@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase-admin';
 import { hashPassword, verifyPassword, signSession, COOKIE_NAME, SESSION_MAX_AGE } from '../../../../lib/auth';
+import { getClientIp, checkRateLimit, logAttempt } from '../../../../lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
     }
 
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimit({ ip, coupon });
+    if (rateLimit.blocked) {
+      return NextResponse.json({
+        error: 'rate_limited',
+        reason: rateLimit.reason,
+        retry_in: rateLimit.retry_in,
+      }, { status: 429 });
+    }
+
     const { data: affiliate, error } = await supabaseAdmin
       .from('affiliates')
       .select('id, name, coupon_code, password_hash, is_admin, blocked')
@@ -34,9 +45,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
     }
     if (!affiliate) {
+      await logAttempt({ ip, coupon, success: false });
       return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
     }
     if (affiliate.blocked) {
+      await logAttempt({ ip, coupon, success: false });
       return NextResponse.json({ error: 'blocked' }, { status: 403 });
     }
     if (!affiliate.password_hash) {
@@ -45,8 +58,10 @@ export async function POST(request) {
 
     const result = await verifyPassword(password, affiliate.password_hash);
     if (!result.ok) {
+      await logAttempt({ ip, coupon, success: false });
       return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
     }
+    await logAttempt({ ip, coupon, success: true });
 
     if (result.needsRehash) {
       try {

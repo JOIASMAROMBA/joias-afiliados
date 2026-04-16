@@ -21,11 +21,13 @@ export default function LoginPage() {
       let data;
       try { data = await res.json(); } catch { data = {}; }
       if (!res.ok || !data.ok) {
+        const retryMin = data.retry_in ? Math.ceil(data.retry_in / 60) : 5;
         const map = {
           invalid_credentials: 'Cupom ou senha incorretos.',
           blocked: 'Conta bloqueada. Contate o suporte.',
           no_password_set: 'Senha nao cadastrada. Faca o cadastro primeiro.',
           missing_fields: 'Preencha cupom e senha.',
+          rate_limited: 'Muitas tentativas. Tente novamente em ' + retryMin + ' minutos.',
           server_misconfigured: 'Servidor mal configurado. Avise o admin.',
           db_error: 'Erro no banco: ' + (data.detail || ''),
           unexpected: 'Erro inesperado: ' + (data.detail || ''),
