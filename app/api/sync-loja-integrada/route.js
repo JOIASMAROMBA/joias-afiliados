@@ -12,8 +12,8 @@ const supabase = createClient(
 const LI_BASE = 'https://api.awsli.com.br/api/v1';
 
 function buildAuthHeaders() {
-  const chaveApi = process.env.LOJA_INTEGRADA_API_KEY;
-  const chaveAplicacao = process.env.LOJA_INTEGRADA_APP_KEY || chaveApi;
+  const chaveApi = (process.env.LOJA_INTEGRADA_API_KEY || '').trim();
+  const chaveAplicacao = (process.env.LOJA_INTEGRADA_APP_KEY || chaveApi).trim();
   return {
     Authorization: `chave_api ${chaveApi}, chave_aplicacao ${chaveAplicacao}`,
     Accept: 'application/json',
