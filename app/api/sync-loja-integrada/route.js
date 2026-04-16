@@ -11,13 +11,14 @@ const supabase = createClient(
 
 const LI_BASE = 'https://api.awsli.com.br/api/v1';
 
-function buildAuthHeaders() {
+function buildAuthHeaders(mode = 'full') {
   const chaveApi = (process.env.LOJA_INTEGRADA_API_KEY || '').trim();
-  const chaveAplicacao = (process.env.LOJA_INTEGRADA_APP_KEY || chaveApi).trim();
-  return {
-    Authorization: `chave_api ${chaveApi}, chave_aplicacao ${chaveAplicacao}`,
-    Accept: 'application/json',
-  };
+  const chaveAplicacao = (process.env.LOJA_INTEGRADA_APP_KEY || '').trim();
+  let auth;
+  if (mode === 'api-only') auth = `chave_api ${chaveApi}`;
+  else if (mode === 'app-only') auth = `chave_aplicacao ${chaveApi}`;
+  else auth = `chave_api ${chaveApi}, chave_aplicacao ${chaveAplicacao || chaveApi}`;
+  return { Authorization: auth, Accept: 'application/json' };
 }
 
 function extractCouponCode(order) {
@@ -52,24 +53,29 @@ function extractProductName(order) {
   return 'Pedido Joias Maromba';
 }
 
-async function fetchPaidOrdersSince(sinceIso) {
-  const url = new URL(`${LI_BASE}/pedido/search/`);
-  url.searchParams.set('situacao', 'pago');
-  url.searchParams.set('data_inicio', sinceIso);
-  url.searchParams.set('limit', '50');
-
-  const res = await fetch(url.toString(), {
-    headers: buildAuthHeaders(),
-    cache: 'no-store',
-  });
-
-  if (!res.ok) {
+async function tryAuthModes(path) {
+  const modes = ['api-only', 'app-only', 'full'];
+  const attempts = [];
+  for (const mode of modes) {
+    const res = await fetch(`${LI_BASE}${path}`, {
+      headers: buildAuthHeaders(mode),
+      cache: 'no-store',
+    });
     const body = await res.text().catch(() => '');
-    throw new Error(`Loja Integrada API ${res.status}: ${body.slice(0, 300)}`);
+    attempts.push({ mode, status: res.status, bodyPreview: body.slice(0, 200) });
+    if (res.ok) return { ok: true, mode, data: JSON.parse(body) };
   }
+  return { ok: false, attempts };
+}
 
-  const data = await res.json();
-  return data?.objects || data?.results || data?.pedidos || [];
+async function fetchPaidOrdersSince(sinceIso) {
+  const path = `/pedido/search/?situacao=pago&data_inicio=${sinceIso}&limit=50`;
+  const result = await tryAuthModes(path);
+  if (!result.ok) {
+    throw new Error(`All auth modes failed: ${JSON.stringify(result.attempts)}`);
+  }
+  const data = result.data;
+  return { orders: data?.objects || data?.results || data?.pedidos || [], mode: result.mode };
 }
 
 async function processOrder(order) {
@@ -133,7 +139,7 @@ export async function GET(request) {
     const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
     const sinceIso = since.toISOString().split('T')[0];
 
-    const orders = await fetchPaidOrdersSince(sinceIso);
+    const { orders, mode: authMode } = await fetchPaidOrdersSince(sinceIso);
     const results = [];
     for (const order of orders) {
       results.push(await processOrder(order));
@@ -145,6 +151,7 @@ export async function GET(request) {
 
     return NextResponse.json({
       ok: true,
+      authMode,
       since: sinceIso,
       fetched: orders.length,
       inserted,
