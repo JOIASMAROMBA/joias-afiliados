@@ -112,9 +112,17 @@ async function processOrder(order) {
 export async function GET(request) {
   try {
     const url = new URL(request.url);
-    const secret = url.searchParams.get('secret');
-    if (!process.env.WEBHOOK_SECRET || secret !== process.env.WEBHOOK_SECRET) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    const envSecret = (process.env.WEBHOOK_SECRET || '').trim();
+    const secret = (url.searchParams.get('secret') || '').trim();
+    if (!envSecret || secret !== envSecret) {
+      return NextResponse.json({
+        error: 'unauthorized',
+        hasEnv: !!envSecret,
+        envLen: envSecret.length,
+        gotLen: secret.length,
+        envStart: envSecret.slice(0, 4),
+        gotStart: secret.slice(0, 4),
+      }, { status: 401 });
     }
 
     if (!process.env.LOJA_INTEGRADA_API_KEY) {
