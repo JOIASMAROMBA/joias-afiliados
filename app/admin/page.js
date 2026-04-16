@@ -10,6 +10,7 @@ export default function AdminDashboard() {
   const [dateRange, setDateRange] = useState('1');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('sales');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [affiliates, setAffiliates] = useState([]);
   const [allSales, setAllSales] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -17,10 +18,13 @@ export default function AdminDashboard() {
   const [recentPosts, setRecentPosts] = useState([]);
   const [monthlySales, setMonthlySales] = useState([]);
   const [monthlyTops, setMonthlyTops] = useState([]);
-  const [monthlyAllAffiliates, setMonthlyAllAffiliates] = useState([]);
   const [selectedAffiliateFilter, setSelectedAffiliateFilter] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
+  const [rewards, setRewards] = useState([]);
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const [editingReward, setEditingReward] = useState(null);
+  const [rewardForm, setRewardForm] = useState({ target_type: 'sales', target_value: '', reward_title: '', reward_description: '', reward_emoji: '🎁', reward_value_money: '' });
 
   useEffect(function() { init(); }, []);
 
@@ -40,30 +44,13 @@ export default function AdminDashboard() {
   }
 
   async function loadAll() {
-    try {
-      var affRes = await supabase.from('affiliate_metrics').select('*');
-      setAffiliates(affRes.data || []);
-    } catch (e) {}
-    try {
-      var salesRes = await supabase.from('sales').select('*, affiliates(name, coupon_code, avatar_initials)').order('created_at', { ascending: false }).limit(500);
-      setAllSales(salesRes.data || []);
-    } catch (e) {}
-    try {
-      var withRes = await supabase.from('withdrawals').select('*, affiliates(name, coupon_code, avatar_initials, email)').order('created_at', { ascending: false });
-      setWithdrawals(withRes.data || []);
-    } catch (e) {}
-    try {
-      var postsRes = await supabase.from('recent_posts').select('*').limit(50);
-      setRecentPosts(postsRes.data || []);
-    } catch (e) {}
-    try {
-      var monthRes = await supabase.from('monthly_sales').select('*');
-      setMonthlySales(monthRes.data || []);
-    } catch (e) {}
-    try {
-      var topsRes = await supabase.from('monthly_top_affiliate').select('*');
-      setMonthlyTops(topsRes.data || []);
-    } catch (e) {}
+    try { var affRes = await supabase.from('affiliate_metrics').select('*'); setAffiliates(affRes.data || []); } catch (e) {}
+    try { var salesRes = await supabase.from('sales').select('*, affiliates(name, coupon_code, avatar_initials)').order('created_at', { ascending: false }).limit(500); setAllSales(salesRes.data || []); } catch (e) {}
+    try { var withRes = await supabase.from('withdrawals').select('*, affiliates(name, coupon_code, avatar_initials, email)').order('created_at', { ascending: false }); setWithdrawals(withRes.data || []); } catch (e) {}
+    try { var postsRes = await supabase.from('recent_posts').select('*').limit(50); setRecentPosts(postsRes.data || []); } catch (e) {}
+    try { var monthRes = await supabase.from('monthly_sales').select('*'); setMonthlySales(monthRes.data || []); } catch (e) {}
+    try { var topsRes = await supabase.from('monthly_top_affiliate').select('*'); setMonthlyTops(topsRes.data || []); } catch (e) {}
+    try { var rwRes = await supabase.from('rewards').select('*').order('target_value', { ascending: true }); setRewards(rwRes.data || []); } catch (e) {}
   }
 
   async function markPaid(wid) {
@@ -88,10 +75,57 @@ export default function AdminDashboard() {
       var publicUrl = urlRes.data.publicUrl;
       await supabase.from('withdrawals').update({ receipt_url: publicUrl, receipt_sent_at: new Date().toISOString() }).eq('id', wid);
       await loadAll();
-    } catch (e) {
-      alert('Erro ao enviar comprovante: ' + (e.message || 'desconhecido'));
-    }
+    } catch (e) { alert('Erro: ' + (e.message || 'desconhecido')); }
     setUploadingId(null);
+  }
+
+  function openRewardModal(reward) {
+    if (reward) {
+      setEditingReward(reward);
+      setRewardForm({
+        target_type: reward.target_type || 'sales',
+        target_value: reward.target_value,
+        reward_title: reward.reward_title,
+        reward_description: reward.reward_description || '',
+        reward_emoji: reward.reward_emoji || '🎁',
+        reward_value_money: reward.reward_value_money || ''
+      });
+    } else {
+      setEditingReward(null);
+      setRewardForm({ target_type: 'sales', target_value: '', reward_title: '', reward_description: '', reward_emoji: '🎁', reward_value_money: '' });
+    }
+    setShowRewardModal(true);
+  }
+
+  async function saveReward() {
+    if (!rewardForm.target_value || !rewardForm.reward_title) { alert('Preencha os campos obrigatórios'); return; }
+    var data = {
+      target_type: rewardForm.target_type,
+      target_value: Number(rewardForm.target_value),
+      reward_title: rewardForm.reward_title.trim(),
+      reward_description: rewardForm.reward_description.trim(),
+      reward_emoji: rewardForm.reward_emoji || '🎁',
+      reward_value_money: rewardForm.reward_value_money ? Number(rewardForm.reward_value_money) : 0,
+      active: true
+    };
+    if (editingReward) {
+      await supabase.from('rewards').update(data).eq('id', editingReward.id);
+    } else {
+      await supabase.from('rewards').insert(data);
+    }
+    setShowRewardModal(false);
+    await loadAll();
+  }
+
+  async function deleteReward(id) {
+    if (!confirm('Tem certeza que quer deletar esta meta?')) return;
+    await supabase.from('rewards').delete().eq('id', id);
+    await loadAll();
+  }
+
+  async function toggleRewardActive(reward) {
+    await supabase.from('rewards').update({ active: !reward.active }).eq('id', reward.id);
+    await loadAll();
   }
 
   var filteredSales = useMemo(function() {
@@ -99,12 +133,8 @@ export default function AdminDashboard() {
     var days = parseInt(dateRange);
     if (isNaN(days)) return allSales;
     var cutoff;
-    if (days === 1) {
-      var today = new Date(); today.setHours(0, 0, 0, 0);
-      cutoff = today.getTime();
-    } else {
-      cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    }
+    if (days === 1) { var today = new Date(); today.setHours(0, 0, 0, 0); cutoff = today.getTime(); }
+    else { cutoff = Date.now() - days * 24 * 60 * 60 * 1000; }
     return allSales.filter(function(s) { return new Date(s.created_at).getTime() >= cutoff; });
   }, [allSales, dateRange]);
 
@@ -113,7 +143,6 @@ export default function AdminDashboard() {
     var commissions = filteredSales.reduce(function(s, v) { return s + Number(v.commission_earned || 0); }, 0);
     var uniqueAffiliates = new Set(filteredSales.map(function(s) { return s.affiliate_id; })).size;
     var days = parseInt(dateRange) || 30;
-    var avgPerDay = filteredSales.length / (days === 1 ? 1 : days);
     return {
       totalSales: filteredSales.length,
       revenue: revenue,
@@ -121,7 +150,6 @@ export default function AdminDashboard() {
       netRevenue: revenue - commissions,
       activeAffiliates: uniqueAffiliates,
       totalAffiliates: affiliates.length,
-      avgPerDay: avgPerDay,
       avgTicket: filteredSales.length ? revenue / filteredSales.length : 0,
       pendingWithdrawals: withdrawals.filter(function(w) { return w.status === 'pending'; }).length
     };
@@ -146,10 +174,8 @@ export default function AdminDashboard() {
 
   var top10 = affiliates.slice().sort(function(a,b){return b.total_sales - a.total_sales;}).slice(0, 10);
 
-  // Calcular vendas mensais por afiliado selecionado
   var filteredMonthlySales = useMemo(function() {
     if (!selectedAffiliateFilter) return monthlySales;
-    // Filtra vendas do afiliado selecionado por mês
     var byMonth = {};
     allSales.filter(function(s) { return s.affiliate_id === selectedAffiliateFilter; }).forEach(function(s) {
       var date = new Date(s.created_at);
@@ -194,25 +220,18 @@ export default function AdminDashboard() {
     return '🌐';
   }
 
-  function getPlatformColor(p) {
-    if (p === 'instagram') return '#E1306C';
-    if (p === 'tiktok') return '#000000';
-    if (p === 'facebook') return '#1877F2';
-    return '#666666';
-  }
-
-  // Cores únicas para cada afiliado no top 10
   var affiliateColors = ['#FFD700', '#0070F3', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#06B6D4'];
 
-  if (loading) return (<div style={{ minHeight: '100vh', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Carregando...</div>);
+  if (loading) return (<div style={{ minHeight: '100vh', background: '#FAFAFA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Carregando...</div>);
 
-  var tabs = [
-    { id: 'overview', label: 'Visao Geral' },
-    { id: 'posts', label: 'Postagens' },
-    { id: 'affiliates', label: 'Afiliados' },
-    { id: 'sales', label: 'Vendas' },
-    { id: 'payments', label: 'Pagamentos' },
-    { id: 'withdrawals', label: 'Saques' }
+  var menuItems = [
+    { id: 'overview', label: 'Visão Geral', icon: '📊' },
+    { id: 'posts', label: 'Postagens', icon: '📸' },
+    { id: 'affiliates', label: 'Afiliados', icon: '👥' },
+    { id: 'sales', label: 'Vendas', icon: '💰' },
+    { id: 'rewards', label: 'Recompensas', icon: '🎁' },
+    { id: 'payments', label: 'Pagamentos', icon: '💳' },
+    { id: 'withdrawals', label: 'Saques', icon: '💸' }
   ];
 
   var dateRangeOptions = [
@@ -221,44 +240,82 @@ export default function AdminDashboard() {
   ];
 
   var monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var emojiOptions = ['🎁','💰','🛴','✈️','🏖️','🏆','🚗','📱','💻','⌚','👜','💎','🎧','🚲','🎮','📷','🍾','🏝️','🥂','👑'];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FFFFFF', color: '#1A1A1A', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif' }}>
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E5E5E5', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#1A1A1A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontWeight: 800, fontSize: 14 }}>JM</div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>Joias Maromba</div>
-            <div style={{ fontSize: 11, color: '#888' }}>Admin Dashboard</div>
-          </div>
+    <div style={{ minHeight: '100vh', background: '#FAFAFA', color: '#1A1A1A', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif', display: 'flex' }}>
+      {/* SIDEBAR */}
+      <aside style={{ width: sidebarOpen ? 240 : 68, background: '#FFFFFF', borderRight: '1px solid #E5E5E5', position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>
+        {/* Logo */}
+        <div style={{ padding: '18px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1A1A1A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>JM</div>
+          {sidebarOpen && (
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Joias Maromba</div>
+              <div style={{ fontSize: 11, color: '#888' }}>Admin</div>
+            </div>
+          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 13, color: '#666' }}>{adminName}</div>
-          <button onClick={function() { router.push('/painel'); }} style={{ background: 'transparent', border: '1px solid #E5E5E5', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#666', cursor: 'pointer' }}>Painel afiliado</button>
-          <button onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ background: 'transparent', border: '1px solid #E5E5E5', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#666', cursor: 'pointer' }}>Sair</button>
-        </div>
-      </div>
 
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
+        {/* Menu items */}
+        <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
+          {menuItems.map(function(item) {
+            var isActive = activeTab === item.id;
+            var showBadge = item.id === 'withdrawals' && kpis.pendingWithdrawals > 0;
+            return (
+              <button key={item.id} onClick={function() { setActiveTab(item.id); }} style={{ width: '100%', padding: '10px 12px', marginBottom: 2, background: isActive ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 8, color: isActive ? '#FFD700' : '#555', fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', position: 'relative' }} onMouseEnter={function(e) { if (!isActive) e.currentTarget.style.background = '#F3F4F6'; }} onMouseLeave={function(e) { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                {sidebarOpen && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>}
+                {sidebarOpen && showBadge && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{kpis.pendingWithdrawals}</span>)}
+                {!sidebarOpen && showBadge && (<span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, background: '#EF4444', borderRadius: 4 }} />)}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Bottom user area */}
+        <div style={{ padding: 12, borderTop: '1px solid #F0F0F0' }}>
+          {sidebarOpen && (
+            <div style={{ padding: '8px 12px', marginBottom: 8, background: '#FAFAFA', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 16, background: '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{adminName.substring(0, 2).toUpperCase()}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{adminName}</div>
+                <div style={{ fontSize: 10, color: '#888' }}>Admin</div>
+              </div>
+            </div>
+          )}
+          <button onClick={function() { router.push('/painel'); }} style={{ width: '100%', padding: '8px 12px', background: 'transparent', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 12, color: '#666', cursor: 'pointer', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>👁️</span>{sidebarOpen && 'Ver painel'}
+          </button>
+          <button onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ width: '100%', padding: '8px 12px', background: 'transparent', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 12, color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>🚪</span>{sidebarOpen && 'Sair'}
+          </button>
+          <button onClick={function() { setSidebarOpen(!sidebarOpen); }} style={{ width: '100%', marginTop: 8, padding: 6, background: 'transparent', border: '1px solid #F0F0F0', borderRadius: 6, fontSize: 14, color: '#AAA', cursor: 'pointer' }}>{sidebarOpen ? '‹' : '›'}</button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main style={{ flex: 1, minWidth: 0, padding: 24, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>Dashboard</div>
-            <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Visao geral da performance da sua rede de afiliados</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>{(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}</div>
+            <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
+              {activeTab === 'overview' && 'Visão geral da performance'}
+              {activeTab === 'posts' && 'Feed em tempo real de postagens'}
+              {activeTab === 'affiliates' && 'Gerenciar afiliados'}
+              {activeTab === 'sales' && 'Todas as vendas registradas'}
+              {activeTab === 'rewards' && 'Metas e prêmios para afiliados'}
+              {activeTab === 'payments' && 'Afiliados com saldo a pagar'}
+              {activeTab === 'withdrawals' && 'Processar saques solicitados'}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {dateRangeOptions.map(function(r) {
-              return (<button key={r.v} onClick={function() { setDateRange(r.v); }} style={{ padding: '8px 14px', background: dateRange === r.v ? '#1A1A1A' : '#FFFFFF', color: dateRange === r.v ? '#FFFFFF' : '#666', border: '1px solid ' + (dateRange === r.v ? '#1A1A1A' : '#E5E5E5'), borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>{r.l}</button>);
-            })}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #E5E5E5', marginBottom: 24, overflowX: 'auto' }}>
-          {tabs.map(function(t) {
-            return (<button key={t.id} onClick={function() { setActiveTab(t.id); }} style={{ padding: '10px 16px', background: 'transparent', border: 'none', borderBottom: activeTab === t.id ? '2px solid #1A1A1A' : '2px solid transparent', color: activeTab === t.id ? '#1A1A1A' : '#888', fontSize: 13, fontWeight: activeTab === t.id ? 600 : 500, cursor: 'pointer', marginBottom: -1, whiteSpace: 'nowrap' }}>
-              {t.label}
-              {t.id === 'withdrawals' && kpis.pendingWithdrawals > 0 && (<span style={{ marginLeft: 6, background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{kpis.pendingWithdrawals}</span>)}
-            </button>);
-          })}
+          {(activeTab === 'overview' || activeTab === 'sales') && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {dateRangeOptions.map(function(r) {
+                return (<button key={r.v} onClick={function() { setDateRange(r.v); }} style={{ padding: '8px 14px', background: dateRange === r.v ? '#1A1A1A' : '#FFFFFF', color: dateRange === r.v ? '#FFFFFF' : '#666', border: '1px solid ' + (dateRange === r.v ? '#1A1A1A' : '#E5E5E5'), borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>{r.l}</button>);
+              })}
+            </div>
+          )}
         </div>
 
         {activeTab === 'overview' && (
@@ -281,9 +338,8 @@ export default function AdminDashboard() {
 
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 24, marginBottom: 24 }}>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Evolucao de vendas {new Date().getFullYear()}</div>
-              <div style={{ fontSize: 12, color: '#888', marginBottom: 20 }}>Clique em um afiliado para ver as vendas dele. Clique em "Top 1" para voltar à visão geral.</div>
+              <div style={{ fontSize: 12, color: '#888', marginBottom: 20 }}>Clique em um afiliado para ver as vendas dele.</div>
 
-              {/* Seletor top 10 horizontal */}
               <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 8 }}>
                 <button onClick={function() { setSelectedAffiliateFilter(null); }} style={{ minWidth: 100, padding: '8px 14px', background: selectedAffiliateFilter === null ? '#1A1A1A' : '#F3F4F6', color: selectedAffiliateFilter === null ? '#FFD700' : '#666', border: 'none', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                   <span style={{ fontSize: 16 }}>🏆</span>Top 1
@@ -292,7 +348,7 @@ export default function AdminDashboard() {
                   var color = affiliateColors[i % affiliateColors.length];
                   var isSel = selectedAffiliateFilter === a.id;
                   return (<button key={a.id} onClick={function() { setSelectedAffiliateFilter(a.id); }} style={{ minWidth: 110, padding: '6px 12px', background: isSel ? color : 'white', border: '2px solid ' + color, borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', color: isSel ? '#fff' : '#1A1A1A' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.3)' : color, color: isSel ? '#fff' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{a.avatar_initials}</div>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.3)' : color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{a.avatar_initials}</div>
                     {a.coupon_code}
                   </button>);
                 })}
@@ -317,7 +373,6 @@ export default function AdminDashboard() {
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>{formatMoney(a.total_earned)}</div>
                   </div>);
                 })}
-                {affiliates.length === 0 && (<div style={{ padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum afiliado</div>)}
               </div>
 
               <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
@@ -338,37 +393,67 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === 'rewards' && (
+          <div>
+            <div style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #333 100%)', border: '1px solid #FFD700', borderRadius: 12, padding: 24, marginBottom: 20, color: '#FFD700' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>🎁 Gerenciar Recompensas</div>
+                  <div style={{ fontSize: 13, opacity: 0.8 }}>Crie metas e prêmios que irão motivar seus afiliados</div>
+                </div>
+                <button onClick={function() { openRewardModal(null); }} style={{ padding: '12px 24px', background: '#FFD700', border: 'none', borderRadius: 8, color: '#1A1A1A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>+ Nova Recompensa</button>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+              {rewards.map(function(r) {
+                return (<div key={r.id} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 12, padding: 20, opacity: r.active ? 1 : 0.5, position: 'relative' }}>
+                  <div style={{ fontSize: 48, marginBottom: 12, textAlign: 'center' }}>{r.reward_emoji}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, textAlign: 'center' }}>{r.reward_title}</div>
+                  {r.reward_description && (<div style={{ fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center', minHeight: 16 }}>{r.reward_description}</div>)}
+                  <div style={{ background: '#FFFBEB', border: '1px solid #FFD700', borderRadius: 8, padding: 12, textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: '#92400E', textTransform: 'uppercase', fontWeight: 600 }}>META</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>
+                      {r.target_type === 'sales' ? r.target_value + ' vendas' : formatMoney(r.target_value)}
+                    </div>
+                  </div>
+                  {Number(r.reward_value_money) > 0 && (<div style={{ fontSize: 12, color: '#10B981', fontWeight: 600, textAlign: 'center', marginBottom: 12 }}>Bonus: {formatMoney(r.reward_value_money)}</div>)}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={function() { openRewardModal(r); }} style={{ flex: 1, padding: 8, background: '#F3F4F6', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✎ Editar</button>
+                    <button onClick={function() { toggleRewardActive(r); }} style={{ flex: 1, padding: 8, background: r.active ? '#DCFCE7' : '#FEE2E2', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: r.active ? '#166534' : '#991B1B' }}>{r.active ? 'Ativa' : 'Inativa'}</button>
+                    <button onClick={function() { deleteReward(r.id); }} style={{ padding: '8px 12px', background: '#FEE2E2', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#991B1B' }}>🗑</button>
+                  </div>
+                </div>);
+              })}
+              {rewards.length === 0 && (<div style={{ gridColumn: '1 / -1', background: '#FFFFFF', border: '2px dashed #E5E5E5', borderRadius: 12, padding: 60, textAlign: 'center', color: '#888' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🎁</div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Nenhuma recompensa criada ainda</div>
+                <div style={{ fontSize: 13, color: '#AAA' }}>Clique em "+ Nova Recompensa" para criar metas motivadoras</div>
+              </div>)}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'posts' && (
           <div>
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 8, height: 8, borderRadius: 4, background: '#10B981' }}></div>
-              <div style={{ fontSize: 13, color: '#666' }}><strong style={{ color: '#1A1A1A' }}>{recentPosts.length}</strong> postagens registradas · atualiza automaticamente a cada 30s</div>
+              <div style={{ fontSize: 13, color: '#666' }}><strong style={{ color: '#1A1A1A' }}>{recentPosts.length}</strong> postagens · atualiza a cada 30s</div>
             </div>
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8 }}>
               <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E5E5', background: '#FAFAFA', display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 2fr', gap: 12, fontSize: 11, fontWeight: 600, color: '#666', textTransform: 'uppercase' }}>
-                <div></div><div>Afiliado</div><div>Rede</div><div>Data/Hora</div><div>Link / ID do Post</div>
+                <div></div><div>Afiliado</div><div>Rede</div><div>Data/Hora</div><div>Link / ID</div>
               </div>
               {recentPosts.map(function(p) {
                 return (<div key={p.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 2fr', gap: 12, alignItems: 'center', fontSize: 13 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>{p.avatar_initials}</div>
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{p.affiliate_name}</div>
-                    <div style={{ fontSize: 11, color: '#888' }}>{p.coupon_code}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 16 }}>{getPlatformIcon(p.platform)}</span>
-                    <span style={{ fontSize: 12, color: getPlatformColor(p.platform), fontWeight: 600, textTransform: 'capitalize' }}>{p.platform}</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: '#666' }}>{formatDateTime(p.created_at)}</div>
-                    <div style={{ fontSize: 10, color: '#888' }}>{timeSince(p.created_at)}</div>
-                  </div>
-                  <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#1A1A1A', wordBreak: 'break-all' }}>
-                    {p.post_identifier ? (p.post_identifier.startsWith('http') ? (<a href={p.post_identifier} target="_blank" rel="noopener" style={{ color: '#0070F3', textDecoration: 'none' }}>{p.post_identifier} ↗</a>) : p.post_identifier) : (<span style={{ color: '#CCC' }}>sem link</span>)}
-                  </div>
+                  <div><div style={{ fontWeight: 500 }}>{p.affiliate_name}</div><div style={{ fontSize: 11, color: '#888' }}>{p.coupon_code}</div></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 16 }}>{getPlatformIcon(p.platform)}</span><span style={{ fontSize: 12, textTransform: 'capitalize' }}>{p.platform}</span></div>
+                  <div><div style={{ fontSize: 12, color: '#666' }}>{formatDateTime(p.created_at)}</div><div style={{ fontSize: 10, color: '#888' }}>{timeSince(p.created_at)}</div></div>
+                  <div style={{ fontSize: 12, fontFamily: 'monospace', wordBreak: 'break-all' }}>{p.post_identifier ? (p.post_identifier.startsWith('http') ? (<a href={p.post_identifier} target="_blank" rel="noopener" style={{ color: '#0070F3' }}>{p.post_identifier} ↗</a>) : p.post_identifier) : (<span style={{ color: '#CCC' }}>sem link</span>)}</div>
                 </div>);
               })}
-              {recentPosts.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma postagem registrada ainda</div>)}
+              {recentPosts.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma postagem</div>)}
             </div>
           </div>
         )}
@@ -376,8 +461,8 @@ export default function AdminDashboard() {
         {activeTab === 'affiliates' && (
           <div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-              <input type="text" value={searchTerm} onChange={function(e) { setSearchTerm(e.target.value); }} placeholder="Buscar..." style={{ flex: 1, minWidth: 240, padding: '10px 14px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, outline: 'none' }} />
-              <select value={sortBy} onChange={function(e) { setSortBy(e.target.value); }} style={{ padding: '10px 14px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, cursor: 'pointer' }}>
+              <input type="text" value={searchTerm} onChange={function(e) { setSearchTerm(e.target.value); }} placeholder="Buscar..." style={{ flex: 1, minWidth: 240, padding: '10px 14px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13 }} />
+              <select value={sortBy} onChange={function(e) { setSortBy(e.target.value); }} style={{ padding: '10px 14px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13 }}>
                 <option value="sales">Mais vendas</option>
                 <option value="earned">Mais ganhos</option>
                 <option value="balance">Maior saldo</option>
@@ -393,14 +478,8 @@ export default function AdminDashboard() {
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{a.name}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{a.email} · {a.coupon_code}</div>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: '#888', fontSize: 10, textTransform: 'uppercase' }}>Vendas</div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{a.total_sales}</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: '#888', fontSize: 10, textTransform: 'uppercase' }}>Saldo</div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#10B981' }}>{formatMoney(a.available_balance)}</div>
-                  </div>
+                  <div style={{ textAlign: 'center' }}><div style={{ color: '#888', fontSize: 10 }}>Vendas</div><div style={{ fontWeight: 700, fontSize: 16 }}>{a.total_sales}</div></div>
+                  <div style={{ textAlign: 'center' }}><div style={{ color: '#888', fontSize: 10 }}>Saldo</div><div style={{ fontWeight: 700, fontSize: 14, color: '#10B981' }}>{formatMoney(a.available_balance)}</div></div>
                   <div style={{ padding: '3px 10px', background: perf.bg, color: perf.color, borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{perf.label}</div>
                 </div>);
               })}
@@ -424,7 +503,7 @@ export default function AdminDashboard() {
                 <div style={{ color: '#10B981', fontWeight: 600 }}>{formatMoney(s.commission_earned)}</div>
               </div>);
             })}
-            {filteredSales.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma venda no periodo</div>)}
+            {filteredSales.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma venda</div>)}
           </div>
         )}
 
@@ -440,7 +519,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#10B981' }}>{formatMoney(a.available_balance)}</div>
               </div>);
             })}
-            {affiliates.filter(function(a) { return a.days_since_signup >= 30 && Number(a.available_balance) > 0; }).length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhum afiliado com saldo pendente</div>)}
+            {affiliates.filter(function(a) { return a.days_since_signup >= 30 && Number(a.available_balance) > 0; }).length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhum afiliado com saldo</div>)}
           </div>
         )}
 
@@ -454,7 +533,7 @@ export default function AdminDashboard() {
 
               return (<div key={w.id} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 18, marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 20, background: isPaid ? '#D1FAE5' : isRejected ? '#FEE2E2' : '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: isPaid ? '#065F46' : isRejected ? '#991B1B' : '#92400E' }}>{af.avatar_initials}</div>
+                  <div style={{ width: 40, height: 40, borderRadius: 20, background: isPaid ? '#D1FAE5' : isRejected ? '#FEE2E2' : '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 }}>{af.avatar_initials}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{af.name}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{af.coupon_code} · {w.affiliate_email || af.email}</div>
@@ -464,16 +543,16 @@ export default function AdminDashboard() {
                 </div>
                 <div style={{ background: '#FAFAFA', border: '1px solid #E5E5E5', borderRadius: 6, padding: 12, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>CHAVE PIX ({w.pix_type})</div>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 600 }}>CHAVE PIX ({w.pix_type})</div>
                     <div style={{ fontSize: 14, fontFamily: 'monospace', wordBreak: 'break-all' }}>{w.pix_key}</div>
                   </div>
-                  <button onClick={function() { navigator.clipboard.writeText(w.pix_key); alert('Copiado'); }} style={{ padding: '6px 10px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: '#666' }}>Copiar</button>
+                  <button onClick={function() { navigator.clipboard.writeText(w.pix_key); alert('Copiado'); }} style={{ padding: '6px 10px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Copiar</button>
                 </div>
 
                 {!isPaid && !isRejected && (
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={function() { if (confirm('Confirmar pagamento de ' + formatMoney(w.amount) + '?')) markPaid(w.id); }} style={{ flex: 1, padding: 12, background: '#EF4444', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>MARCAR COMO PAGO</button>
-                    <button onClick={function() { if (confirm('Rejeitar?')) rejectWith(w.id); }} style={{ padding: '10px 16px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, color: '#666', fontSize: 13, cursor: 'pointer' }}>Rejeitar</button>
+                    <button onClick={function() { if (confirm('Pagar ' + formatMoney(w.amount) + '?')) markPaid(w.id); }} style={{ flex: 1, padding: 12, background: '#EF4444', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>MARCAR COMO PAGO</button>
+                    <button onClick={function() { if (confirm('Rejeitar?')) rejectWith(w.id); }} style={{ padding: '10px 16px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, cursor: 'pointer' }}>Rejeitar</button>
                   </div>
                 )}
 
@@ -481,14 +560,12 @@ export default function AdminDashboard() {
                   <div>
                     <div style={{ padding: '10px 14px', background: '#10B981', borderRadius: 6, color: '#FFFFFF', fontWeight: 800, fontSize: 13, textAlign: 'center', marginBottom: 10 }}>✓ PAGO em {formatDateTime(w.paid_at)}</div>
                     {!hasReceipt && (
-                      <label style={{ display: 'block', padding: 12, background: '#EF4444', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'center' }}>
+                      <label style={{ display: 'block', padding: 12, background: '#EF4444', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'center' }}>
                         {uploadingId === w.id ? 'ENVIANDO...' : '📎 ENVIAR COMPROVANTE'}
                         <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={function(e) { if (e.target.files[0]) uploadReceipt(w.id, e.target.files[0]); }} />
                       </label>
                     )}
-                    {hasReceipt && (
-                      <button onClick={function() { setViewReceiptUrl(w.receipt_url); }} style={{ width: '100%', padding: 12, background: '#10B981', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>✓ COMPROVANTE ENVIADO (clique para ver)</button>
-                    )}
+                    {hasReceipt && (<button onClick={function() { setViewReceiptUrl(w.receipt_url); }} style={{ width: '100%', padding: 12, background: '#10B981', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>✓ COMPROVANTE ENVIADO</button>)}
                   </div>
                 )}
 
@@ -498,7 +575,46 @@ export default function AdminDashboard() {
             {withdrawals.length === 0 && (<div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma solicitacao</div>)}
           </div>
         )}
-      </div>
+      </main>
+
+      {/* Modal Recompensa */}
+      {showRewardModal && (
+        <div onClick={function() { setShowRewardModal(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 500, width: '100%', background: '#fff', borderRadius: 12, padding: 24, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{editingReward ? 'Editar' : 'Nova'} Recompensa</div>
+              <button onClick={function() { setShowRewardModal(false); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#555' }}>Emoji</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6, marginBottom: 16 }}>
+              {emojiOptions.map(function(em) {
+                return (<button key={em} onClick={function() { setRewardForm(Object.assign({}, rewardForm, { reward_emoji: em })); }} style={{ padding: 8, fontSize: 20, background: rewardForm.reward_emoji === em ? '#FFD700' : '#F3F4F6', border: 'none', borderRadius: 6, cursor: 'pointer' }}>{em}</button>);
+              })}
+            </div>
+
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#555' }}>Titulo da recompensa *</label>
+            <input type="text" value={rewardForm.reward_title} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_title: e.target.value })); }} placeholder="Ex: Viagem para Paris" style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
+
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#555' }}>Descricao (opcional)</label>
+            <input type="text" value={rewardForm.reward_description} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_description: e.target.value })); }} placeholder="Ex: Tudo pago + R$1000 de mimos" style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
+
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#555' }}>Tipo de meta</label>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              <button onClick={function() { setRewardForm(Object.assign({}, rewardForm, { target_type: 'sales' })); }} style={{ flex: 1, padding: 10, background: rewardForm.target_type === 'sales' ? '#1A1A1A' : '#F3F4F6', color: rewardForm.target_type === 'sales' ? '#FFD700' : '#666', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Numero de vendas</button>
+              <button onClick={function() { setRewardForm(Object.assign({}, rewardForm, { target_type: 'revenue' })); }} style={{ flex: 1, padding: 10, background: rewardForm.target_type === 'revenue' ? '#1A1A1A' : '#F3F4F6', color: rewardForm.target_type === 'revenue' ? '#FFD700' : '#666', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Valor em R$</button>
+            </div>
+
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#555' }}>Meta ({rewardForm.target_type === 'sales' ? 'quantidade de vendas' : 'valor em R$'}) *</label>
+            <input type="number" value={rewardForm.target_value} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { target_value: e.target.value })); }} placeholder={rewardForm.target_type === 'sales' ? 'Ex: 50' : 'Ex: 10000'} style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
+
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600, color: '#555' }}>Valor em dinheiro (se aplicavel)</label>
+            <input type="number" value={rewardForm.reward_value_money} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_value_money: e.target.value })); }} placeholder="Ex: 200 (deixe vazio se for produto)" style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 20, fontSize: 14 }} />
+
+            <button onClick={saveReward} style={{ width: '100%', padding: 12, background: '#1A1A1A', color: '#FFD700', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{editingReward ? 'Salvar alterações' : 'Criar Recompensa'}</button>
+          </div>
+        </div>
+      )}
 
       {viewReceiptUrl && (
         <div onClick={function() { setViewReceiptUrl(null); }} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -519,46 +635,26 @@ export default function AdminDashboard() {
 function MonthlyTowersChart({ monthlySales, monthlyTops, monthNames, formatMoney, selectedAffiliate }) {
   var currentMonth = new Date().getMonth() + 1;
   var maxRevenue = Math.max.apply(null, (monthlySales || []).map(function(m) { return Number(m.revenue); }).concat([100]));
-
-  // Arredondar max pra cima pro nível mais próximo
   var levelStep = maxRevenue > 10000 ? 5000 : maxRevenue > 5000 ? 2500 : maxRevenue > 1000 ? 1000 : maxRevenue > 500 ? 500 : 250;
   var topLevel = Math.ceil(maxRevenue / levelStep) * levelStep;
   if (topLevel === 0) topLevel = levelStep;
 
   var levels = [];
-  for (var i = 0; i <= 4; i++) {
-    levels.push(Math.round((topLevel / 4) * i));
-  }
+  for (var i = 0; i <= 4; i++) { levels.push(Math.round((topLevel / 4) * i)); }
   levels.reverse();
 
-  function getMonthData(monthNum) {
-    return (monthlySales || []).find(function(m) { return m.month_num === monthNum; }) || { sales_count: 0, revenue: 0 };
-  }
-
-  function getTopData(monthNum) {
-    if (selectedAffiliate) return null;
-    return monthlyTops.find(function(m) { return m.month_num === monthNum; });
-  }
+  function getMonthData(monthNum) { return (monthlySales || []).find(function(m) { return m.month_num === monthNum; }) || { sales_count: 0, revenue: 0 }; }
+  function getTopData(monthNum) { if (selectedAffiliate) return null; return monthlyTops.find(function(m) { return m.month_num === monthNum; }); }
 
   return (
     <div style={{ display: 'flex', gap: 0, alignItems: 'stretch', height: 380, position: 'relative' }}>
-      {/* Coluna de níveis à esquerda */}
       <div style={{ width: 70, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingTop: 60, paddingBottom: 50, fontSize: 10, color: '#888', textAlign: 'right', paddingRight: 10, flexShrink: 0 }}>
-        {levels.map(function(lv, i) {
-          return (<div key={i} style={{ fontSize: 10, fontWeight: 600, color: '#666' }}>R$ {lv.toLocaleString('pt-BR')}</div>);
-        })}
+        {levels.map(function(lv, i) { return (<div key={i} style={{ fontSize: 10, fontWeight: 600, color: '#666' }}>R$ {lv.toLocaleString('pt-BR')}</div>); })}
       </div>
-
-      {/* Linhas horizontais de nível */}
       <div style={{ flex: 1, position: 'relative' }}>
         <div style={{ position: 'absolute', top: 60, bottom: 50, left: 0, right: 0, pointerEvents: 'none' }}>
-          {levels.map(function(lv, i) {
-            var pct = (i / (levels.length - 1)) * 100;
-            return (<div key={i} style={{ position: 'absolute', top: pct + '%', left: 0, right: 0, borderTop: '1px dashed #E5E5E5' }}></div>);
-          })}
+          {levels.map(function(lv, i) { var pct = (i / (levels.length - 1)) * 100; return (<div key={i} style={{ position: 'absolute', top: pct + '%', left: 0, right: 0, borderTop: '1px dashed #E5E5E5' }}></div>); })}
         </div>
-
-        {/* Torres */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: '100%', paddingTop: 60, paddingBottom: 50, position: 'relative' }}>
           {[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m) {
             var data = getMonthData(m);
@@ -567,44 +663,24 @@ function MonthlyTowersChart({ monthlySales, monthlyTops, monthNames, formatMoney
             var heightPct = topLevel > 0 ? (revenue / topLevel) * 100 : 0;
             var isCurrent = m === currentMonth;
             var isFuture = m > currentMonth;
-
             return (
               <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', minWidth: 0, position: 'relative' }}>
-                {/* Troféu + cupom */}
                 {top && !isFuture && !selectedAffiliate && (
                   <div style={{ position: 'absolute', top: -55, left: 0, right: 0, textAlign: 'center' }}>
                     <div style={{ fontSize: 22, lineHeight: 1 }}>🏆</div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: '#FFD700', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80, margin: '2px auto 0' }}>{top.coupon_code}</div>
                   </div>
                 )}
-
-                {/* Número de vendas acima da torre */}
-                {revenue > 0 && (
-                  <div style={{ position: 'absolute', bottom: 'calc(' + Math.max(heightPct, 2) + '% + 52px)', fontSize: 10, fontWeight: 700, color: isCurrent ? '#B8860B' : '#666' }}>{data.sales_count}</div>
-                )}
-
-                {/* Torre */}
+                {revenue > 0 && (<div style={{ position: 'absolute', bottom: 'calc(' + Math.max(heightPct, 2) + '% + 52px)', fontSize: 10, fontWeight: 700, color: isCurrent ? '#B8860B' : '#666' }}>{data.sales_count}</div>)}
                 <div style={{ width: '100%', maxWidth: 60, height: Math.max(heightPct, isFuture ? 0 : 2) + '%', minHeight: isFuture ? 0 : 2, background: isFuture ? 'transparent' : (isCurrent ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' : 'linear-gradient(180deg, #FFD700 0%, #B8860B 100%)'), borderRadius: '6px 6px 0 0', transition: 'height 0.5s ease-out', boxShadow: isFuture ? 'none' : '0 2px 8px rgba(255,215,0,0.3)' }}></div>
-
-                {/* Base reta preta */}
                 <div style={{ width: '100%', maxWidth: 60, height: 3, background: '#1A1A1A', borderRadius: 1 }}></div>
-
-                {/* Mês */}
                 <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: isCurrent ? '#1A1A1A' : '#888' }}>{monthNames[m-1]}</div>
-
-                {/* Valor */}
                 <div style={{ marginTop: 2, fontSize: 9, color: '#666', whiteSpace: 'nowrap' }}>{revenue > 0 ? formatMoney(revenue) : '–'}</div>
               </div>
             );
           })}
         </div>
-
-        {/* Nome do afiliado selecionado */}
-        {selectedAffiliate && (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>
-            Visualizando vendas de: <span style={{ color: '#B8860B' }}>{selectedAffiliate.name}</span>
-          </div>
-        )}
+        {selectedAffiliate && (<div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: 13, fontWeight: 700 }}>Vendas de: <span style={{ color: '#B8860B' }}>{selectedAffiliate.name}</span></div>)}
       </div>
     </div>
   );
