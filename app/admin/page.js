@@ -7,7 +7,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [dateRange, setDateRange] = useState('30');
+  const [dateRange, setDateRange] = useState('1');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('sales');
   const [affiliates, setAffiliates] = useState([]);
@@ -61,9 +61,18 @@ export default function AdminDashboard() {
 
   // Filtered data based on date range
   var filteredSales = useMemo(function() {
+    if (dateRange === 'all') return allSales;
     var days = parseInt(dateRange);
     if (isNaN(days)) return allSales;
-    var cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    var cutoff;
+    if (days === 1) {
+      // "Hoje" = desde 00:00 do dia atual
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+      cutoff = today.getTime();
+    } else {
+      cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    }
     return allSales.filter(function(s) { return new Date(s.created_at).getTime() >= cutoff; });
   }, [allSales, dateRange]);
 
@@ -73,7 +82,7 @@ export default function AdminDashboard() {
     var commissions = filteredSales.reduce(function(s, v) { return s + Number(v.commission_earned || 0); }, 0);
     var uniqueAffiliates = new Set(filteredSales.map(function(s) { return s.affiliate_id; })).size;
     var days = parseInt(dateRange) || 30;
-    var avgPerDay = filteredSales.length / days;
+    var avgPerDay = filteredSales.length / (days === 1 ? 1 : days);
     return {
       totalSales: filteredSales.length,
       revenue: revenue,
@@ -91,12 +100,24 @@ export default function AdminDashboard() {
   // Previous period for comparison
   var previousKpis = useMemo(function() {
     var days = parseInt(dateRange) || 30;
+    if (dateRange === 'all') return { totalSales: 0, revenue: 0 };
     var now = Date.now();
-    var startPrev = now - days * 2 * 24 * 60 * 60 * 1000;
-    var endPrev = now - days * 24 * 60 * 60 * 1000;
+    var prevStart, prevEnd;
+    if (days === 1) {
+      var yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      var todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      prevStart = yesterday.getTime();
+      prevEnd = todayStart.getTime();
+    } else {
+      prevStart = now - days * 2 * 24 * 60 * 60 * 1000;
+      prevEnd = now - days * 24 * 60 * 60 * 1000;
+    }
     var prev = allSales.filter(function(s) {
       var t = new Date(s.created_at).getTime();
-      return t >= startPrev && t < endPrev;
+      return t >= prevStart && t < prevEnd;
     });
     return { totalSales: prev.length, revenue: prev.reduce(function(s, v) { return s + Number(v.product_value || 0); }, 0) };
   }, [allSales, dateRange]);
@@ -104,6 +125,12 @@ export default function AdminDashboard() {
   function trend(curr, prev) {
     if (prev === 0) return curr > 0 ? 100 : 0;
     return Math.round(((curr - prev) / prev) * 100);
+  }
+
+  function periodLabel() {
+    if (dateRange === 'all') return 'todo o período';
+    if (dateRange === '1') return 'de ontem';
+    return 'período anterior';
   }
 
   // Top affiliates filtered/sorted
@@ -146,9 +173,17 @@ export default function AdminDashboard() {
     { id: 'withdrawals', label: 'Saques' }
   ];
 
+  var dateRangeOptions = [
+    { v: '1', l: 'Hoje' },
+    { v: '3', l: '3 dias' },
+    { v: '7', l: '7 dias' },
+    { v: '30', l: '30 dias' },
+    { v: '90', l: '90 dias' },
+    { v: 'all', l: 'Tudo' }
+  ];
+
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAFA', color: '#1A1A1A', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif' }}>
-      {/* TOP BAR */}
       <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E5E5E5', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #1A1A1A, #333)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontWeight: 800, fontSize: 14 }}>JM</div>
@@ -164,16 +199,14 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* CONTAINER */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
-        {/* TITLE + FILTERS */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#1A1A1A' }}>Dashboard</div>
             <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Visão geral da performance da sua rede de afiliados</div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {[{v: '7', l: '7 dias'}, {v: '30', l: '30 dias'}, {v: '90', l: '90 dias'}, {v: 'all', l: 'Tudo'}].map(function(r) {
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            {dateRangeOptions.map(function(r) {
               return (
                 <button key={r.v} onClick={function() { setDateRange(r.v); }} style={{ padding: '8px 14px', background: dateRange === r.v ? '#1A1A1A' : '#FFFFFF', color: dateRange === r.v ? '#FFFFFF' : '#666', border: '1px solid ' + (dateRange === r.v ? '#1A1A1A' : '#E5E5E5'), borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>{r.l}</button>
               );
@@ -181,7 +214,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* TABS */}
         <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #E5E5E5', marginBottom: 24 }}>
           {tabs.map(function(t) {
             return (
@@ -193,15 +225,13 @@ export default function AdminDashboard() {
           })}
         </div>
 
-        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div>
-            {/* KPI CARDS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 24 }}>
               {[
-                { label: 'Faturamento', value: formatMoney(kpis.revenue), trend: trend(kpis.revenue, previousKpis.revenue), format: 'money' },
-                { label: 'Vendas', value: formatNumber(kpis.totalSales), trend: trend(kpis.totalSales, previousKpis.totalSales), format: 'count' },
-                { label: 'Comissões a pagar', value: formatMoney(kpis.commissions), sub: 'R$' + Math.round(kpis.commissions / (parseInt(dateRange) || 30)) + '/dia' },
+                { label: 'Faturamento', value: formatMoney(kpis.revenue), trend: trend(kpis.revenue, previousKpis.revenue) },
+                { label: 'Vendas', value: formatNumber(kpis.totalSales), trend: trend(kpis.totalSales, previousKpis.totalSales) },
+                { label: 'Comissões a pagar', value: formatMoney(kpis.commissions), sub: 'R$ ' + kpis.commissions.toFixed(2) + ' no período' },
                 { label: 'Lucro líquido', value: formatMoney(kpis.netRevenue), sub: 'Receita - comissões' },
                 { label: 'Afiliados ativos', value: kpis.activeAffiliates + ' / ' + kpis.totalAffiliates, sub: 'Com vendas no período' },
                 { label: 'Ticket médio', value: formatMoney(kpis.avgTicket), sub: kpis.avgPerDay.toFixed(1) + ' vendas/dia' }
@@ -212,7 +242,7 @@ export default function AdminDashboard() {
                     <div style={{ fontSize: 22, fontWeight: 700, color: '#1A1A1A', marginBottom: 4 }}>{k.value}</div>
                     {k.trend !== undefined && (
                       <div style={{ fontSize: 12, color: k.trend > 0 ? '#10B981' : k.trend < 0 ? '#EF4444' : '#888', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <span>{k.trend > 0 ? '↑' : k.trend < 0 ? '↓' : '–'}</span>{Math.abs(k.trend)}% vs período anterior
+                        <span>{k.trend > 0 ? '↑' : k.trend < 0 ? '↓' : '–'}</span>{Math.abs(k.trend)}% vs {periodLabel()}
                       </div>
                     )}
                     {k.sub && (<div style={{ fontSize: 12, color: '#888' }}>{k.sub}</div>)}
@@ -221,7 +251,6 @@ export default function AdminDashboard() {
               })}
             </div>
 
-            {/* CHART */}
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20, marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
@@ -232,9 +261,7 @@ export default function AdminDashboard() {
               <SalesChart data={dailyMetrics.slice(0, 30).reverse()} />
             </div>
 
-            {/* TOP 10 + PAGAMENTOS LAYOUT */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 16 }}>
-              {/* Top 10 */}
               <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Top 10 afiliados</div>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Por volume de vendas totais</div>
@@ -255,7 +282,6 @@ export default function AdminDashboard() {
                 })}
               </div>
 
-              {/* Próximos pagamentos */}
               <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Pagamentos pendentes</div>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Aguardando processamento</div>
@@ -278,7 +304,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* AFFILIATES TAB */}
         {activeTab === 'affiliates' && (
           <div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -323,7 +348,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* SALES TAB */}
         {activeTab === 'sales' && (
           <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8 }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E5E5', background: '#FAFAFA', display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr 1fr', gap: 12, fontSize: 11, fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: 0.3 }}>
@@ -345,7 +369,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* PAYMENTS TAB */}
         {activeTab === 'payments' && (
           <div>
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
@@ -375,7 +398,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* WITHDRAWALS TAB */}
         {activeTab === 'withdrawals' && (
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
@@ -444,7 +466,6 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* AFFILIATE DETAIL MODAL */}
       {selectedAffiliate && (<AffiliateDetailModal affiliate={selectedAffiliate} onClose={function() { setSelectedAffiliate(null); }} onToggleBlock={toggleBlock} formatMoney={formatMoney} formatDate={formatDate} />)}
     </div>
   );
@@ -454,7 +475,6 @@ function SalesChart({ data }) {
   if (!data || data.length === 0) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Sem dados</div>;
   var max = Math.max.apply(null, data.map(function(d) { return d.sales_count; }));
   if (max === 0) max = 1;
-  var width = 100 / data.length;
   return (
     <div style={{ position: 'relative', height: 180 }}>
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 20, top: 0, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
