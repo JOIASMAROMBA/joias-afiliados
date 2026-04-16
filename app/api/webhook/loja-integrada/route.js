@@ -52,11 +52,21 @@ function isPaidStatus(order) {
   return ['pago', 'paid', 'aprovado', 'approved', 'faturado', 'concluido', 'concluído'].some(s => status.includes(s));
 }
 
+function safeEqual(a, b) {
+  const ab = Buffer.from(String(a || ''));
+  const bb = Buffer.from(String(b || ''));
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
 export async function POST(request) {
   try {
     const url = new URL(request.url);
-    const secret = url.searchParams.get('secret');
-    if (!process.env.WEBHOOK_SECRET || secret !== process.env.WEBHOOK_SECRET) {
+    const envSecret = (process.env.WEBHOOK_SECRET || '').trim();
+    const secret = (url.searchParams.get('secret') || '').trim();
+    if (!envSecret || !safeEqual(secret, envSecret)) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
