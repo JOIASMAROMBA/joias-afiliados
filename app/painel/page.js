@@ -320,7 +320,7 @@ export default function PainelPage() {
             <button onClick={function() { setShowPostModal(true); }} style={{ width: '100%', padding: 12, background: 'linear-gradient(135deg, #FFD700 0%, #B8860B 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 20px rgba(255,215,0,0.3)' }}>✨ Registrar Postagem de Hoje</button>
 
             {obligations.length > 0 && (
-              <div style={{ marginTop: 12, padding: 10, borderRadius: 10, textAlign: 'center', background: pendingMissed > 0 ? 'rgba(255,80,80,0.1)' : 'rgba(0,255,136,0.1)', border: '1px solid ' + (pendingMissed > 0 ? 'rgba(255,80,80,0.3)' : 'rgba(0,255,136,0.3)') }}>
+              <div style={{ marginTop: 12, padding: 10, textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: pendingMissed > 0 ? '#ff6b6b' : '#00ff88' }}>
                   {pendingMissed === 0 ? '🎉 Parabéns! Você não falhou nenhum dia ainda!' : '⚠️ Você deixou de postar ' + pendingMissed + ' ' + (pendingMissed === 1 ? 'vez' : 'vezes') + '. Compense postando outro dia!'}
                   {compensated > 0 && pendingMissed > 0 && (<div style={{ fontSize: 10, marginTop: 4, color: '#00ff88' }}>(Você ja compensou {compensated})</div>)}
@@ -332,10 +332,10 @@ export default function PainelPage() {
           {allSales.length > 0 && (
             <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,215,0,0.3)', borderRadius: 20, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#FFD700' }}>💎 Ultima Venda</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ color: '#fff', fontWeight: 600 }}>{allSales[0].product_name}</div>
-                  <div style={{ color: 'rgba(255,215,0,0.4)', fontSize: 12 }}>{allSales[0].buyer_name}</div>
+                  <div style={{ color: '#fff', fontWeight: 600 }}>{allSales[0].buyer_name}</div>
+                  {allSales[0].buyer_city && (<div style={{ color: 'rgba(255,215,0,0.4)', fontSize: 12 }}>{allSales[0].buyer_city}</div>)}
                 </div>
                 <div style={{ color: '#FFD700', fontSize: 20, fontWeight: 900 }}>+R${allSales[0].commission_earned}</div>
               </div>
