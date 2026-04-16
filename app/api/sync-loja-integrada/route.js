@@ -54,16 +54,25 @@ function extractProductName(order) {
 }
 
 async function tryAuthModes(path) {
-  const modes = ['api-only', 'app-only', 'full'];
+  const chaveApi = (process.env.LOJA_INTEGRADA_API_KEY || '').trim();
+  const chaveAplicacao = (process.env.LOJA_INTEGRADA_APP_KEY || chaveApi).trim();
+  const separator = path.includes('?') ? '&' : '?';
+  const queryAuth = `chave_api=${encodeURIComponent(chaveApi)}&chave_aplicacao=${encodeURIComponent(chaveAplicacao)}`;
+
+  const modes = [
+    { name: 'query', url: `${LI_BASE}${path}${separator}${queryAuth}`, headers: { Accept: 'application/json' } },
+    { name: 'header-full', url: `${LI_BASE}${path}`, headers: buildAuthHeaders('full') },
+    { name: 'header-api-only', url: `${LI_BASE}${path}`, headers: buildAuthHeaders('api-only') },
+    { name: 'header-app-only', url: `${LI_BASE}${path}`, headers: buildAuthHeaders('app-only') },
+    { name: 'bearer', url: `${LI_BASE}${path}`, headers: { Authorization: `Bearer ${chaveApi}`, Accept: 'application/json' } },
+  ];
+
   const attempts = [];
-  for (const mode of modes) {
-    const res = await fetch(`${LI_BASE}${path}`, {
-      headers: buildAuthHeaders(mode),
-      cache: 'no-store',
-    });
+  for (const m of modes) {
+    const res = await fetch(m.url, { headers: m.headers, cache: 'no-store' });
     const body = await res.text().catch(() => '');
-    attempts.push({ mode, status: res.status, bodyPreview: body.slice(0, 200) });
-    if (res.ok) return { ok: true, mode, data: JSON.parse(body) };
+    attempts.push({ mode: m.name, status: res.status, bodyPreview: body.slice(0, 150) });
+    if (res.ok) return { ok: true, mode: m.name, data: JSON.parse(body) };
   }
   return { ok: false, attempts };
 }
