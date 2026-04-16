@@ -372,6 +372,11 @@ export default function AdminDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAFA', color: '#1A1A1A', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif', display: 'flex' }}>
       <style>{`
+        @media (max-width: 768px) {
+          .admin-sidebar { position: fixed !important; z-index: 100; }
+          .admin-content { padding: 16px !important; }
+          .admin-kpi-grid { grid-template-columns: 1fr 1fr !important; }
+        }
         @keyframes sirenPulse {
           0%, 100% { background-color: rgba(239, 68, 68, 0.1); border-color: #EF4444; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
           50% { background-color: rgba(239, 68, 68, 0.25); border-color: #DC2626; box-shadow: 0 0 0 8px rgba(239,68,68,0); }
@@ -390,7 +395,7 @@ export default function AdminDashboard() {
         }
       `}</style>
 
-      <aside style={{ width: sidebarOpen ? 240 : 68, background: '#FFFFFF', borderRight: '1px solid #E5E5E5', position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>
+      <aside className="admin-sidebar" style={{ width: sidebarOpen ? 240 : 68, background: '#FFFFFF', borderRight: '1px solid #E5E5E5', position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>
         <div style={{ padding: '18px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1A1A1A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>JM</div>
           {sidebarOpen && (<div><div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Joias Maromba</div><div style={{ fontSize: 11, color: '#888' }}>Admin</div></div>)}
