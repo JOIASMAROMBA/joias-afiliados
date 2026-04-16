@@ -1,33 +1,20 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
 
 export default function AdminPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(function() {
-    var id = localStorage.getItem('affiliate_id');
-    if (!id) { router.push('/login'); return; }
-    check(id);
+    setReady(true);
   }, []);
 
-  async function check(id) {
-    var r = await supabase.from('affiliates').select('is_admin, name').eq('id', id).single();
-    if (!r.data || !r.data.is_admin) { router.push('/login'); return; }
-    setIsAdmin(true);
-    setLoading(false);
-  }
-
-  if (loading) return (<div style={{ minHeight: '100vh', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando...</div>);
+  if (!ready) return null;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAFAFA', padding: 40 }}>
-      <h1>Dashboard Admin</h1>
-      <p>Funcionou! Esta e a versao basica. Vamos adicionar funcionalidades aos poucos.</p>
-      <button onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ marginTop: 20, padding: 10 }}>Sair</button>
+    <div style={{ minHeight: '100vh', background: '#fff', padding: 40, color: '#000' }}>
+      <h1>FUNCIONOU!</h1>
+      <p>Se você está vendo isso, o admin está OK.</p>
+      <button onClick={function() { localStorage.clear(); window.location.href = '/login'; }} style={{ padding: 10, marginTop: 20 }}>Sair</button>
     </div>
   );
 }
