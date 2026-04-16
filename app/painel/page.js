@@ -29,6 +29,15 @@ export default function PainelPage() {
   const [postMessage, setPostMessage] = useState('');
   const [activeTab, setActiveTab] = useState('home');
   const [motivationalPhrase, setMotivationalPhrase] = useState('');
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [editMessage, setEditMessage] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   var phrases = [
     '🔥 Bora pra cima! Você é brabo(a) e ninguém segura!',
@@ -108,6 +117,56 @@ export default function PainelPage() {
     setShowPostModal(false);
     setPostPlatform(''); setPostLink(''); setPostMessage('');
     loadData(id);
+  }
+
+  function openEditProfile() {
+    setEditName(affiliate.name || '');
+    setEditEmail(affiliate.email || '');
+    setEditPhone(affiliate.phone || '');
+    setEditPassword('');
+    setEditAvatarUrl(affiliate.avatar_url || '');
+    setEditMessage('');
+    setShowEditProfile(true);
+  }
+
+  async function handleAvatarUpload(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setEditMessage('Imagem muito grande (máx 5MB)'); return; }
+    setUploadingAvatar(true);
+    setEditMessage('');
+    try {
+      var ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      var fileName = affiliate.id + '-' + Date.now() + '.' + ext;
+      var up = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true, cacheControl: '3600' });
+      if (up.error) { setEditMessage('Erro no upload: ' + up.error.message); setUploadingAvatar(false); return; }
+      var pub = supabase.storage.from('avatars').getPublicUrl(fileName);
+      setEditAvatarUrl(pub.data.publicUrl);
+    } catch (err) {
+      setEditMessage('Erro: ' + err.message);
+    }
+    setUploadingAvatar(false);
+  }
+
+  async function saveProfile() {
+    if (!editName.trim()) { setEditMessage('Nome nao pode estar vazio'); return; }
+    if (!editEmail.trim()) { setEditMessage('Email nao pode estar vazio'); return; }
+    setSavingProfile(true);
+    var updates = {
+      name: editName.trim(),
+      email: editEmail.trim().toLowerCase(),
+      phone: editPhone.trim(),
+      avatar_url: editAvatarUrl || null,
+    };
+    if (editPassword.trim()) {
+      if (editPassword.trim().length !== 6) { setEditMessage('Senha deve ter 6 digitos'); setSavingProfile(false); return; }
+      updates.password_hash = editPassword.trim();
+    }
+    var res = await supabase.from('affiliates').update(updates).eq('id', affiliate.id);
+    if (res.error) { setEditMessage('Erro ao salvar: ' + res.error.message); setSavingProfile(false); return; }
+    setShowEditProfile(false);
+    setSavingProfile(false);
+    loadData(affiliate.id);
   }
 
   function viewReceipt(url) { setReceiptImage(url); setShowReceiptModal(true); }
@@ -226,14 +285,19 @@ export default function PainelPage() {
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #FFD700, #B8860B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#000', boxShadow: '0 4px 20px rgba(255,215,0,0.4)' }}>{affiliate && affiliate.avatar_initials}</div>
+        <div onClick={openEditProfile} style={{ width: 52, height: 52, borderRadius: '50%', background: affiliate && affiliate.avatar_url ? 'transparent' : 'linear-gradient(135deg, #FFD700, #B8860B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#000', boxShadow: '0 4px 20px rgba(255,215,0,0.4)', overflow: 'hidden', cursor: 'pointer', border: '2px solid #FFD700' }}>
+          {affiliate && affiliate.avatar_url ? (<img src={affiliate.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
+        </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>AFILIADO</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>Ola, {affiliate && affiliate.name && affiliate.name.split(' ')[0]}!</div>
+          <div onClick={openEditProfile} style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)', cursor: 'pointer', textDecoration: 'underline', marginTop: 2 }}>Editar perfil</div>
         </div>
-        <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))', border: '1px solid #FFD700', borderRadius: 12, padding: '6px 12px', textAlign: 'center' }}>
-          <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)' }}>Cupom</div>
-          <div style={{ color: '#FFD700', fontWeight: 800, fontSize: 14 }}>{affiliate && affiliate.coupon_code}</div>
+        <div style={{ background: '#F5C518', color: '#000', padding: '8px 10px', borderRadius: 6, fontWeight: 900, letterSpacing: 1, boxShadow: '0 2px 12px rgba(245,197,24,0.45)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, position: 'relative', minWidth: 68 }}>
+          <span style={{ position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)', width: 10, height: 10, borderRadius: '50%', background: '#000' }}></span>
+          <span style={{ position: 'absolute', bottom: -5, left: '50%', transform: 'translateX(-50%)', width: 10, height: 10, borderRadius: '50%', background: '#000' }}></span>
+          <span style={{ fontSize: 9, letterSpacing: 1.5 }}>CUPOM:</span>
+          <span style={{ fontSize: 13, borderTop: '1.5px dashed #000', paddingTop: 3, width: '100%', textAlign: 'center' }}>{affiliate && affiliate.coupon_code}</span>
         </div>
       </div>
 
@@ -553,6 +617,57 @@ export default function PainelPage() {
             </div>
             <img src={receiptImage} alt="Comprovante" style={{ width: '100%', borderRadius: 8 }} />
             <a href={receiptImage} download target="_blank" rel="noopener" style={{ display: 'block', marginTop: 12, padding: 12, background: 'linear-gradient(135deg, #FFD700, #B8860B)', borderRadius: 10, color: '#000', fontWeight: 800, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}>⬇ Baixar</a>
+          </div>
+        </div>
+      )}
+
+      {showEditProfile && (
+        <div onClick={function() { if (!savingProfile && !uploadingAvatar) setShowEditProfile(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10002, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.92)', padding: 20 }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 440, width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#0a0a0a', border: '2px solid #FFD700', borderRadius: 20, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>👤 Editar Perfil</div>
+              <button onClick={function() { if (!savingProfile && !uploadingAvatar) setShowEditProfile(false); }} style={{ background: 'none', border: 'none', color: '#FFD700', fontSize: 22, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
+              <div style={{ width: 100, height: 100, borderRadius: '50%', background: editAvatarUrl ? 'transparent' : 'linear-gradient(135deg, #FFD700, #B8860B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 800, color: '#000', boxShadow: '0 4px 20px rgba(255,215,0,0.5)', overflow: 'hidden', border: '3px solid #FFD700', marginBottom: 12 }}>
+                {editAvatarUrl ? (<img src={editAvatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
+              </div>
+              <label style={{ cursor: uploadingAvatar ? 'wait' : 'pointer', padding: '8px 16px', background: 'linear-gradient(135deg, #FFD700, #B8860B)', borderRadius: 10, color: '#000', fontWeight: 800, fontSize: 12, opacity: uploadingAvatar ? 0.6 : 1 }}>
+                {uploadingAvatar ? 'Enviando...' : '📷 Escolher Foto'}
+                <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploadingAvatar} style={{ display: 'none' }} />
+              </label>
+              {editAvatarUrl && (
+                <button onClick={function() { setEditAvatarUrl(''); }} style={{ marginTop: 8, background: 'none', border: 'none', color: 'rgba(255,107,107,0.8)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}>Remover foto</button>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(255,215,0,0.7)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Nome completo</label>
+              <input type="text" value={editName} onChange={function(e) { setEditName(e.target.value); }} style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(255,215,0,0.7)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Email</label>
+              <input type="email" value={editEmail} onChange={function(e) { setEditEmail(e.target.value); }} style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(255,215,0,0.7)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Telefone / WhatsApp</label>
+              <input type="text" value={editPhone} onChange={function(e) { setEditPhone(e.target.value); }} placeholder="(00) 00000-0000" style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(255,215,0,0.7)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Nova senha (opcional)</label>
+              <input type="password" value={editPassword} onChange={function(e) { setEditPassword(e.target.value); }} maxLength={6} placeholder="6 digitos" style={{ width: '100%', padding: '12px 14px', background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none', letterSpacing: 4 }} />
+              <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.5)', marginTop: 4 }}>Deixe em branco para manter a senha atual</div>
+            </div>
+
+            {editMessage && (<div style={{ marginBottom: 12, padding: 10, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, color: '#ff6b6b', fontSize: 12, textAlign: 'center' }}>{editMessage}</div>)}
+
+            <button onClick={saveProfile} disabled={savingProfile || uploadingAvatar} style={{ width: '100%', padding: 14, background: 'linear-gradient(135deg, #FFD700, #B8860B)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 900, fontSize: 14, cursor: savingProfile ? 'wait' : 'pointer', opacity: (savingProfile || uploadingAvatar) ? 0.6 : 1, boxShadow: '0 4px 20px rgba(255,215,0,0.4)' }}>
+              {savingProfile ? 'Salvando...' : '💾 Salvar Alteracoes'}
+            </button>
           </div>
         </div>
       )}
