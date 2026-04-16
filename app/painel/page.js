@@ -162,8 +162,13 @@ export default function PainelPage() {
       if (editPassword.trim().length !== 6) { setEditMessage('Senha deve ter 6 digitos'); setSavingProfile(false); return; }
       updates.password_hash = editPassword.trim();
     }
-    var res = await supabase.from('affiliates').update(updates).eq('id', affiliate.id);
+    var res = await supabase.from('affiliates').update(updates).eq('id', affiliate.id).select();
     if (res.error) { setEditMessage('Erro ao salvar: ' + res.error.message); setSavingProfile(false); return; }
+    if (!res.data || res.data.length === 0) {
+      setEditMessage('Nenhuma linha foi atualizada (RLS bloqueou o update). Rode o SQL de policy.');
+      setSavingProfile(false);
+      return;
+    }
     setShowEditProfile(false);
     setSavingProfile(false);
     loadData(affiliate.id);
