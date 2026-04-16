@@ -5,71 +5,82 @@ import { hashPassword, verifyPassword, signSession, COOKIE_NAME, SESSION_MAX_AGE
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
-  let body;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
-  }
+    if (!process.env.AUTH_JWT_SECRET || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: 'server_misconfigured', detail: 'missing env vars on server' }, { status: 500 });
+    }
 
-  const coupon = String(body?.coupon || '').trim();
-  const password = String(body?.password || '').trim();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
+    }
 
-  if (!coupon || !password) {
-    return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
-  }
+    const coupon = String(body?.coupon || '').trim();
+    const password = String(body?.password || '').trim();
 
-  const { data: affiliate, error } = await supabaseAdmin
-    .from('affiliates')
-    .select('id, name, coupon_code, password_hash, is_admin, blocked')
-    .ilike('coupon_code', coupon)
-    .maybeSingle();
+    if (!coupon || !password) {
+      return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
+    }
 
-  if (error || !affiliate) {
-    return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
-  }
+    const { data: affiliate, error } = await supabaseAdmin
+      .from('affiliates')
+      .select('id, name, coupon_code, password_hash, is_admin, blocked')
+      .ilike('coupon_code', coupon)
+      .maybeSingle();
 
-  if (affiliate.blocked) {
-    return NextResponse.json({ error: 'blocked' }, { status: 403 });
-  }
+    if (error) {
+      return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
+    }
+    if (!affiliate) {
+      return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
+    }
+    if (affiliate.blocked) {
+      return NextResponse.json({ error: 'blocked' }, { status: 403 });
+    }
+    if (!affiliate.password_hash) {
+      return NextResponse.json({ error: 'no_password_set' }, { status: 403 });
+    }
 
-  if (!affiliate.password_hash) {
-    return NextResponse.json({ error: 'no_password_set' }, { status: 403 });
-  }
+    const result = await verifyPassword(password, affiliate.password_hash);
+    if (!result.ok) {
+      return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
+    }
 
-  const result = await verifyPassword(password, affiliate.password_hash);
-  if (!result.ok) {
-    return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
-  }
+    if (result.needsRehash) {
+      try {
+        const newHash = await hashPassword(password);
+        await supabaseAdmin.from('affiliates').update({ password_hash: newHash }).eq('id', affiliate.id);
+      } catch {}
+    }
 
-  if (result.needsRehash) {
-    const newHash = await hashPassword(password);
-    await supabaseAdmin.from('affiliates').update({ password_hash: newHash }).eq('id', affiliate.id);
-  }
-
-  const token = signSession({
-    id: affiliate.id,
-    coupon: affiliate.coupon_code,
-    is_admin: !!affiliate.is_admin,
-  });
-
-  const res = NextResponse.json({
-    ok: true,
-    affiliate: {
+    const token = signSession({
       id: affiliate.id,
-      name: affiliate.name,
-      coupon_code: affiliate.coupon_code,
+      coupon: affiliate.coupon_code,
       is_admin: !!affiliate.is_admin,
-    },
-  });
+    });
 
-  res.cookies.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_MAX_AGE,
-  });
+    const res = NextResponse.json({
+      ok: true,
+      affiliate: {
+        id: affiliate.id,
+        name: affiliate.name,
+        coupon_code: affiliate.coupon_code,
+        is_admin: !!affiliate.is_admin,
+      },
+    });
 
-  return res;
+    res.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SESSION_MAX_AGE,
+    });
+
+    return res;
+  } catch (err) {
+    return NextResponse.json({ error: 'unexpected', detail: String(err?.message || err) }, { status: 500 });
+  }
 }

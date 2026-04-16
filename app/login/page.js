@@ -18,15 +18,19 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coupon: coupon.trim(), password: password.trim() }),
       });
-      const data = await res.json();
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
       if (!res.ok || !data.ok) {
         const map = {
           invalid_credentials: 'Cupom ou senha incorretos.',
           blocked: 'Conta bloqueada. Contate o suporte.',
           no_password_set: 'Senha nao cadastrada. Faca o cadastro primeiro.',
           missing_fields: 'Preencha cupom e senha.',
+          server_misconfigured: 'Servidor mal configurado. Avise o admin.',
+          db_error: 'Erro no banco: ' + (data.detail || ''),
+          unexpected: 'Erro inesperado: ' + (data.detail || ''),
         };
-        setError(map[data.error] || 'Erro ao entrar. Tente novamente.');
+        setError(map[data.error] || ('Erro ' + res.status + ': ' + (data.error || 'desconhecido')));
         setLoading(false);
         return;
       }
