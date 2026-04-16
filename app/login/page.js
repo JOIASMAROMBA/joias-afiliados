@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
 
 export default function LoginPage() {
   const [coupon, setCoupon] = useState('');
@@ -13,13 +12,33 @@ export default function LoginPage() {
   async function handleLogin() {
     setLoading(true);
     setError('');
-    var result = await supabase.from('affiliates').select('id, name, coupon_code, password_hash, is_admin').ilike('coupon_code', coupon.trim()).single();
-    if (result.error || !result.data) { setError('Cupom nao encontrado.'); setLoading(false); return; }
-    if (result.data.password_hash && result.data.password_hash !== password) { setError('Senha incorreta.'); setLoading(false); return; }
-    localStorage.setItem('affiliate_id', result.data.id);
-    localStorage.setItem('affiliate_name', result.data.name);
-    localStorage.setItem('affiliate_coupon', result.data.coupon_code);
-    if (result.data.is_admin) { router.push('/admin'); } else { router.push('/painel'); }
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coupon: coupon.trim(), password: password.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        const map = {
+          invalid_credentials: 'Cupom ou senha incorretos.',
+          blocked: 'Conta bloqueada. Contate o suporte.',
+          no_password_set: 'Senha nao cadastrada. Faca o cadastro primeiro.',
+          missing_fields: 'Preencha cupom e senha.',
+        };
+        setError(map[data.error] || 'Erro ao entrar. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('affiliate_id', data.affiliate.id);
+      localStorage.setItem('affiliate_name', data.affiliate.name);
+      localStorage.setItem('affiliate_coupon', data.affiliate.coupon_code);
+      if (data.affiliate.is_admin) router.push('/admin');
+      else router.push('/painel');
+    } catch (err) {
+      setError('Erro de conexao. Tente novamente.');
+      setLoading(false);
+    }
   }
 
   return (
