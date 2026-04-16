@@ -385,7 +385,7 @@ export default function PainelPage() {
                   }
                 }
                 return checkpoints.map(function(c, idx) {
-                  return (<div key={idx} style={{ position: 'absolute', left: 40, top: 'calc(' + c.topPct + '% + 20px)', width: 10, height: 10, borderRadius: '50%', background: c.reached ? '#FFD700' : 'rgba(255,215,0,0.25)', border: '2px solid ' + (c.reached ? '#FFD700' : 'rgba(255,215,0,0.4)'), boxShadow: c.reached ? '0 0 8px rgba(255,215,0,0.6)' : 'none', zIndex: 1 }} />);
+                  return (<div key={idx} style={{ position: 'absolute', left: 41, top: 'calc(' + c.topPct + '% + 20px)', width: 10, height: 10, borderRadius: '50%', background: c.reached ? '#FFD700' : 'rgba(255,215,0,0.25)', border: '2px solid ' + (c.reached ? '#FFD700' : 'rgba(255,215,0,0.4)'), boxShadow: c.reached ? '0 0 8px rgba(255,215,0,0.6)' : 'none', zIndex: 1 }} />);
                 });
               })()}
 
@@ -394,7 +394,7 @@ export default function PainelPage() {
                 var topCalc = (reversedPos / rewards.length) * 100;
                 return (
                   <div style={{ position: 'absolute', left: -10, top: 'calc(' + topCalc + '% + 10px)', display: 'flex', alignItems: 'center', gap: 6, zIndex: 3, transition: 'top 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', animation: 'floatRocket 2s ease-in-out infinite' }}>
-                    <div style={{ background: 'linear-gradient(135deg, #FFD700, #B8860B)', color: '#000', padding: '4px 8px', borderRadius: 10, fontSize: 11, fontWeight: 900, boxShadow: '0 0 15px rgba(255,215,0,0.6)', whiteSpace: 'nowrap' }}>{totalSales}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'linear-gradient(135deg, #FFD700, #B8860B)', color: '#000', padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 900, boxShadow: '0 0 15px rgba(255,215,0,0.6)', whiteSpace: 'nowrap' }}><span style={{ fontSize: 14 }}>🎫</span>{totalSales}</div>
                     <div style={{ fontSize: 36, filter: 'drop-shadow(0 0 20px rgba(255,215,0,0.8))' }}>🚀</div>
                   </div>
                 );
@@ -448,7 +448,7 @@ export default function PainelPage() {
 
                 return (
                   <div key={r.id} style={{ marginBottom: 24, position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: -22, top: 28, width: 28, height: 28, borderRadius: '50%', background: achieved ? 'linear-gradient(135deg, #00ff88, #00cc6a)' : isTop ? 'linear-gradient(135deg, #FFD700, #FF8C00)' : isMid ? 'linear-gradient(135deg, #E8E8E8, #A8A8A8)' : 'linear-gradient(135deg, #CD7F32, #8B4513)', border: '3px solid ' + (achieved ? '#00ff88' : isTop ? '#FFD700' : isMid ? '#C0C0C0' : '#CD7F32'), boxShadow: achieved ? '0 0 15px rgba(0,255,136,0.8)' : isTop ? '0 0 20px rgba(255,215,0,0.9)' : '0 0 10px rgba(255,215,0,0.4)', zIndex: 2 }}>
+                    <div style={{ position: 'absolute', left: -28, top: -14, width: 28, height: 28, borderRadius: '50%', background: achieved ? 'linear-gradient(135deg, #00ff88, #00cc6a)' : isTop ? 'linear-gradient(135deg, #FFD700, #FF8C00)' : isMid ? 'linear-gradient(135deg, #E8E8E8, #A8A8A8)' : 'linear-gradient(135deg, #CD7F32, #8B4513)', border: '3px solid ' + (achieved ? '#00ff88' : isTop ? '#FFD700' : isMid ? '#C0C0C0' : '#CD7F32'), boxShadow: achieved ? '0 0 15px rgba(0,255,136,0.8)' : isTop ? '0 0 20px rgba(255,215,0,0.9)' : '0 0 10px rgba(255,215,0,0.4)', zIndex: 2 }}>
                       {achieved && <div style={{ textAlign: 'center', color: '#000', fontSize: 14, fontWeight: 900, lineHeight: '22px' }}>✓</div>}
                     </div>
 
