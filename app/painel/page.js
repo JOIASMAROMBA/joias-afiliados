@@ -229,7 +229,7 @@ export default function PainelPage() {
         <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #FFD700, #B8860B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#000', boxShadow: '0 4px 20px rgba(255,215,0,0.4)' }}>{affiliate && affiliate.avatar_initials}</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>AFILIADO</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>Ola, {affiliate && affiliate.name && affiliate.name.split(' ')[0]}!</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>Ola, {affiliate && affiliate.name && affiliate.name.split(' ')[0]}!</div>
         </div>
         <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))', border: '1px solid #FFD700', borderRadius: 12, padding: '6px 12px', textAlign: 'center' }}>
           <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)' }}>Cupom</div>
