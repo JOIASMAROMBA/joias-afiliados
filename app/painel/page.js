@@ -370,10 +370,7 @@ export default function PainelPage() {
                   var nextVal = Number(rewards[i].target_value);
                   var diff = nextVal - prevVal;
 
-                  var numCheckpoints;
-                  if (diff <= 10) numCheckpoints = 4;
-                  else if (diff <= 50) numCheckpoints = 6;
-                  else numCheckpoints = 8;
+                  var numCheckpoints = 4;
 
                   for (var k = 1; k <= numCheckpoints; k++) {
                     var fraction = k / (numCheckpoints + 1);
@@ -393,8 +390,8 @@ export default function PainelPage() {
                 var reversedPos = rewards.length - rocketPos;
                 var topCalc = (reversedPos / rewards.length) * 100;
                 return (
-                  <div style={{ position: 'absolute', left: -10, top: 'calc(' + topCalc + '% + 10px)', display: 'flex', alignItems: 'center', gap: 6, zIndex: 3, transition: 'top 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', animation: 'floatRocket 2s ease-in-out infinite' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'linear-gradient(135deg, #FFD700, #B8860B)', color: '#000', padding: '4px 10px', borderRadius: 10, fontSize: 12, fontWeight: 900, boxShadow: '0 0 15px rgba(255,215,0,0.6)', whiteSpace: 'nowrap' }}><span style={{ fontSize: 14 }}>🎫</span>{totalSales}</div>
+                  <div style={{ position: 'absolute', left: 0, width: 64, top: 'calc(' + topCalc + '% + 10px)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, zIndex: 3, transition: 'top 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', animation: 'floatRocket 2s ease-in-out infinite' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #FFD700, #B8860B)', color: '#000', padding: '4px 8px', borderRadius: 10, fontSize: 11, fontWeight: 900, boxShadow: '0 0 15px rgba(255,215,0,0.6)', whiteSpace: 'nowrap' }}>{totalSales}</div>
                     <div style={{ fontSize: 36, filter: 'drop-shadow(0 0 20px rgba(255,215,0,0.8))' }}>🚀</div>
                   </div>
                 );
@@ -484,8 +481,8 @@ export default function PainelPage() {
             </div>
           )}
 
-          <div style={{ marginTop: 30, padding: 20, background: 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))', border: '1px solid rgba(255,215,0,0.2)', borderRadius: 16, textAlign: 'center', animation: 'fadeMotivation 3s ease-in-out infinite' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#FFD700', lineHeight: 1.5 }}>{motivationalPhrase}</div>
+          <div style={{ marginTop: 30, textAlign: 'center', animation: 'fadeMotivation 3s ease-in-out infinite' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700', lineHeight: 1.4 }}>{motivationalPhrase}</div>
           </div>
         </div>
       )}
