@@ -31,6 +31,15 @@ export default function EsqueciSenhaPage() {
         setLoading(false);
         return;
       }
+      if (data.email_sent === false) {
+        if (data.email_error) {
+          setMessage('Senha foi resetada no banco, mas o email nao saiu: ' + data.email_error);
+        } else {
+          setMessage('Senha resetada no banco, mas o envio de email nao esta configurado. Avise o admin.');
+        }
+        setLoading(false);
+        return;
+      }
       setSuccess(true);
     } catch (err) {
       setMessage('Erro de conexao. Tente novamente.');
