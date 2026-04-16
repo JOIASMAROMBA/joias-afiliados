@@ -30,9 +30,7 @@ export default function CadastroPage() {
       const res = await fetch('/api/auth/check-coupon?coupon=' + encodeURIComponent(form.coupon.trim()));
       const data = await res.json();
       setCouponStatus(data.available ? 'available' : 'taken');
-    } catch {
-      setCouponStatus('');
-    }
+    } catch { setCouponStatus(''); }
     setCouponChecking(false);
   };
 
@@ -79,34 +77,16 @@ export default function CadastroPage() {
       if (form.facebook) social.facebook = form.facebook;
       if (form.tiktok) social.tiktok = form.tiktok;
       if (form.outro) social.outro = form.outro;
-
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          coupon: form.coupon.trim(),
-          password: form.password,
-          age: form.age,
-          city: form.city,
-          platforms: form.platforms,
-          social,
-        }),
+        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), coupon: form.coupon.trim(), password: form.password, age: form.age, city: form.city, platforms: form.platforms, social }),
       });
       let data;
       try { data = await res.json(); } catch { data = {}; }
       if (!res.ok || !data.ok) {
-        const map = {
-          coupon_taken: 'Esse cupom ja foi usado.',
-          email_taken: 'Esse e-mail ja esta cadastrado.',
-          invalid_name: 'Nome invalido.',
-          invalid_email: 'E-mail invalido.',
-          invalid_coupon: 'Cupom invalido (apenas letras e numeros, 3 a 40 chars).',
-          invalid_password: 'Senha deve ter 6 digitos numericos.',
-          rate_limited: 'Muitas tentativas. Aguarde alguns minutos.',
-        };
-        setError(map[data.error] || 'Erro ao cadastrar. Tente novamente.');
+        const map = { coupon_taken: 'Esse cupom ja foi usado.', email_taken: 'Esse e-mail ja esta cadastrado.', invalid_name: 'Nome invalido.', invalid_email: 'E-mail invalido.', invalid_coupon: 'Cupom invalido.', invalid_password: 'Senha deve ter 6 digitos.', rate_limited: 'Muitas tentativas. Aguarde.' };
+        setError(map[data.error] || 'Erro ao cadastrar.');
         setLoading(false);
         return;
       }
@@ -122,40 +102,65 @@ export default function CadastroPage() {
     }
   };
 
-  if (showTicket) {
+  const bgStyle = { minHeight: '100vh', background: '#000', position: 'relative', overflow: 'hidden', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif" };
+  const bgEffects = (<>
+    <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(201,169,97,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(201,169,97,0.06) 1px, transparent 1px)', backgroundSize: '60px 60px', animation: 'gridPulse 4s ease-in-out infinite', pointerEvents: 'none' }} />
+    <div style={{ position: 'absolute', top: '50%', left: '50%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,169,97,0.12) 0%, transparent 70%)', transform: 'translate(-50%, -50%)', animation: 'goldGlow 6s ease-in-out infinite', pointerEvents: 'none' }} />
+    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at top, rgba(0,0,0,0) 0%, #000 80%)', pointerEvents: 'none' }} />
+  </>);
+  const globalStyles = (<style>{`
+    @keyframes gridPulse { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.3; } }
+    @keyframes goldGlow { 0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.1); } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes ticketEntry { 0% { opacity: 0; transform: scale(0.8) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); } }
+    @keyframes sparkleRain { 0% { transform: translateY(-20px); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(100vh); opacity: 0; } }
+    input.premium::placeholder { color: rgba(255,255,255,0.25); font-weight: 400; }
+    input.premium:-webkit-autofill { -webkit-box-shadow: 0 0 0 1000px rgba(20,20,20,0.8) inset !important; -webkit-text-fill-color: #fff !important; transition: background-color 9999s ease-out; }
+  `}</style>);
+
+  const inputStyle = (focused) => ({ width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', border: '1px solid ' + (focused ? 'rgba(201,169,97,0.5)' : 'rgba(255,255,255,0.1)'), borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 500, outline: 'none', transition: 'all 0.3s', boxShadow: focused ? '0 0 0 4px rgba(201,169,97,0.08)' : 'none', boxSizing: 'border-box' });
+  const labelStyle = { display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 };
+  const primaryBtn = (disabled) => ({ width: '100%', padding: '15px 24px', background: disabled ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)', border: '1px solid ' + (disabled ? 'rgba(255,255,255,0.08)' : 'rgba(201,169,97,0.6)'), borderRadius: 10, color: disabled ? 'rgba(255,255,255,0.3)' : '#1a1306', fontWeight: 700, fontSize: 15, letterSpacing: 0.5, cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.3s', boxShadow: disabled ? 'none' : '0 8px 24px rgba(201,169,97,0.3), inset 0 1px 0 rgba(255,255,255,0.35)' });
+
+  if (showWelcome) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)' }}>
-        {Array.from({ length: 40 }).map(function(_, i) { return (
-          <div key={i} style={{ position: 'absolute', left: Math.random()*100+'%', top: -20, fontSize: Math.random()*20+16, animation: 'moneyRain '+(Math.random()*2+2)+'s linear '+(Math.random()*1.5)+'s infinite', opacity: 0.8 }}>{['🪙','💰','💵','✨','🪙','💎'][Math.floor(Math.random()*6)]}</div>
-        ); })}
-        <div style={{ animation: 'slideUp 0.6s cubic-bezier(0.34,1.56,0.64,1)', maxWidth: 360, width: '90%', textAlign: 'center' }}>
-          <div style={{ background: 'linear-gradient(145deg, #FFD700 0%, #FFA500 30%, #FFD700 50%, #B8860B 70%, #FFD700 100%)', borderRadius: 24, padding: '40px 28px', boxShadow: '0 0 60px rgba(255,215,0,0.5), 0 0 120px rgba(255,215,0,0.2)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ fontSize: 14, color: 'rgba(26,10,46,0.5)', textTransform: 'uppercase', letterSpacing: 3, fontWeight: 700, marginBottom: 8 }}>GOLDEN TICKET</div>
-              <div style={{ width: 60, height: 2, background: 'rgba(26,10,46,0.2)', margin: '0 auto 16px' }} />
-              <div style={{ fontSize: 13, color: 'rgba(26,10,46,0.6)', marginBottom: 4 }}>Cupom exclusivo de</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 900, color: '#1a0a2e', marginBottom: 4 }}>{form.name.split(' ')[0]}</div>
-              <div style={{ fontSize: 36, fontWeight: 900, color: '#1a0a2e', letterSpacing: 4, padding: '12px 0', borderTop: '2px dashed rgba(26,10,46,0.2)', borderBottom: '2px dashed rgba(26,10,46,0.2)', margin: '12px 0', fontFamily: "'DM Sans', sans-serif" }}>{form.coupon}</div>
-              <div style={{ fontSize: 14, color: 'rgba(26,10,46,0.6)', marginBottom: 4 }}>Comissao por venda</div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#1a0a2e' }}>R$30,00</div>
-              <div style={{ fontSize: 11, color: 'rgba(26,10,46,0.4)', marginTop: 8 }}>Valido enquanto ativo</div>
-            </div>
+      <div style={bgStyle}>
+        {globalStyles}
+        {bgEffects}
+        <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ textAlign: 'center', animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <div style={{ fontSize: 64, marginBottom: 20, filter: 'drop-shadow(0 0 30px rgba(201,169,97,0.6))' }}>✦</div>
+            <h1 style={{ fontSize: 32, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 8, letterSpacing: -0.5 }}>Seja bem-vindo</h1>
+            <p style={{ color: '#C9A961', fontSize: 15, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>Bora lucrar</p>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Abrindo seu painel...</p>
           </div>
-          <button onClick={handleTicketClose} style={{ marginTop: 24, padding: '16px 40px', background: 'linear-gradient(135deg, #00ff88, #00cc6a)', border: 'none', borderRadius: 16, color: '#1a0a2e', fontWeight: 800, fontSize: 16, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 24px rgba(0,255,136,0.4)', animation: 'pulse 2s ease-in-out infinite' }}>ATIVAR MEU CUPOM!</button>
         </div>
       </div>
     );
   }
 
-  if (showWelcome) {
+  if (showTicket) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'linear-gradient(135deg, #0f0520 0%, #1a0a2e 40%, #0d0a1a 100%)' }}>
-        <div style={{ textAlign: 'center', animation: 'slideUp 0.5s ease-out', maxWidth: 400, position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: 60, marginBottom: 16, animation: 'float 2s ease-in-out infinite' }}>🚀</div>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 800, color: '#FFD700', marginBottom: 12 }}>Seja bem-vindo(a)!</h2>
-          <p style={{ color: '#00ff88', fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Bora lucrar!</p>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Abrindo seu painel...</p>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', padding: 24, overflow: 'hidden' }}>
+        {globalStyles}
+        {bgEffects}
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} style={{ position: 'absolute', left: (Math.random() * 100) + '%', top: -20, fontSize: Math.random() * 12 + 10, animation: 'sparkleRain ' + (Math.random() * 3 + 3) + 's linear ' + (Math.random() * 2) + 's infinite', color: '#C9A961', opacity: 0.6 }}>✦</div>
+        ))}
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: 400, width: '100%', textAlign: 'center', animation: 'ticketEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+          <div style={{ background: 'linear-gradient(145deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)', borderRadius: 16, padding: '36px 28px', boxShadow: '0 0 80px rgba(201,169,97,0.4), 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.3)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg, transparent, transparent 14px, rgba(0,0,0,0.04) 14px, rgba(0,0,0,0.04) 28px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize: 11, color: 'rgba(26,19,6,0.6)', textTransform: 'uppercase', letterSpacing: 3, fontWeight: 700, marginBottom: 10 }}>Golden Ticket</div>
+              <div style={{ width: 40, height: 1, background: 'rgba(26,19,6,0.3)', margin: '0 auto 16px' }} />
+              <div style={{ fontSize: 12, color: 'rgba(26,19,6,0.6)', marginBottom: 4 }}>Cupom exclusivo de</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#1a1306', marginBottom: 12, letterSpacing: -0.5 }}>{form.name.split(' ')[0]}</div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: '#1a1306', letterSpacing: 4, padding: '14px 0', borderTop: '1.5px dashed rgba(26,19,6,0.3)', borderBottom: '1.5px dashed rgba(26,19,6,0.3)', margin: '12px 0' }}>{form.coupon}</div>
+              <div style={{ fontSize: 12, color: 'rgba(26,19,6,0.6)', marginTop: 12, marginBottom: 4 }}>Comissão por venda</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#1a1306' }}>R$ 30,00</div>
+            </div>
+          </div>
+          <button onClick={handleTicketClose} style={{ marginTop: 24, padding: '15px 36px', background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, color: '#C9A961', fontWeight: 700, fontSize: 14, letterSpacing: 1, textTransform: 'uppercase', cursor: 'pointer' }}>Ativar meu cupom</button>
         </div>
       </div>
     );
@@ -163,115 +168,136 @@ export default function CadastroPage() {
 
   if (step === 2) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'linear-gradient(135deg, #0f0520 0%, #1a0a2e 40%, #0d0a1a 100%)' }}>
-        <div style={{ width: '100%', maxWidth: 400, animation: 'slideUp 0.5s ease-out' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 44, marginBottom: 12 }}>🔐</div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 800, color: '#FFD700', marginBottom: 8 }}>Crie sua senha</h1>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Seu login sera o cupom <strong style={{ color: '#FFD700' }}>{form.coupon}</strong></p>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 28 }}>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>Senha (6 numeros)</label>
-              <input type="password" inputMode="numeric" value={form.password} onChange={function(e) { handleChange('password', e.target.value); }} placeholder="000000" maxLength={6} style={{ width: '100%', padding: '16px 20px', background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,215,0,0.2)', borderRadius: 14, color: '#FFD700', fontSize: 28, fontWeight: 800, textAlign: 'center', letterSpacing: 8, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+      <div style={bgStyle}>
+        {globalStyles}
+        {bgEffects}
+        <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ width: '100%', maxWidth: 420, animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg, rgba(201,169,97,0.15), rgba(201,169,97,0.02))', border: '1px solid rgba(201,169,97,0.25)', marginBottom: 20, boxShadow: '0 8px 32px rgba(201,169,97,0.08)', fontSize: 26 }}>🔒</div>
+              <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, margin: 0, marginBottom: 8, letterSpacing: -0.3 }}>Crie sua senha</h1>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Login será o cupom <strong style={{ color: '#C9A961' }}>{form.coupon}</strong></p>
             </div>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>Confirme a senha</label>
-              <input type="password" inputMode="numeric" value={form.passwordConfirm} onChange={function(e) { handleChange('passwordConfirm', e.target.value); }} placeholder="000000" maxLength={6} style={{ width: '100%', padding: '16px 20px', background: 'rgba(255,255,255,0.08)', border: '2px solid ' + (form.passwordConfirm.length === 6 && form.password === form.passwordConfirm ? 'rgba(0,255,136,0.5)' : 'rgba(255,215,0,0.2)'), borderRadius: 14, color: form.passwordConfirm.length === 6 && form.password === form.passwordConfirm ? '#00ff88' : '#FFD700', fontSize: 28, fontWeight: 800, textAlign: 'center', letterSpacing: 8, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
-              {form.passwordConfirm.length === 6 && form.password === form.passwordConfirm && (<div style={{ textAlign: 'center', marginTop: 8, color: '#00ff88', fontSize: 12, fontWeight: 600 }}>Senhas conferem!</div>)}
+            <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>Senha (6 dígitos)</label>
+                <input type="password" className="premium" inputMode="numeric" value={form.password} onChange={(e) => handleChange('password', e.target.value)} placeholder="••••••" maxLength={6} style={{ ...inputStyle(false), fontSize: 18, letterSpacing: form.password ? 8 : 1, textAlign: form.password ? 'center' : 'left' }} />
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>Confirme a senha</label>
+                <input type="password" className="premium" inputMode="numeric" value={form.passwordConfirm} onChange={(e) => handleChange('passwordConfirm', e.target.value)} placeholder="••••••" maxLength={6} style={{ ...inputStyle(form.passwordConfirm.length === 6 && form.password === form.passwordConfirm), fontSize: 18, letterSpacing: form.passwordConfirm ? 8 : 1, textAlign: form.passwordConfirm ? 'center' : 'left' }} />
+                {form.passwordConfirm.length === 6 && form.password === form.passwordConfirm && (<div style={{ textAlign: 'center', marginTop: 8, color: '#C9A961', fontSize: 11, fontWeight: 600, letterSpacing: 1 }}>✓ SENHAS CONFEREM</div>)}
+              </div>
+              {error && (<div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)', borderRadius: 8, color: '#ff6b6b', fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}><span>⚠</span>{error}</div>)}
+              <button onClick={handleCreatePassword} disabled={loading || form.password.length !== 6 || form.password !== form.passwordConfirm} style={primaryBtn(loading || form.password.length !== 6 || form.password !== form.passwordConfirm)}>{loading ? 'Criando...' : 'Acessar o painel'}</button>
             </div>
-            {error && (<div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: 10, color: '#ff6b6b', fontSize: 13, textAlign: 'center' }}>{error}</div>)}
-            <button onClick={handleCreatePassword} disabled={loading} style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #FFD700, #FFA500)', border: 'none', borderRadius: 14, color: '#1a0a2e', fontWeight: 800, fontSize: 16, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 20px rgba(255,215,0,0.3)', opacity: loading ? 0.7 : 1 }}>{loading ? 'Criando...' : 'Acessar o Painel!'}</button>
           </div>
         </div>
       </div>
     );
   }
 
-  var platformOptions = [
-    { id: 'instagram', label: 'Instagram', icon: '📸' },
-    { id: 'facebook', label: 'Facebook', icon: '👤' },
-    { id: 'tiktok', label: 'TikTok', icon: '🎵' },
-    { id: 'outro', label: 'Outro', icon: '🌐' }
+  const platformOptions = [
+    { id: 'instagram', label: 'Instagram', icon: '📷' },
+    { id: 'facebook', label: 'Facebook', icon: '👥' },
+    { id: 'tiktok', label: 'TikTok', icon: '🎶' },
+    { id: 'outro', label: 'Outro', icon: '🌐' },
   ];
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'linear-gradient(135deg, #0f0520 0%, #1a0a2e 40%, #0d0a1a 100%)' }}>
-      <div style={{ width: '100%', maxWidth: 420, animation: 'slideUp 0.5s ease-out' }}>
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 44, marginBottom: 12, animation: 'float 3s ease-in-out infinite' }}>💎</div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 800, background: 'linear-gradient(90deg, #FFD700, #FFA500)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>Quero ser Afiliado(a)</h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Ganhe <strong style={{ color: '#00ff88' }}>R$30 por venda</strong> divulgando nossas joias</p>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 28 }}>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>Nome completo *</label>
-            <input type="text" value={form.name} onChange={function(e) { handleChange('name', e.target.value); }} placeholder="Seu nome completo" style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 14, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+    <div style={bgStyle}>
+      {globalStyles}
+      {bgEffects}
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ width: '100%', maxWidth: 440, animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 100, height: 100, marginBottom: 12, position: 'relative' }}>
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,169,97,0.18) 0%, transparent 70%)', filter: 'blur(20px)' }} />
+              <img src="/logo.png" alt="Joias Maromba" style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.92, filter: 'drop-shadow(0 4px 20px rgba(201,169,97,0.35))', position: 'relative', zIndex: 1 }} />
+            </div>
+            <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, letterSpacing: -0.3, margin: 0, marginBottom: 6 }}>Seja Afiliada</h1>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0 }}>Ganhe <strong style={{ color: '#C9A961' }}>R$ 30 por venda</strong> divulgando nossas joias</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, marginBottom: 14 }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>Idade *</label>
-              <input type="number" value={form.age} onChange={function(e) { handleChange('age', e.target.value); }} placeholder="25" style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 14, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+
+          <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Nome completo</label>
+              <input type="text" className="premium" value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Seu nome completo" style={inputStyle(false)} />
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>Cidade *</label>
-              <input type="text" value={form.city} onChange={function(e) { handleChange('city', e.target.value); }} placeholder="Sua cidade" style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 14, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, marginBottom: 14 }}>
+              <div>
+                <label style={labelStyle}>Idade</label>
+                <input type="number" className="premium" value={form.age} onChange={(e) => handleChange('age', e.target.value)} placeholder="25" style={inputStyle(false)} />
+              </div>
+              <div>
+                <label style={labelStyle}>Cidade</label>
+                <input type="text" className="premium" value={form.city} onChange={(e) => handleChange('city', e.target.value)} placeholder="Sua cidade" style={inputStyle(false)} />
+              </div>
             </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>E-mail</label>
+              <input type="email" className="premium" value={form.email} onChange={(e) => handleChange('email', e.target.value)} placeholder="seu@email.com" style={inputStyle(false)} />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Onde vai divulgar</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {platformOptions.map((p) => {
+                  const selected = form.platforms.includes(p.id);
+                  return (
+                    <button key={p.id} onClick={() => togglePlatform(p.id)} style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid ' + (selected ? 'rgba(201,169,97,0.5)' : 'rgba(255,255,255,0.1)'), background: selected ? 'rgba(201,169,97,0.08)' : 'rgba(255,255,255,0.02)', color: selected ? '#C9A961' : 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}>
+                      <span style={{ fontSize: 16 }}>{p.icon}</span>{p.label}
+                      {selected && <span style={{ marginLeft: 'auto' }}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {form.platforms.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {form.platforms.map((p) => {
+                  const opt = platformOptions.find((o) => o.id === p);
+                  return (
+                    <div key={p} style={{ marginBottom: 10 }}>
+                      <label style={labelStyle}><span style={{ marginRight: 6 }}>{opt.icon}</span>Seu @ no {opt.label}</label>
+                      <input type="text" className="premium" value={form[p]} onChange={(e) => handleChange(p, e.target.value)} placeholder={'@seu_' + p} style={inputStyle(false)} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Crie seu cupom</label>
+              <input type="text" className="premium" value={form.coupon} onChange={(e) => handleChange('coupon', e.target.value)} placeholder="SEUNOME" maxLength={20} style={{ ...inputStyle(couponStatus === 'available'), fontSize: 15, fontWeight: 700, textAlign: 'center', letterSpacing: 2, color: couponStatus === 'available' ? '#C9A961' : couponStatus === 'taken' ? '#ff6b6b' : '#fff', borderColor: couponStatus === 'taken' ? 'rgba(255,107,107,0.4)' : (couponStatus === 'available' ? 'rgba(201,169,97,0.5)' : 'rgba(255,255,255,0.1)') }} />
+              <div style={{ textAlign: 'center', marginTop: 6, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, minHeight: 14 }}>
+                {couponChecking && <span style={{ color: 'rgba(255,255,255,0.4)' }}>Verificando...</span>}
+                {couponStatus === 'available' && <span style={{ color: '#C9A961' }}>✓ DISPONÍVEL</span>}
+                {couponStatus === 'taken' && <span style={{ color: '#ff6b6b' }}>✗ CUPOM EM USO</span>}
+              </div>
+            </div>
+
+            <div onClick={() => handleChange('agreedCommission', !form.agreedCommission)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px', marginBottom: 18, borderRadius: 10, background: form.agreedCommission ? 'rgba(201,169,97,0.06)' : 'rgba(255,255,255,0.02)', border: '1px solid ' + (form.agreedCommission ? 'rgba(201,169,97,0.3)' : 'rgba(255,255,255,0.08)'), cursor: 'pointer', transition: 'all 0.3s' }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, border: '2px solid ' + (form.agreedCommission ? '#C9A961' : 'rgba(255,255,255,0.2)'), background: form.agreedCommission ? '#C9A961' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.3s' }}>
+                {form.agreedCommission && <span style={{ color: '#1a1306', fontSize: 13, fontWeight: 900 }}>✓</span>}
+              </div>
+              <div>
+                <div style={{ color: form.agreedCommission ? '#C9A961' : 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>Aceito a comissão de R$ 30 por peça</div>
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 2 }}>Pagamento via PIX até 24h após solicitação</div>
+              </div>
+            </div>
+
+            {error && (<div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)', borderRadius: 8, color: '#ff6b6b', fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}><span>⚠</span>{error}</div>)}
+
+            <button onClick={handleStep1Submit} disabled={loading} style={primaryBtn(loading)}>{loading ? 'Verificando...' : 'Confirmar e criar cupom'}</button>
           </div>
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>E-mail *</label>
-            <input type="email" value={form.email} onChange={function(e) { handleChange('email', e.target.value); }} placeholder="seu@email.com" style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 14, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+
+          <div style={{ textAlign: 'center', marginTop: 20, color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
+            Já tem cupom? <span onClick={() => router.push('/login')} style={{ color: '#C9A961', cursor: 'pointer', fontWeight: 600 }}>Fazer login</span>
           </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', marginBottom: 8, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>Onde deseja anunciar? *</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {platformOptions.map(function(p) {
-                var selected = form.platforms.includes(p.id);
-                return (
-                  <button key={p.id} onClick={function() { togglePlatform(p.id); }} style={{ padding: '12px 14px', borderRadius: 12, border: selected ? '2px solid #FFD700' : '1px solid rgba(255,255,255,0.1)', background: selected ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.03)', color: selected ? '#FFD700' : 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 18 }}>{p.icon}</span>{p.label}
-                    {selected && <span style={{ marginLeft: 'auto', color: '#FFD700' }}>✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          {form.platforms.length > 0 && (
-            <div style={{ marginBottom: 18 }}>
-              {form.platforms.map(function(p) {
-                var opt = platformOptions.find(function(o) { return o.id === p; });
-                return (
-                  <div key={p} style={{ marginBottom: 10 }}>
-                    <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>{opt.icon} Seu @ no {opt.label}</label>
-                    <input type="text" value={form[p]} onChange={function(e) { handleChange(p, e.target.value); }} placeholder={'@seu_' + p} style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 14, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: 'block', marginBottom: 6, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600 }}>Crie seu cupom *</label>
-            <input type="text" value={form.coupon} onChange={function(e) { handleChange('coupon', e.target.value); }} placeholder="Ex: SEUNOME" maxLength={20} style={{ width: '100%', padding: '14px 18px', background: 'rgba(255,215,0,0.06)', border: '2px solid ' + (couponStatus === 'available' ? 'rgba(0,255,136,0.5)' : couponStatus === 'taken' ? 'rgba(255,80,80,0.5)' : 'rgba(255,215,0,0.2)'), borderRadius: 14, color: couponStatus === 'available' ? '#00ff88' : '#FFD700', fontSize: 18, fontWeight: 800, textAlign: 'center', letterSpacing: 2, outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
-            <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, fontWeight: 600 }}>
-              {couponChecking && <span style={{ color: 'rgba(255,255,255,0.4)' }}>Verificando...</span>}
-              {couponStatus === 'available' && <span style={{ color: '#00ff88' }}>Disponivel! Este cupom e seu!</span>}
-              {couponStatus === 'taken' && <span style={{ color: '#ff6b6b' }}>Cupom ja em uso. Tente outro.</span>}
-            </div>
-          </div>
-          <div onClick={function() { handleChange('agreedCommission', !form.agreedCommission); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 20, borderRadius: 14, background: form.agreedCommission ? 'rgba(0,255,136,0.08)' : 'rgba(255,255,255,0.03)', border: form.agreedCommission ? '1px solid rgba(0,255,136,0.3)' : '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
-            <div style={{ width: 24, height: 24, borderRadius: 6, border: form.agreedCommission ? '2px solid #00ff88' : '2px solid rgba(255,255,255,0.2)', background: form.agreedCommission ? '#00ff88' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {form.agreedCommission && <span style={{ color: '#1a0a2e', fontSize: 14, fontWeight: 900 }}>✓</span>}
-            </div>
-            <div>
-              <div style={{ color: form.agreedCommission ? '#00ff88' : 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600 }}>Comissao por vendas: R$30 por peca</div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 2 }}>Aceito os termos de comissao</div>
-            </div>
-          </div>
-          {error && (<div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: 10, color: '#ff6b6b', fontSize: 13, textAlign: 'center' }}>{error}</div>)}
-          <button onClick={handleStep1Submit} disabled={loading} style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #FFD700, #FFA500)', border: 'none', borderRadius: 14, color: '#1a0a2e', fontWeight: 800, fontSize: 16, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 20px rgba(255,215,0,0.3)', opacity: loading ? 0.7 : 1 }}>{loading ? 'Verificando...' : 'Confirmar e Criar Cupom!'}</button>
-        </div>
-        <div style={{ textAlign: 'center', marginTop: 20, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
-          Ja tem cupom?{' '}<span onClick={function() { router.push('/login'); }} style={{ color: '#FFD700', cursor: 'pointer', fontWeight: 600 }}>Fazer login</span>
         </div>
       </div>
     </div>
