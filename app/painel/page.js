@@ -145,16 +145,27 @@ export default function PainelPage() {
   async function handleAvatarUpload(e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setEditMessage('Imagem muito grande (máx 5MB)'); return; }
+    if (file.size > 5 * 1024 * 1024) { setEditMessage('Imagem muito grande (max 5MB)'); return; }
     setUploadingAvatar(true);
     setEditMessage('');
     try {
-      var ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      var fileName = affiliate.id + '-' + Date.now() + '.' + ext;
-      var up = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true, cacheControl: '3600' });
-      if (up.error) { setEditMessage('Erro no upload: ' + up.error.message); setUploadingAvatar(false); return; }
-      var pub = supabase.storage.from('avatars').getPublicUrl(fileName);
-      setEditAvatarUrl(pub.data.publicUrl);
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/profile/avatar', { method: 'POST', body: form });
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok || !data.ok) {
+        const map = {
+          invalid_image: 'Arquivo invalido. Use JPG, PNG, GIF ou WebP.',
+          file_too_large: 'Imagem muito grande (max 5MB).',
+          no_file: 'Selecione um arquivo.',
+          unauthorized: 'Sessao expirada. Faca login de novo.',
+        };
+        setEditMessage(map[data.error] || ('Erro: ' + (data.error || 'desconhecido')));
+        setUploadingAvatar(false);
+        return;
+      }
+      setEditAvatarUrl(data.url);
     } catch (err) {
       setEditMessage('Erro: ' + err.message);
     }
