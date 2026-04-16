@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
 
 export default function CadastroPage() {
   const router = useRouter();
@@ -27,8 +26,13 @@ export default function CadastroPage() {
   const checkCoupon = async () => {
     if (form.coupon.length < 3) { setCouponStatus('min'); return; }
     setCouponChecking(true);
-    const { data } = await supabase.from('affiliates').select('id').ilike('coupon_code', form.coupon.trim()).single();
-    setCouponStatus(data ? 'taken' : 'available');
+    try {
+      const res = await fetch('/api/auth/check-coupon?coupon=' + encodeURIComponent(form.coupon.trim()));
+      const data = await res.json();
+      setCouponStatus(data.available ? 'available' : 'taken');
+    } catch {
+      setCouponStatus('');
+    }
     setCouponChecking(false);
   };
 
@@ -59,11 +63,7 @@ export default function CadastroPage() {
     var err = validateStep1();
     if (err) { setError(err); return; }
     setError('');
-    setLoading(true);
-    var result = await supabase.from('affiliates').select('id').ilike('email', form.email.trim()).single();
-    if (result.data) { setError('Esse e-mail ja esta cadastrado.'); setLoading(false); return; }
     setShowTicket(true);
-    setLoading(false);
   };
 
   const handleTicketClose = () => { setShowTicket(false); setStep(2); };
@@ -73,20 +73,53 @@ export default function CadastroPage() {
     if (form.password !== form.passwordConfirm) { setError('As senhas nao conferem.'); return; }
     setError('');
     setLoading(true);
-    var nameParts = form.name.trim().split(' ');
-    var initials = nameParts.length >= 2 ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase() : form.name.trim().substring(0, 2).toUpperCase();
-    var socialData = {};
-    if (form.instagram) socialData.instagram = form.instagram;
-    if (form.facebook) socialData.facebook = form.facebook;
-    if (form.tiktok) socialData.tiktok = form.tiktok;
-    if (form.outro) socialData.outro = form.outro;
-    var insertResult = await supabase.from('affiliates').insert({ name: form.name.trim(), email: form.email.trim().toLowerCase(), phone: form.city.trim(), instagram: JSON.stringify({ age: form.age, city: form.city, platforms: form.platforms, social: socialData }), coupon_code: form.coupon.trim(), avatar_initials: initials, tier: 'Divulgadora', is_sponsored: false, commission_value: 30, commission_type: 'fixed_per_sale', active: true, password_hash: form.password });
-    if (insertResult.error) { setError('Erro ao cadastrar. Tente novamente.'); setLoading(false); return; }
-    var newResult = await supabase.from('affiliates').select('id').ilike('coupon_code', form.coupon.trim()).single();
-    if (newResult.data) { localStorage.setItem('affiliate_id', newResult.data.id); localStorage.setItem('affiliate_name', form.name); localStorage.setItem('affiliate_coupon', form.coupon); }
-    setLoading(false);
-    setShowWelcome(true);
-    setTimeout(function() { router.push('/painel'); }, 3500);
+    try {
+      const social = {};
+      if (form.instagram) social.instagram = form.instagram;
+      if (form.facebook) social.facebook = form.facebook;
+      if (form.tiktok) social.tiktok = form.tiktok;
+      if (form.outro) social.outro = form.outro;
+
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          coupon: form.coupon.trim(),
+          password: form.password,
+          age: form.age,
+          city: form.city,
+          platforms: form.platforms,
+          social,
+        }),
+      });
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok || !data.ok) {
+        const map = {
+          coupon_taken: 'Esse cupom ja foi usado.',
+          email_taken: 'Esse e-mail ja esta cadastrado.',
+          invalid_name: 'Nome invalido.',
+          invalid_email: 'E-mail invalido.',
+          invalid_coupon: 'Cupom invalido (apenas letras e numeros, 3 a 40 chars).',
+          invalid_password: 'Senha deve ter 6 digitos numericos.',
+          rate_limited: 'Muitas tentativas. Aguarde alguns minutos.',
+        };
+        setError(map[data.error] || 'Erro ao cadastrar. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('affiliate_id', data.affiliate.id);
+      localStorage.setItem('affiliate_name', data.affiliate.name);
+      localStorage.setItem('affiliate_coupon', data.affiliate.coupon_code);
+      setLoading(false);
+      setShowWelcome(true);
+      setTimeout(function() { router.push('/painel'); }, 3500);
+    } catch (err) {
+      setError('Erro de conexao. Tente novamente.');
+      setLoading(false);
+    }
   };
 
   if (showTicket) {
