@@ -196,6 +196,9 @@ export default function PainelPage() {
           invalid_email: 'Email invalido.',
           name_too_short: 'Nome muito curto.',
           password_must_be_6_digits: 'Senha deve ter exatamente 6 digitos numericos.',
+          email_taken: 'Esse email ja esta em uso por outra conta.',
+          duplicate: 'Esse dado ja esta em uso.',
+          db_error: 'Erro no banco: ' + (data.detail || ''),
         };
         setEditMessage(map[data.error] || ('Erro: ' + (data.error || 'desconhecido')));
         setSavingProfile(false);

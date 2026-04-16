@@ -46,7 +46,14 @@ export async function POST(request) {
     .eq('id', auth.affiliate.id)
     .select('id, name, coupon_code, email, phone, avatar_url, is_admin');
 
-  if (error) return NextResponse.json({ error: 'db_error', details: error.message }, { status: 500 });
+  if (error) {
+    const msg = String(error.message || '').toLowerCase();
+    if (msg.includes('duplicate') || msg.includes('unique') || error.code === '23505') {
+      if (msg.includes('email')) return NextResponse.json({ error: 'email_taken' }, { status: 409 });
+      return NextResponse.json({ error: 'duplicate' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
+  }
   if (!data || data.length === 0) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
   return NextResponse.json({ ok: true, affiliate: data[0] });
