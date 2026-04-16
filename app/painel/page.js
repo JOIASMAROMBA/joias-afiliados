@@ -347,7 +347,7 @@ export default function PainelPage() {
       {activeTab === 'rewards' && (
         <div>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: '#FFD700', marginBottom: 4 }}>🚀 Sua Jornada de Prêmios</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 4 }}>🚀 Sua Jornada de Prêmios</div>
             <div style={{ fontSize: 13, color: 'rgba(255,215,0,0.6)' }}>Cada venda te impulsiona mais alto!</div>
           </div>
 
@@ -361,30 +361,6 @@ export default function PainelPage() {
           {rewards.length > 0 && (
             <div style={{ position: 'relative', paddingLeft: 60, paddingRight: 10, minHeight: rewards.length * 150 + 'px' }}>
               <div style={{ position: 'absolute', left: 44, top: 0, bottom: 40, width: 4, background: 'linear-gradient(180deg, #FFD700 0%, #B8860B 100%)', borderRadius: 2, boxShadow: '0 0 20px rgba(255,215,0,0.3)' }}></div>
-
-              {(function() {
-                var checkpoints = [];
-                for (var i = 0; i < rewards.length; i++) {
-                  if (rewards[i].target_type !== 'sales') continue;
-                  var prevVal = i > 0 ? Number(rewards[i - 1].target_value) : 0;
-                  var nextVal = Number(rewards[i].target_value);
-                  var diff = nextVal - prevVal;
-
-                  var numCheckpoints = 4;
-
-                  for (var k = 1; k <= numCheckpoints; k++) {
-                    var fraction = k / (numCheckpoints + 1);
-                    var cpValue = prevVal + diff * fraction;
-                    var reached = totalSales >= cpValue;
-                    var segmentPos = (rewards.length - 1 - i) + (1 - fraction);
-                    var topPct = (segmentPos / rewards.length) * 100;
-                    checkpoints.push({ value: Math.round(cpValue), reached: reached, topPct: topPct });
-                  }
-                }
-                return checkpoints.map(function(c, idx) {
-                  return (<div key={idx} style={{ position: 'absolute', left: 41, top: 'calc(' + c.topPct + '% + 20px)', width: 10, height: 10, borderRadius: '50%', background: c.reached ? '#FFD700' : 'rgba(255,215,0,0.25)', border: '2px solid ' + (c.reached ? '#FFD700' : 'rgba(255,215,0,0.4)'), boxShadow: c.reached ? '0 0 8px rgba(255,215,0,0.6)' : 'none', zIndex: 1 }} />);
-                });
-              })()}
 
               {(function() {
                 var reversedPos = rewards.length - rocketPos;
@@ -445,9 +421,10 @@ export default function PainelPage() {
 
                 return (
                   <div key={r.id} style={{ marginBottom: 24, position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: -28, top: -14, width: 28, height: 28, borderRadius: '50%', background: achieved ? 'linear-gradient(135deg, #00ff88, #00cc6a)' : isTop ? 'linear-gradient(135deg, #FFD700, #FF8C00)' : isMid ? 'linear-gradient(135deg, #E8E8E8, #A8A8A8)' : 'linear-gradient(135deg, #CD7F32, #8B4513)', border: '3px solid ' + (achieved ? '#00ff88' : isTop ? '#FFD700' : isMid ? '#C0C0C0' : '#CD7F32'), boxShadow: achieved ? '0 0 15px rgba(0,255,136,0.8)' : isTop ? '0 0 20px rgba(255,215,0,0.9)' : '0 0 10px rgba(255,215,0,0.4)', zIndex: 2 }}>
-                      {achieved && <div style={{ textAlign: 'center', color: '#000', fontSize: 14, fontWeight: 900, lineHeight: '22px' }}>✓</div>}
-                    </div>
+                    <div style={{ position: 'absolute', left: -30, top: -16, width: 32, height: 32, background: achieved ? 'linear-gradient(135deg, #00ff88, #00cc6a)' : isTop ? 'linear-gradient(135deg, #FFD700, #FF8C00)' : isMid ? 'linear-gradient(135deg, #E8E8E8, #A8A8A8)' : 'linear-gradient(135deg, #CD7F32, #8B4513)', clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', filter: 'drop-shadow(0 0 8px ' + (achieved ? 'rgba(0,255,136,0.8)' : isTop ? 'rgba(255,215,0,0.9)' : isMid ? 'rgba(232,232,232,0.6)' : 'rgba(205,127,50,0.6)') + ')', zIndex: 2 }}></div>
+                    {[1, 2, 3, 4].map(function(n) {
+                      return (<div key={n} style={{ position: 'absolute', left: -19, top: (n * 20) + '%', width: 10, height: 10, borderRadius: '50%', background: 'rgba(255,215,0,0.3)', border: '2px solid rgba(255,215,0,0.5)', zIndex: 1 }}></div>);
+                    })}
 
                     <div style={{ background: tierStyles.bg, border: tierStyles.border, borderRadius: 16, padding: 18, position: 'relative', overflow: 'hidden', animation: tierStyles.cardAnim }}>
                       {!achieved && (<div style={{ position: 'absolute', top: 0, right: 0, padding: '4px 12px', background: tierStyles.badgeBg, color: '#000', borderRadius: '0 16px 0 12px', fontSize: 9, fontWeight: 900, letterSpacing: 1 }}>{tierStyles.badge}</div>)}
@@ -482,7 +459,7 @@ export default function PainelPage() {
           )}
 
           <div style={{ marginTop: 30, textAlign: 'center', animation: 'fadeMotivation 3s ease-in-out infinite' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700', lineHeight: 1.4 }}>{motivationalPhrase}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.4 }}>{motivationalPhrase}</div>
           </div>
         </div>
       )}
