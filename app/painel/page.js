@@ -114,7 +114,6 @@ export default function PainelPage() {
   function formatDate(d) { return new Date(d).toLocaleDateString('pt-BR'); }
   function formatDateTime(d) { return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 
-  // ===== Filtragem de vendas =====
   var filteredSales = (function() {
     if (salesFilter === 'all') return allSales;
     var days = parseInt(salesFilter);
@@ -127,11 +126,9 @@ export default function PainelPage() {
   var filteredCount = filteredSales.length;
   var filteredRevenue = filteredSales.reduce(function(s, v) { return s + Number(v.product_value || 0); }, 0);
 
-  // ===== Calendário 7 dias da semana (recente -> futuro) =====
   function getWeekDays() {
     var today = new Date(); today.setHours(0,0,0,0);
     var days = [];
-    // Mostra 3 dias anteriores + hoje + 3 dias futuros
     for (var i = -3; i <= 3; i++) {
       var d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -142,7 +139,6 @@ export default function PainelPage() {
         return pd.getTime() >= dStart.getTime() && pd.getTime() <= dEnd.getTime();
       });
       var weekday = d.getDay();
-      // É dia obrigatório?
       var isObligatory = obligations.some(function(o) {
         if (o.obligation_type === 'recurring') return o.weekday === weekday;
         if (o.obligation_type === 'specific' && o.specific_date) {
@@ -261,7 +257,6 @@ export default function PainelPage() {
 
       {activeTab === 'home' && (
         <div>
-          {/* CARDS DE VENDAS COM FILTRO */}
           <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,215,0,0.15)', borderRadius: 20, padding: 16, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#FFD700' }}>📊 Suas Vendas</div>
@@ -284,7 +279,6 @@ export default function PainelPage() {
             </div>
           </div>
 
-          {/* CARD SALDO + BOTÃO VERDE */}
           <div style={{ background: '#0a0a0a', border: '2px solid #00ff88', borderRadius: 20, padding: 20, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div>
@@ -296,7 +290,6 @@ export default function PainelPage() {
             <button onClick={function() { setShowWithdrawModal(true); }} disabled={Number(balance.available_balance) < 10} style={{ width: '100%', padding: 14, background: Number(balance.available_balance) >= 10 ? 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)' : '#1a1a1a', border: 'none', borderRadius: 14, color: Number(balance.available_balance) >= 10 ? '#000' : 'rgba(0,255,136,0.3)', fontWeight: 800, fontSize: 15, cursor: Number(balance.available_balance) >= 10 ? 'pointer' : 'not-allowed', boxShadow: Number(balance.available_balance) >= 10 ? '0 4px 20px rgba(0,255,136,0.4)' : 'none' }}>💸 Solicitar Saque</button>
           </div>
 
-          {/* CALENDÁRIO 7 DIAS DA SEMANA */}
           <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,215,0,0.2)', borderRadius: 20, padding: 18, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#FFD700' }}>📸 Sua Semana de Postagens</div>
@@ -326,7 +319,6 @@ export default function PainelPage() {
 
             <button onClick={function() { setShowPostModal(true); }} style={{ width: '100%', padding: 12, background: 'linear-gradient(135deg, #FFD700 0%, #B8860B 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 20px rgba(255,215,0,0.3)' }}>✨ Registrar Postagem de Hoje</button>
 
-            {/* Mensagem motivacional/cobrança */}
             {obligations.length > 0 && (
               <div style={{ marginTop: 12, padding: 10, borderRadius: 10, textAlign: 'center', background: pendingMissed > 0 ? 'rgba(255,80,80,0.1)' : 'rgba(0,255,136,0.1)', border: '1px solid ' + (pendingMissed > 0 ? 'rgba(255,80,80,0.3)' : 'rgba(0,255,136,0.3)') }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: pendingMissed > 0 ? '#ff6b6b' : '#00ff88' }}>
@@ -337,7 +329,6 @@ export default function PainelPage() {
             )}
           </div>
 
-          {/* ULTIMA VENDA */}
           {allSales.length > 0 && (
             <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,215,0,0.3)', borderRadius: 20, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#FFD700' }}>💎 Ultima Venda</div>
@@ -374,23 +365,27 @@ export default function PainelPage() {
               {(function() {
                 var checkpoints = [];
                 for (var i = 0; i < rewards.length; i++) {
+                  if (rewards[i].target_type !== 'sales') continue;
                   var prevVal = i > 0 ? Number(rewards[i - 1].target_value) : 0;
                   var nextVal = Number(rewards[i].target_value);
-                  if (rewards[i].target_type !== 'sales') continue;
-                  var cp = Math.ceil((prevVal + 1) / 5) * 5;
-                  while (cp < nextVal) {
-                    if (cp > prevVal) {
-                      var reached = totalSales >= cp;
-                      var progress = (cp - prevVal) / (nextVal - prevVal);
-                      var segmentPos = (rewards.length - 1 - i) + (1 - progress);
-                      var topPct = (segmentPos / rewards.length) * 100;
-                      checkpoints.push({ value: cp, reached: reached, topPct: topPct });
-                    }
-                    cp += 5;
+                  var diff = nextVal - prevVal;
+
+                  var numCheckpoints;
+                  if (diff <= 10) numCheckpoints = 4;
+                  else if (diff <= 50) numCheckpoints = 6;
+                  else numCheckpoints = 8;
+
+                  for (var k = 1; k <= numCheckpoints; k++) {
+                    var fraction = k / (numCheckpoints + 1);
+                    var cpValue = prevVal + diff * fraction;
+                    var reached = totalSales >= cpValue;
+                    var segmentPos = (rewards.length - 1 - i) + (1 - fraction);
+                    var topPct = (segmentPos / rewards.length) * 100;
+                    checkpoints.push({ value: Math.round(cpValue), reached: reached, topPct: topPct });
                   }
                 }
                 return checkpoints.map(function(c, idx) {
-                  return (<div key={idx} style={{ position: 'absolute', left: 40, top: 'calc(' + c.topPct + '% + 20px)', width: 12, height: 12, borderRadius: '50%', background: c.reached ? '#FFD700' : 'rgba(255,215,0,0.25)', border: '2px solid ' + (c.reached ? '#FFD700' : 'rgba(255,215,0,0.4)'), boxShadow: c.reached ? '0 0 8px rgba(255,215,0,0.6)' : 'none', zIndex: 1 }} />);
+                  return (<div key={idx} style={{ position: 'absolute', left: 40, top: 'calc(' + c.topPct + '% + 20px)', width: 10, height: 10, borderRadius: '50%', background: c.reached ? '#FFD700' : 'rgba(255,215,0,0.25)', border: '2px solid ' + (c.reached ? '#FFD700' : 'rgba(255,215,0,0.4)'), boxShadow: c.reached ? '0 0 8px rgba(255,215,0,0.6)' : 'none', zIndex: 1 }} />);
                 });
               })()}
 
