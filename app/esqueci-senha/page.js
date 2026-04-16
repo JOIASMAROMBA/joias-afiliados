@@ -57,8 +57,8 @@ export default function EsqueciSenhaPage() {
           ) : (
             <div style={{ textAlign: 'center', color: '#fff' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-              <div style={{ fontSize: 15, marginBottom: 8, fontWeight: 700 }}>Pedido registrado!</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,215,0,0.7)', lineHeight: 1.5 }}>O admin foi notificado e vai te enviar uma senha provisoria em breve no seu email.</div>
+              <div style={{ fontSize: 15, marginBottom: 8, fontWeight: 700 }}>Email enviado!</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,215,0,0.7)', lineHeight: 1.5 }}>Em poucos minutos voce vai receber uma senha provisoria no seu email. Entra no painel com ela e depois troque em Editar Perfil.</div>
             </div>
           )}
           <div style={{ marginTop: 18, textAlign: 'center' }}>
