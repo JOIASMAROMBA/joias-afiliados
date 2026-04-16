@@ -165,26 +165,38 @@ export default function PainelPage() {
     if (!editName.trim()) { setEditMessage('Nome nao pode estar vazio'); return; }
     if (!editEmail.trim()) { setEditMessage('Email nao pode estar vazio'); return; }
     setSavingProfile(true);
-    var updates = {
-      name: editName.trim(),
-      email: editEmail.trim().toLowerCase(),
-      phone: editPhone.trim(),
-      avatar_url: editAvatarUrl || null,
-    };
-    if (editPassword.trim()) {
-      if (editPassword.trim().length !== 6) { setEditMessage('Senha deve ter 6 digitos'); setSavingProfile(false); return; }
-      updates.password_hash = editPassword.trim();
-    }
-    var res = await supabase.from('affiliates').update(updates).eq('id', affiliate.id).select();
-    if (res.error) { setEditMessage('Erro ao salvar: ' + res.error.message); setSavingProfile(false); return; }
-    if (!res.data || res.data.length === 0) {
-      setEditMessage('Nenhuma linha foi atualizada (RLS bloqueou o update). Rode o SQL de policy.');
+    try {
+      const payload = {
+        name: editName.trim(),
+        email: editEmail.trim().toLowerCase(),
+        phone: editPhone.trim(),
+        avatar_url: editAvatarUrl || '',
+      };
+      if (editPassword.trim()) payload.password = editPassword.trim();
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        const map = {
+          unauthorized: 'Sessao expirada. Faca login novamente.',
+          invalid_email: 'Email invalido.',
+          name_too_short: 'Nome muito curto.',
+          password_must_be_6_digits: 'Senha deve ter exatamente 6 digitos numericos.',
+        };
+        setEditMessage(map[data.error] || ('Erro: ' + (data.error || 'desconhecido')));
+        setSavingProfile(false);
+        return;
+      }
+      setShowEditProfile(false);
       setSavingProfile(false);
-      return;
+      loadData(affiliate.id);
+    } catch (err) {
+      setEditMessage('Erro de conexao: ' + err.message);
+      setSavingProfile(false);
     }
-    setShowEditProfile(false);
-    setSavingProfile(false);
-    loadData(affiliate.id);
   }
 
   function viewReceipt(url) { setReceiptImage(url); setShowReceiptModal(true); }

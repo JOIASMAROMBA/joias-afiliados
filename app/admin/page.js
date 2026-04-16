@@ -59,7 +59,11 @@ export default function AdminDashboard() {
   }
 
   async function toggleSponsored(affiliateId, current) {
-    await supabase.from('affiliates').update({ is_sponsored: !current }).eq('id', affiliateId);
+    await fetch('/api/admin/affiliate/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ affiliate_id: affiliateId, is_sponsored: !current }),
+    });
     await loadAll();
   }
 
