@@ -327,8 +327,30 @@ export default function PainelPage() {
   var weekdayShort = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: '#000', padding: 20, color: '#fff', position: 'relative', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif" }}>
+    <div className="painel-root" style={{ margin: '0 auto', minHeight: '100vh', background: '#000', padding: 20, color: '#fff', position: 'relative', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif" }}>
       <style>{`
+        .painel-root { max-width: 480px; }
+        .painel-home-grid { display: block; }
+        .painel-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .painel-rewards-wrap { max-width: 100%; }
+        @media (min-width: 900px) {
+          .painel-root { max-width: 1100px; padding: 32px 40px; }
+          .painel-home-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+          }
+          .painel-home-grid > .full-width { grid-column: 1 / -1; }
+          .painel-tabs { max-width: 600px; margin-left: auto; margin-right: auto; }
+          .painel-rewards-wrap { max-width: 720px; margin: 0 auto; }
+          .painel-withdrawals { max-width: 720px; margin: 0 auto; }
+          .painel-header {
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+          }
+        }
         @keyframes magicTrail {
           0%, 100% { left: -60%; }
           50% { left: 100%; }
@@ -368,7 +390,7 @@ export default function PainelPage() {
         }
       `}</style>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+      <div className="painel-header" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
         <div onClick={openEditProfile} style={{ width: 52, height: 52, borderRadius: '50%', background: affiliate && affiliate.avatar_url ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#1a1306', boxShadow: '0 4px 20px rgba(201,169,97,0.3)', overflow: 'hidden', cursor: 'pointer', border: '1.5px solid rgba(201,169,97,0.6)' }}>
           {affiliate && affiliate.avatar_url ? (<img src={affiliate.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
         </div>
@@ -385,7 +407,7 @@ export default function PainelPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 12, padding: 4, position: 'relative' }}>
+      <div className="painel-tabs" style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 12, padding: 4, position: 'relative' }}>
         {[{id: 'home', l: '🏠 Home', magic: false}, {id: 'rewards', l: '✨ PREMIOS', magic: true}, {id: 'withdrawals', l: '💰 Saques', magic: false}].map(function(t) {
           var isActive = activeTab === t.id;
           return (
@@ -402,7 +424,7 @@ export default function PainelPage() {
       </div>
 
       {activeTab === 'home' && (
-        <div>
+        <div className="painel-home-grid">
           <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#C9A961' }}>📊 Suas Vendas</div>
@@ -436,7 +458,7 @@ export default function PainelPage() {
             <button onClick={function() { setShowWithdrawModal(true); }} disabled={Number(balance.available_balance) < 10} style={{ width: '100%', padding: 14, background: Number(balance.available_balance) >= 10 ? 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)' : '#1a1a1a', border: 'none', borderRadius: 14, color: Number(balance.available_balance) >= 10 ? '#000' : 'rgba(0,255,136,0.3)', fontWeight: 800, fontSize: 15, cursor: Number(balance.available_balance) >= 10 ? 'pointer' : 'not-allowed', boxShadow: Number(balance.available_balance) >= 10 ? '0 4px 20px rgba(0,255,136,0.4)' : 'none' }}>💸 Solicitar Saque</button>
           </div>
 
-          <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.2)', borderRadius: 16, padding: 18, marginBottom: 16 }}>
+          <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.2)', borderRadius: 16, padding: 18, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#C9A961' }}>📸 Sua Semana de Postagens</div>
             </div>
@@ -476,7 +498,7 @@ export default function PainelPage() {
           </div>
 
           {allSales.length > 0 && (
-            <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 20 }}>
+            <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#C9A961' }}>💎 Ultima Venda</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -491,7 +513,7 @@ export default function PainelPage() {
       )}
 
       {activeTab === 'rewards' && (
-        <div>
+        <div className="painel-rewards-wrap">
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 4 }}>🚀 Sua Jornada de Prêmios</div>
             <div style={{ fontSize: 13, color: 'rgba(201,169,97,0.6)' }}>Cada venda te impulsiona mais alto!</div>
@@ -611,7 +633,7 @@ export default function PainelPage() {
       )}
 
       {activeTab === 'withdrawals' && (
-        <div>
+        <div className="painel-withdrawals">
           <div style={{ fontSize: 18, fontWeight: 800, color: '#C9A961', marginBottom: 16 }}>Historico de Saques</div>
           {myWithdrawals.length === 0 && (<div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 16, padding: 40, textAlign: 'center', color: 'rgba(201,169,97,0.5)' }}>Nenhum saque solicitado ainda</div>)}
           {myWithdrawals.map(function(w) {
