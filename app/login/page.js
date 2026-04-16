@@ -138,32 +138,38 @@ export default function LoginPage() {
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 64, height: 64,
-              borderRadius: 16,
-              background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.02))',
-              border: '1px solid rgba(255,215,0,0.25)',
-              marginBottom: 24,
-              backdropFilter: 'blur(20px)',
-              boxShadow: '0 8px 32px rgba(255,215,0,0.08), inset 0 1px 0 rgba(255,255,255,0.1)',
-            }}>
-              <div style={{ fontSize: 28, filter: 'drop-shadow(0 0 8px rgba(255,215,0,0.5))' }}>◆</div>
-            </div>
-            <h1 style={{
-              color: '#fff',
-              fontSize: 32,
-              fontWeight: 700,
-              letterSpacing: -0.5,
-              margin: 0,
+              width: 140, height: 140,
               marginBottom: 8,
+              position: 'relative',
             }}>
-              Joias Maromba
-            </h1>
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(201,169,97,0.18) 0%, transparent 70%)',
+                filter: 'blur(20px)',
+              }} />
+              <img
+                src="/logo.png"
+                alt="Joias Maromba"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  opacity: 0.92,
+                  filter: 'drop-shadow(0 4px 20px rgba(201,169,97,0.35)) drop-shadow(0 0 40px rgba(201,169,97,0.15))',
+                  position: 'relative',
+                  zIndex: 1,
+                }}
+              />
+            </div>
             <div style={{
-              fontSize: 14,
-              color: 'rgba(255,255,255,0.4)',
-              letterSpacing: 2,
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.45)',
+              letterSpacing: 3,
               textTransform: 'uppercase',
               fontWeight: 500,
+              marginTop: 4,
             }}>
               Área de Afiliados
             </div>
@@ -290,10 +296,10 @@ export default function LoginPage() {
                 padding: '15px 24px',
                 background: (loading || !coupon.trim() || password.length !== 6)
                   ? 'rgba(255,255,255,0.05)'
-                  : 'linear-gradient(135deg, #FFD700 0%, #DAA520 100%)',
-                border: '1px solid ' + ((loading || !coupon.trim() || password.length !== 6) ? 'rgba(255,255,255,0.08)' : 'rgba(255,215,0,0.5)'),
-                borderRadius: 12,
-                color: (loading || !coupon.trim() || password.length !== 6) ? 'rgba(255,255,255,0.3)' : '#000',
+                  : 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)',
+                border: '1px solid ' + ((loading || !coupon.trim() || password.length !== 6) ? 'rgba(255,255,255,0.08)' : 'rgba(201,169,97,0.6)'),
+                borderRadius: 10,
+                color: (loading || !coupon.trim() || password.length !== 6) ? 'rgba(255,255,255,0.3)' : '#1a1306',
                 fontWeight: 700,
                 fontSize: 15,
                 letterSpacing: 0.5,
@@ -301,7 +307,7 @@ export default function LoginPage() {
                 transition: 'all 0.3s',
                 boxShadow: (loading || !coupon.trim() || password.length !== 6)
                   ? 'none'
-                  : '0 8px 24px rgba(255,215,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+                  : '0 8px 24px rgba(201,169,97,0.3), inset 0 1px 0 rgba(255,255,255,0.35)',
               }}
             >
               {loading ? 'Entrando...' : 'Entrar'}
