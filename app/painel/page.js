@@ -26,11 +26,38 @@ export default function PainelPage() {
   const [postLink, setPostLink] = useState('');
   const [postMessage, setPostMessage] = useState('');
   const [activeTab, setActiveTab] = useState('home');
+  const [motivationalPhrase, setMotivationalPhrase] = useState('');
+
+  var phrases = [
+    '🔥 Bora pra cima! Você é brabo(a) e ninguém segura!',
+    '💪 Cada venda é um passo mais perto do seu sonho',
+    '🚀 Anuncie hoje e conquiste sua meta!',
+    '⭐ Os campeões não esperam, eles vão atrás!',
+    '💎 Você nasceu pra brilhar. Mostra pro mundo!',
+    '🎯 Foca na meta, não no problema!',
+    '👑 Grandes vendedoras fazem da venda um espetáculo',
+    '🔥 O que te diferencia é a consistência. Segue firme!',
+    '💰 Dinheiro segue quem age. Parte pra cima!',
+    '✨ Sua próxima venda pode mudar seu dia. Vai lá!',
+    '🌟 Você é capaz de muito mais do que imagina',
+    '🏆 Campeões fazem acontecer, nunca desistem!',
+    '⚡ A pressa é inimiga da perfeição, mas a preguiça é inimiga do sucesso',
+    '🎊 Cada sim é uma vitória. Vai colecionando!',
+    '🔑 A chave do sucesso é a ação diária. Bora postar!'
+  ];
 
   useEffect(function() {
     var id = localStorage.getItem('affiliate_id');
     if (!id) { router.push('/login'); return; }
     loadData(id);
+    setMotivationalPhrase(phrases[Math.floor(Math.random() * phrases.length)]);
+  }, []);
+
+  useEffect(function() {
+    var interval = setInterval(function() {
+      setMotivationalPhrase(phrases[Math.floor(Math.random() * phrases.length)]);
+    }, 8000);
+    return function() { clearInterval(interval); };
   }, []);
 
   async function loadData(affiliateId) {
@@ -87,15 +114,67 @@ export default function PainelPage() {
   var totalSales = sales.length;
   var totalRevenue = sales.reduce(function(s, v) { return s + Number(v.product_value || 0); }, 0);
 
-  // Determinar próxima meta (primeira que ainda não foi alcançada)
-  var nextRewardIndex = rewards.findIndex(function(r) {
-    var current = r.target_type === 'sales' ? totalSales : totalRevenue;
-    return current < Number(r.target_value);
-  });
-  if (nextRewardIndex === -1) nextRewardIndex = rewards.length;
+  // Calcula posição do foguete — agora considera checkpoints a cada 5 vendas entre as metas
+  function calculateRocketPosition() {
+    if (rewards.length === 0) return 0;
+    // Encontra próxima meta não alcançada
+    var nextIdx = rewards.findIndex(function(r) {
+      var current = r.target_type === 'sales' ? totalSales : totalRevenue;
+      return current < Number(r.target_value);
+    });
+    if (nextIdx === -1) return rewards.length; // todas alcançadas, foguete no topo
+    var prevVal = nextIdx > 0 ? Number(rewards[nextIdx - 1].target_value) : 0;
+    var nextVal = Number(rewards[nextIdx].target_value);
+    var current = rewards[nextIdx].target_type === 'sales' ? totalSales : totalRevenue;
+    var progress = (current - prevVal) / (nextVal - prevVal);
+    return nextIdx + Math.max(0, Math.min(1, progress));
+  }
+
+  var rocketPos = calculateRocketPosition();
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: 'linear-gradient(180deg, #000000 0%, #0a0a0a 50%, #000000 100%)', padding: 20, color: '#fff', position: 'relative' }}>
+      <style>{`
+        @keyframes magicSparkle {
+          0%, 100% { opacity: 0; transform: translate(0, 0) scale(0); }
+          50% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
+        }
+        @keyframes magicGlow {
+          0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.2), inset 0 0 20px rgba(255,215,0,0.1); border-color: #FFD700; }
+          50% { box-shadow: 0 0 40px rgba(255,215,0,0.8), 0 0 80px rgba(255,215,0,0.4), inset 0 0 30px rgba(255,215,0,0.2); border-color: #FFF8DC; }
+        }
+        @keyframes rotate360 {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes floatRocket {
+          0%, 100% { transform: translateY(0) rotate(-5deg); }
+          50% { transform: translateY(-4px) rotate(5deg); }
+        }
+        @keyframes fadeMotivation {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+        .magic-tab {
+          position: relative;
+          overflow: visible !important;
+        }
+        .magic-tab::before {
+          content: '';
+          position: absolute;
+          top: -2px; left: -2px; right: -2px; bottom: -2px;
+          border-radius: 10px;
+          background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700, #B8860B, #FFD700);
+          background-size: 300% 100%;
+          z-index: -1;
+          animation: shimmer 2s linear infinite;
+        }
+        @keyframes shimmer {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+      `}</style>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
         <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #FFD700, #B8860B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#000', boxShadow: '0 4px 20px rgba(255,215,0,0.4)' }}>{affiliate && affiliate.avatar_initials}</div>
         <div style={{ flex: 1 }}>
@@ -108,10 +187,52 @@ export default function PainelPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#0a0a0a', border: '1px solid rgba(255,215,0,0.15)', borderRadius: 12, padding: 4 }}>
-        {[{id: 'home', l: '🏠 Home'}, {id: 'rewards', l: '🎁 Metas'}, {id: 'withdrawals', l: '💰 Saques'}].map(function(t) {
-          return (<button key={t.id} onClick={function() { setActiveTab(t.id); }} style={{ flex: 1, padding: '10px 8px', border: 'none', borderRadius: 8, background: activeTab === t.id ? 'linear-gradient(135deg, #FFD700, #B8860B)' : 'transparent', color: activeTab === t.id ? '#000' : '#FFD700', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{t.l}</button>);
+      {/* Tabs com aba PREMIOS especial */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#0a0a0a', border: '1px solid rgba(255,215,0,0.15)', borderRadius: 12, padding: 4, position: 'relative' }}>
+        {[{id: 'home', l: '🏠 Home', magic: false}, {id: 'rewards', l: '✨ PREMIOS', magic: true}, {id: 'withdrawals', l: '💰 Saques', magic: false}].map(function(t) {
+          var isActive = activeTab === t.id;
+          return (
+            <div key={t.id} style={{ flex: 1, position: 'relative' }}>
+              {t.magic && !isActive && (
+                // Raios de magia em volta do botão Premios
+                <>
+                  {[...Array(8)].map(function(_, i) {
+                    var angle = (i * 45) + (Date.now() / 50) % 360;
+                    return (
+                      <div key={i} style={{
+                        position: 'absolute', top: '50%', left: '50%',
+                        width: 4, height: 4, borderRadius: '50%',
+                        background: '#FFD700',
+                        boxShadow: '0 0 8px #FFD700, 0 0 12px #FFA500',
+                        '--tx': Math.cos(angle * Math.PI / 180) * 30 + 'px',
+                        '--ty': Math.sin(angle * Math.PI / 180) * 20 + 'px',
+                        animation: 'magicSparkle 2s ease-in-out infinite',
+                        animationDelay: (i * 0.2) + 's',
+                        pointerEvents: 'none',
+                        zIndex: 2
+                      }} />
+                    );
+                  })}
+                </>
+              )}
+              <button onClick={function() { setActiveTab(t.id); }} style={{
+                width: '100%',
+                padding: '10px 8px',
+                border: 'none',
+                borderRadius: 8,
+                background: isActive ? 'linear-gradient(135deg, #FFD700, #B8860B)' : (t.magic ? 'linear-gradient(135deg, #1a0a00, #2a1a00)' : 'transparent'),
+                color: isActive ? '#000' : '#FFD700',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                position: 'relative',
+                zIndex: 1,
+                boxShadow: t.magic && !isActive ? '0 0 20px rgba(255,215,0,0.5), inset 0 0 15px rgba(255,215,0,0.2)' : 'none',
+                border: t.magic && !isActive ? '1px solid #FFD700' : 'none',
+                animation: t.magic && !isActive ? 'magicGlow 2s ease-in-out infinite' : 'none'
+              }}>{t.l}</button>
+            </div>
+          );
         })}
       </div>
 
@@ -154,40 +275,58 @@ export default function PainelPage() {
       {activeTab === 'rewards' && (
         <div>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: '#FFD700', marginBottom: 4 }}>🚀 Sua Jornada</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,215,0,0.6)' }}>Suba cada vez mais alto e conquiste as metas!</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: '#FFD700', marginBottom: 4 }}>🚀 Sua Jornada de Prêmios</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,215,0,0.6)' }}>Cada venda te impulsiona mais alto!</div>
           </div>
 
           {rewards.length === 0 && (
             <div style={{ background: '#0a0a0a', border: '1px dashed rgba(255,215,0,0.3)', borderRadius: 16, padding: 40, textAlign: 'center' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🎁</div>
-              <div style={{ color: '#FFD700', fontSize: 14, fontWeight: 600 }}>Novas metas em breve</div>
-              <div style={{ color: 'rgba(255,215,0,0.5)', fontSize: 12, marginTop: 6 }}>Fique atento, logo teremos premios incriveis!</div>
+              <div style={{ color: '#FFD700', fontSize: 14, fontWeight: 600 }}>Novos prêmios em breve</div>
+              <div style={{ color: 'rgba(255,215,0,0.5)', fontSize: 12, marginTop: 6 }}>Fique atenta, logo teremos presentes incríveis!</div>
             </div>
           )}
 
           {rewards.length > 0 && (
-            <div style={{ position: 'relative', paddingLeft: 40, paddingRight: 10 }}>
+            <div style={{ position: 'relative', paddingLeft: 40, paddingRight: 10, minHeight: rewards.length * 130 + 'px' }}>
               {/* Linha vertical dourada */}
-              <div style={{ position: 'absolute', left: 24, top: 30, bottom: 30, width: 4, background: 'linear-gradient(180deg, #FFD700 0%, #B8860B 100%)', borderRadius: 2, boxShadow: '0 0 20px rgba(255,215,0,0.3)' }}></div>
+              <div style={{ position: 'absolute', left: 24, top: 0, bottom: 40, width: 4, background: 'linear-gradient(180deg, #FFD700 0%, #B8860B 100%)', borderRadius: 2, boxShadow: '0 0 20px rgba(255,215,0,0.3)' }}></div>
 
-              {/* Foguete posicionado na altura atual */}
+              {/* Checkpoints a cada 5 vendas no meio das metas */}
               {(function() {
-                var pos;
-                if (nextRewardIndex === 0) pos = 0;
-                else if (nextRewardIndex >= rewards.length) pos = rewards.length;
-                else {
-                  var prev = rewards[nextRewardIndex - 1];
-                  var next = rewards[nextRewardIndex];
-                  var prevVal = Number(prev.target_value);
-                  var nextVal = Number(next.target_value);
-                  var current = next.target_type === 'sales' ? totalSales : totalRevenue;
-                  var progress = (current - prevVal) / (nextVal - prevVal);
-                  pos = nextRewardIndex - 1 + Math.max(0, Math.min(1, progress));
+                var checkpoints = [];
+                for (var i = 0; i < rewards.length; i++) {
+                  var prevVal = i > 0 ? Number(rewards[i - 1].target_value) : 0;
+                  var nextVal = Number(rewards[i].target_value);
+                  if (rewards[i].target_type !== 'sales') continue;
+                  // Gera checkpoints a cada 5 entre prev e next
+                  var cp = Math.ceil((prevVal + 1) / 5) * 5;
+                  while (cp < nextVal) {
+                    if (cp > prevVal) {
+                      var reached = totalSales >= cp;
+                      var progress = (cp - prevVal) / (nextVal - prevVal);
+                      var segmentPos = (rewards.length - 1 - i) + (1 - progress);
+                      var topPct = (segmentPos / rewards.length) * 100;
+                      checkpoints.push({ value: cp, reached: reached, topPct: topPct });
+                    }
+                    cp += 5;
+                  }
                 }
-                var reversedPos = (rewards.length - pos);
+                return checkpoints.map(function(c, idx) {
+                  return (
+                    <div key={idx} style={{ position: 'absolute', left: 18, top: 'calc(' + c.topPct + '% + 20px)', width: 16, height: 16, borderRadius: '50%', background: c.reached ? '#FFD700' : 'rgba(255,215,0,0.2)', border: '2px solid ' + (c.reached ? '#FFD700' : 'rgba(255,215,0,0.4)'), boxShadow: c.reached ? '0 0 8px rgba(255,215,0,0.6)' : 'none', zIndex: 1 }}>
+                      <div style={{ position: 'absolute', left: 20, top: -2, fontSize: 10, color: c.reached ? '#FFD700' : 'rgba(255,215,0,0.5)', fontWeight: 700, whiteSpace: 'nowrap' }}>+{c.value}</div>
+                    </div>
+                  );
+                });
+              })()}
+
+              {/* Foguete */}
+              {(function() {
+                var reversedPos = rewards.length - rocketPos;
+                var topCalc = (reversedPos / rewards.length) * 100;
                 return (
-                  <div style={{ position: 'absolute', left: -2, top: 'calc(' + (reversedPos / rewards.length) * 100 + '% - 20px)', fontSize: 40, filter: 'drop-shadow(0 0 20px rgba(255,215,0,0.6))', transition: 'top 1s ease-out', zIndex: 2, animation: 'float 2s ease-in-out infinite' }}>🚀</div>
+                  <div style={{ position: 'absolute', left: -4, top: 'calc(' + topCalc + '% + 10px)', fontSize: 40, filter: 'drop-shadow(0 0 20px rgba(255,215,0,0.8))', transition: 'top 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', zIndex: 3, animation: 'floatRocket 2s ease-in-out infinite' }}>🚀</div>
                 );
               })()}
 
@@ -197,17 +336,20 @@ export default function PainelPage() {
                 var current = r.target_type === 'sales' ? totalSales : totalRevenue;
                 var target = Number(r.target_value);
                 var achieved = current >= target;
-                var isNext = realIndex === nextRewardIndex;
                 var progress = Math.min(100, (current / target) * 100);
+                var isNext = !achieved && realIndex === rewards.findIndex(function(x) {
+                  var c = x.target_type === 'sales' ? totalSales : totalRevenue;
+                  return c < Number(x.target_value);
+                });
 
                 return (
                   <div key={r.id} style={{ marginBottom: 20, position: 'relative' }}>
-                    {/* Bolinha no pé do marco */}
-                    <div style={{ position: 'absolute', left: -22, top: 24, width: 24, height: 24, borderRadius: '50%', background: achieved ? 'linear-gradient(135deg, #FFD700, #B8860B)' : isNext ? 'linear-gradient(135deg, #FFD700, #FFA500)' : '#1a1a1a', border: '3px solid ' + (achieved || isNext ? '#FFD700' : '#333'), boxShadow: achieved || isNext ? '0 0 15px rgba(255,215,0,0.6)' : 'none', zIndex: 1 }}>
+                    {/* Bolinha do marco */}
+                    <div style={{ position: 'absolute', left: -22, top: 24, width: 24, height: 24, borderRadius: '50%', background: achieved ? 'linear-gradient(135deg, #FFD700, #B8860B)' : '#1a1a1a', border: '3px solid ' + (achieved ? '#FFD700' : 'rgba(255,215,0,0.4)'), boxShadow: achieved ? '0 0 15px rgba(255,215,0,0.8)' : 'none', zIndex: 2 }}>
                       {achieved && <div style={{ textAlign: 'center', color: '#000', fontSize: 12, fontWeight: 900, lineHeight: '18px' }}>✓</div>}
                     </div>
 
-                    <div style={{ background: achieved ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))' : isNext ? 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))' : '#0a0a0a', border: achieved ? '2px solid #FFD700' : isNext ? '2px solid #FFD700' : '1px solid rgba(255,215,0,0.2)', borderRadius: 16, padding: 16, boxShadow: isNext ? '0 0 30px rgba(255,215,0,0.2)' : 'none' }}>
+                    <div style={{ background: achieved ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05))' : isNext ? 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))' : '#0a0a0a', border: achieved || isNext ? '2px solid #FFD700' : '1px solid rgba(255,215,0,0.2)', borderRadius: 16, padding: 16, boxShadow: isNext ? '0 0 30px rgba(255,215,0,0.2)' : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                         <div style={{ fontSize: 36, filter: achieved ? 'none' : 'grayscale(0.3)' }}>{r.reward_emoji}</div>
                         <div style={{ flex: 1 }}>
@@ -218,12 +360,8 @@ export default function PainelPage() {
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6 }}>
-                        <div style={{ color: 'rgba(255,215,0,0.6)' }}>
-                          {r.target_type === 'sales' ? 'Meta: ' + target + ' vendas' : 'Meta: R$' + Number(target).toLocaleString('pt-BR')}
-                        </div>
-                        <div style={{ color: '#FFD700', fontWeight: 700 }}>
-                          {r.target_type === 'sales' ? current + '/' + target : 'R$' + Number(current).toFixed(0) + '/R$' + Number(target).toFixed(0)}
-                        </div>
+                        <div style={{ color: 'rgba(255,215,0,0.6)' }}>{r.target_type === 'sales' ? 'Meta: ' + target + ' vendas' : 'Meta: R$' + Number(target).toLocaleString('pt-BR')}</div>
+                        <div style={{ color: '#FFD700', fontWeight: 700 }}>{r.target_type === 'sales' ? current + '/' + target : 'R$' + Number(current).toFixed(0) + '/R$' + Number(target).toFixed(0)}</div>
                       </div>
                       <div style={{ height: 8, background: 'rgba(255,215,0,0.1)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ width: progress + '%', height: '100%', background: 'linear-gradient(90deg, #FFD700, #FFA500)', transition: 'width 0.8s ease-out', boxShadow: '0 0 10px rgba(255,215,0,0.5)' }}></div>
@@ -234,13 +372,18 @@ export default function PainelPage() {
                 );
               })}
 
-              {/* Base/Start */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, padding: 12, background: 'rgba(255,215,0,0.05)', borderRadius: 12, border: '1px dashed rgba(255,215,0,0.3)' }}>
-                <div style={{ position: 'absolute', left: 16, width: 20, height: 20, borderRadius: '50%', background: '#FFD700' }}></div>
-                <div style={{ marginLeft: 20, color: '#FFD700', fontWeight: 700, fontSize: 13 }}>🏁 Você está aqui</div>
+              {/* Base */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, padding: 12, background: 'rgba(255,215,0,0.05)', borderRadius: 12, border: '1px dashed rgba(255,215,0,0.3)', position: 'relative' }}>
+                <div style={{ position: 'absolute', left: -22, width: 20, height: 20, borderRadius: '50%', background: '#FFD700' }}></div>
+                <div style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>🏁 Ponto de partida</div>
               </div>
             </div>
           )}
+
+          {/* Frase motivacional no rodape */}
+          <div style={{ marginTop: 30, padding: 20, background: 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))', border: '1px solid rgba(255,215,0,0.2)', borderRadius: 16, textAlign: 'center', animation: 'fadeMotivation 3s ease-in-out infinite' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#FFD700', lineHeight: 1.5 }}>{motivationalPhrase}</div>
+          </div>
         </div>
       )}
 
@@ -277,7 +420,7 @@ export default function PainelPage() {
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ fontSize: 50, marginBottom: 16 }}>✅</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700', marginBottom: 12 }}>Solicitação confirmada!</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,215,0,0.7)', lineHeight: 1.5, marginBottom: 20 }}>O prazo de recebimento é de até 24 horas. Fique atento ao seu email.</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,215,0,0.7)', lineHeight: 1.5, marginBottom: 20 }}>O prazo de recebimento é de até 24 horas. Fique atenta ao seu email.</div>
                 <button onClick={closeWithdrawModal} style={{ width: '100%', padding: 14, background: 'linear-gradient(135deg, #FFD700 0%, #B8860B 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>Fechar</button>
               </div>
             ) : (
