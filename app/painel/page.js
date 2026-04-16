@@ -349,7 +349,7 @@ export default function PainelPage() {
           <div style={{ background: '#0a0a0a', border: '2px solid #00ff88', borderRadius: 20, padding: 20, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div>
-                <div style={{ color: '#00ff88', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Saldo Disponível</div>
+                <div style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Saldo Disponível</div>
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#00ff88' }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
               </div>
               <div style={{ fontSize: 36 }}>💰</div>
