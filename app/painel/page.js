@@ -71,6 +71,19 @@ export default function PainelPage() {
     return function() { clearInterval(interval); };
   }, []);
 
+  useEffect(function() {
+    if (!affiliate) return;
+    var channel = supabase
+      .channel('painel-live-' + affiliate.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, function() { loadData(affiliate.id); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: 'affiliate_id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawals', filter: 'affiliate_id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posting_obligations', filter: 'affiliate_id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'affiliates', filter: 'id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
+      .subscribe();
+    return function() { supabase.removeChannel(channel); };
+  }, [affiliate && affiliate.id]);
+
   async function loadData(affiliateId) {
     var check = await supabase.from('affiliates').select('*').eq('id', affiliateId).single();
     if (!check.data) { router.push('/login'); return; }
