@@ -74,18 +74,20 @@ export default function AdminDashboard() {
 
   async function toggleRecurringWeekday(weekday) {
     if (!obligationsAffiliateId) return;
-    var existing = obligationsList.find(function(o) { return o.obligation_type === 'recurring' && o.weekday === weekday; });
-    if (existing) await supabase.from('posting_obligations').delete().eq('id', existing.id);
-    else await supabase.from('posting_obligations').insert({ affiliate_id: obligationsAffiliateId, obligation_type: 'recurring', weekday: weekday, active: true });
+    await fetch('/api/admin/obligations/update', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'toggle-recurring', affiliate_id: obligationsAffiliateId, weekday }),
+    });
     await loadObligations(obligationsAffiliateId);
     await loadAll();
   }
 
   async function toggleSpecificDate(dateStr) {
     if (!obligationsAffiliateId) return;
-    var existing = obligationsList.find(function(o) { return o.obligation_type === 'specific' && o.specific_date === dateStr; });
-    if (existing) await supabase.from('posting_obligations').delete().eq('id', existing.id);
-    else await supabase.from('posting_obligations').insert({ affiliate_id: obligationsAffiliateId, obligation_type: 'specific', specific_date: dateStr, active: true });
+    await fetch('/api/admin/obligations/update', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'toggle-specific', affiliate_id: obligationsAffiliateId, date: dateStr }),
+    });
     await loadObligations(obligationsAffiliateId);
     await loadAll();
   }
@@ -93,24 +95,39 @@ export default function AdminDashboard() {
   async function clearAllObligations() {
     if (!obligationsAffiliateId) return;
     if (!confirm('Limpar TODAS as obrigações deste afiliado?')) return;
-    await supabase.from('posting_obligations').delete().eq('affiliate_id', obligationsAffiliateId);
+    await fetch('/api/admin/obligations/update', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear', affiliate_id: obligationsAffiliateId }),
+    });
     await loadObligations(obligationsAffiliateId);
     await loadAll();
   }
 
-  async function markPaid(wid) { await supabase.from('withdrawals').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', wid); await loadAll(); }
-  async function rejectWith(wid) { await supabase.from('withdrawals').update({ status: 'rejected' }).eq('id', wid); await loadAll(); }
+  async function markPaid(wid) {
+    await fetch('/api/admin/withdrawals/update', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: wid, status: 'paid' }),
+    });
+    await loadAll();
+  }
+  async function rejectWith(wid) {
+    await fetch('/api/admin/withdrawals/update', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: wid, status: 'rejected' }),
+    });
+    await loadAll();
+  }
 
   async function uploadReceipt(wid, file) {
     if (!file) return;
     setUploadingId(wid);
     try {
-      var ext = file.name.split('.').pop();
-      var fileName = wid + '_' + Date.now() + '.' + ext;
-      var uploadRes = await supabase.storage.from('receipts').upload(fileName, file, { cacheControl: '3600', upsert: false });
-      if (uploadRes.error) throw uploadRes.error;
-      var urlRes = supabase.storage.from('receipts').getPublicUrl(fileName);
-      await supabase.from('withdrawals').update({ receipt_url: urlRes.data.publicUrl, receipt_sent_at: new Date().toISOString() }).eq('id', wid);
+      const form = new FormData();
+      form.append('file', file);
+      form.append('withdrawal_id', wid);
+      const res = await fetch('/api/admin/withdrawals/upload-receipt', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || 'erro');
       await loadAll();
     } catch (e) { alert('Erro: ' + (e.message || 'desconhecido')); }
     setUploadingId(null);
@@ -129,15 +146,39 @@ export default function AdminDashboard() {
 
   async function saveReward() {
     if (!rewardForm.target_value || !rewardForm.reward_title) { alert('Preencha os campos'); return; }
-    var data = { target_type: rewardForm.target_type, target_value: Number(rewardForm.target_value), reward_title: rewardForm.reward_title.trim(), reward_description: rewardForm.reward_description.trim(), reward_emoji: rewardForm.reward_emoji || '🎁', reward_value_money: rewardForm.reward_value_money ? Number(rewardForm.reward_value_money) : 0, active: true };
-    if (editingReward) await supabase.from('rewards').update(data).eq('id', editingReward.id);
-    else await supabase.from('rewards').insert(data);
+    const payload = {
+      target_type: rewardForm.target_type,
+      target_value: Number(rewardForm.target_value),
+      reward_title: rewardForm.reward_title.trim(),
+      reward_description: rewardForm.reward_description.trim(),
+      reward_emoji: rewardForm.reward_emoji || '🎁',
+      reward_value_money: rewardForm.reward_value_money ? Number(rewardForm.reward_value_money) : 0,
+      active: true,
+    };
+    if (editingReward) payload.id = editingReward.id;
+    await fetch('/api/admin/rewards/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
     setShowRewardModal(false);
     await loadAll();
   }
 
-  async function deleteReward(id) { if (!confirm('Deletar?')) return; await supabase.from('rewards').delete().eq('id', id); await loadAll(); }
-  async function toggleRewardActive(reward) { await supabase.from('rewards').update({ active: !reward.active }).eq('id', reward.id); await loadAll(); }
+  async function deleteReward(id) {
+    if (!confirm('Deletar?')) return;
+    await fetch('/api/admin/rewards/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    await loadAll();
+  }
+  async function toggleRewardActive(reward) {
+    await fetch('/api/admin/rewards/toggle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: reward.id, active: !reward.active }),
+    });
+    await loadAll();
+  }
 
   // ==== Aplicar filtro de tipo (all/affiliate/sponsored) nos afiliados ====
   function applyTypeFilter(list) {

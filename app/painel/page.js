@@ -109,9 +109,37 @@ export default function PainelPage() {
     if (!pixType) { setWithdrawMessage('Selecione o tipo de chave PIX'); return; }
     if (!pixKey.trim()) { setWithdrawMessage('Informe sua chave PIX'); return; }
     if (!withdrawEmail.trim() || !withdrawEmail.includes('@')) { setWithdrawMessage('Email invalido'); return; }
-    var id = localStorage.getItem('affiliate_id');
-    await supabase.from('withdrawals').insert({ affiliate_id: id, amount: Number(withdrawAmount), pix_key: pixKey.trim(), pix_type: pixType, affiliate_email: withdrawEmail.trim(), status: 'pending' });
-    setWithdrawSuccess(true);
+    try {
+      const res = await fetch('/api/withdrawals/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(withdrawAmount),
+          pix_key: pixKey.trim(),
+          pix_type: pixType,
+          email: withdrawEmail.trim(),
+        }),
+      });
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok || !data.ok) {
+        const map = {
+          invalid_amount: 'Valor invalido (minimo R$10).',
+          invalid_pix_type: 'Tipo de chave PIX invalido.',
+          invalid_pix_key: 'Chave PIX invalida para o tipo escolhido.',
+          invalid_email: 'Email invalido.',
+          insufficient_balance: 'Saldo insuficiente. Disponivel: R$' + (data.available || 0),
+          has_pending: 'Voce ja tem um saque pendente. Aguarde o admin processar.',
+          daily_limit_reached: 'Limite diario de saques atingido (3 por dia).',
+          unauthorized: 'Sessao expirada. Faca login novamente.',
+        };
+        setWithdrawMessage(map[data.error] || 'Erro ao solicitar saque.');
+        return;
+      }
+      setWithdrawSuccess(true);
+    } catch (err) {
+      setWithdrawMessage('Erro de conexao. Tente novamente.');
+    }
   }
 
   function closeWithdrawModal() {
@@ -124,12 +152,24 @@ export default function PainelPage() {
   async function handleConfirmPost() {
     if (!postPlatform) { setPostMessage('Selecione a rede social'); return; }
     if (!postLink.trim()) { setPostMessage('Cole o link ou ID do post'); return; }
-    var id = localStorage.getItem('affiliate_id');
-    var now = new Date();
-    await supabase.from('posts').insert({ affiliate_id: id, post_type: postPlatform, platform: postPlatform, post_id: postLink.trim(), post_url: postLink.trim(), week_number: Math.ceil(now.getDate() / 7), year: now.getFullYear() });
-    setShowPostModal(false);
-    setPostPlatform(''); setPostLink(''); setPostMessage('');
-    loadData(id);
+    try {
+      const res = await fetch('/api/posts/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: postPlatform, post_link: postLink.trim() }),
+      });
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok || !data.ok) {
+        setPostMessage('Erro: ' + (data.error || 'falha ao registrar'));
+        return;
+      }
+      setShowPostModal(false);
+      setPostPlatform(''); setPostLink(''); setPostMessage('');
+      loadData(affiliate.id);
+    } catch (err) {
+      setPostMessage('Erro de conexao.');
+    }
   }
 
   function openEditProfile() {
