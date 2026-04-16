@@ -186,9 +186,9 @@ export default function PainelPage() {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: 'linear-gradient(180deg, #000000 0%, #0a0a0a 50%, #000000 100%)', padding: 20, color: '#fff', position: 'relative' }}>
       <style>{`
-        @keyframes magicSparkle {
-          0%, 100% { opacity: 0; transform: translate(0, 0) scale(0); }
-          50% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
+        @keyframes magicTrail {
+          0%, 100% { left: -60%; }
+          50% { left: 100%; }
         }
         @keyframes magicGlow {
           0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.2), inset 0 0 20px rgba(255,215,0,0.1); border-color: #FFD700; }
@@ -218,6 +218,11 @@ export default function PainelPage() {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,0,0.6); }
           50% { box-shadow: 0 0 0 6px rgba(255,215,0,0); }
         }
+        @keyframes starSpin {
+          0% { transform: perspective(200px) rotateZ(-18deg) rotateY(0deg) scale(1); }
+          25% { transform: perspective(200px) rotateZ(-18deg) rotateY(360deg) scale(1.25); }
+          50%, 100% { transform: perspective(200px) rotateZ(-18deg) rotateY(720deg) scale(1); }
+        }
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
@@ -238,18 +243,11 @@ export default function PainelPage() {
           return (
             <div key={t.id} style={{ flex: 1, position: 'relative' }}>
               {t.magic && !isActive && (
-                <>
-                  {[0,1,2,3,4,5,6,7].map(function(i) {
-                    var angle = i * 45;
-                    var tx = Math.cos(angle * Math.PI / 180) * 30;
-                    var ty = Math.sin(angle * Math.PI / 180) * 20;
-                    return (
-                      <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 4, height: 4, borderRadius: '50%', background: '#FFD700', boxShadow: '0 0 8px #FFD700, 0 0 12px #FFA500', ['--tx']: tx + 'px', ['--ty']: ty + 'px', animation: 'magicSparkle 2s ease-in-out infinite', animationDelay: (i * 0.2) + 's', pointerEvents: 'none', zIndex: 2 }} />
-                    );
-                  })}
-                </>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', borderRadius: 8, pointerEvents: 'none', zIndex: 0 }}>
+                  <div style={{ position: 'absolute', top: '-30%', bottom: '-30%', width: '60%', background: 'radial-gradient(ellipse at center, rgba(255,215,0,0.9) 0%, rgba(255,140,0,0.5) 35%, rgba(255,215,0,0.15) 65%, transparent 100%)', filter: 'blur(6px)', animation: 'magicTrail 2.5s ease-in-out infinite' }} />
+                </div>
               )}
-              <button onClick={function() { setActiveTab(t.id); }} style={{ width: '100%', padding: '10px 8px', borderRadius: 8, background: isActive ? 'linear-gradient(135deg, #FFD700, #B8860B)' : (t.magic ? 'linear-gradient(135deg, #1a0a00, #2a1a00)' : 'transparent'), color: isActive ? '#000' : '#FFD700', fontSize: 12, fontWeight: 800, cursor: 'pointer', position: 'relative', zIndex: 1, border: t.magic && !isActive ? '1px solid #FFD700' : 'none', animation: t.magic && !isActive ? 'magicGlow 2s ease-in-out infinite' : 'none' }}>{t.l}</button>
+              <button onClick={function() { setActiveTab(t.id); }} style={{ width: '100%', padding: '10px 8px', borderRadius: 8, background: isActive ? 'linear-gradient(135deg, #FFD700, #B8860B)' : 'transparent', color: isActive ? '#000' : '#FFD700', fontSize: 12, fontWeight: 800, cursor: 'pointer', position: 'relative', zIndex: 1, border: t.magic && !isActive ? '1px solid #FFD700' : 'none', animation: t.magic && !isActive ? 'magicGlow 2s ease-in-out infinite' : 'none' }}>{t.l}</button>
             </div>
           );
         })}
@@ -421,9 +419,9 @@ export default function PainelPage() {
 
                 return (
                   <div key={r.id} style={{ marginBottom: 24, position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: -30, top: -16, width: 32, height: 32, background: achieved ? 'linear-gradient(135deg, #00ff88, #00cc6a)' : isTop ? 'linear-gradient(135deg, #FFD700, #FF8C00)' : isMid ? 'linear-gradient(135deg, #E8E8E8, #A8A8A8)' : 'linear-gradient(135deg, #CD7F32, #8B4513)', clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', filter: 'drop-shadow(0 0 8px ' + (achieved ? 'rgba(0,255,136,0.8)' : isTop ? 'rgba(255,215,0,0.9)' : isMid ? 'rgba(232,232,232,0.6)' : 'rgba(205,127,50,0.6)') + ')', zIndex: 2 }}></div>
-                    {[1, 2, 3, 4].map(function(n) {
-                      return (<div key={n} style={{ position: 'absolute', left: -19, top: (n * 20) + '%', width: 10, height: 10, borderRadius: '50%', background: 'rgba(255,215,0,0.3)', border: '2px solid rgba(255,215,0,0.5)', zIndex: 1 }}></div>);
+                    <div style={{ position: 'absolute', left: -30, top: -16, width: 32, height: 32, background: achieved ? 'linear-gradient(135deg, #00ff88, #00cc6a)' : isTop ? 'linear-gradient(135deg, #FFD700, #FF8C00)' : isMid ? 'linear-gradient(135deg, #E8E8E8, #A8A8A8)' : 'linear-gradient(135deg, #CD7F32, #8B4513)', clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)', filter: 'drop-shadow(0 0 8px ' + (achieved ? 'rgba(0,255,136,0.8)' : isTop ? 'rgba(255,215,0,0.9)' : isMid ? 'rgba(232,232,232,0.6)' : 'rgba(205,127,50,0.6)') + ')', zIndex: 2, animation: 'starSpin 3s ease-in-out infinite', transformOrigin: 'center center' }}></div>
+                    {[1, 2, 3].map(function(n) {
+                      return (<div key={n} style={{ position: 'absolute', left: -19, top: (n * 25) + '%', width: 10, height: 10, borderRadius: '50%', background: 'rgba(255,215,0,0.3)', border: '2px solid rgba(255,215,0,0.5)', zIndex: 1 }}></div>);
                     })}
 
                     <div style={{ background: tierStyles.bg, border: tierStyles.border, borderRadius: 16, padding: 18, position: 'relative', overflow: 'hidden', animation: tierStyles.cardAnim }}>
