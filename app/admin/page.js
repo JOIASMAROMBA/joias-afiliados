@@ -11,11 +11,14 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('sales');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [typeFilter, setTypeFilter] = useState('all'); // all | affiliate | sponsored
   const [affiliates, setAffiliates] = useState([]);
   const [allSales, setAllSales] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
   const [adminName, setAdminName] = useState('Admin');
   const [recentPosts, setRecentPosts] = useState([]);
+  const [allPosts, setAllPosts] = useState([]);
+  const [allObligations, setAllObligations] = useState([]);
   const [monthlySales, setMonthlySales] = useState([]);
   const [monthlyTops, setMonthlyTops] = useState([]);
   const [selectedAffiliateFilter, setSelectedAffiliateFilter] = useState(null);
@@ -31,11 +34,7 @@ export default function AdminDashboard() {
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
 
   useEffect(function() { init(); }, []);
-
-  useEffect(function() {
-    var interval = setInterval(function() { loadAll(); }, 30000);
-    return function() { clearInterval(interval); };
-  }, []);
+  useEffect(function() { var i = setInterval(function() { loadAll(); }, 30000); return function() { clearInterval(i); }; }, []);
 
   async function init() {
     var id = localStorage.getItem('affiliate_id');
@@ -49,42 +48,42 @@ export default function AdminDashboard() {
 
   async function loadAll() {
     try { var affRes = await supabase.from('affiliate_metrics').select('*'); setAffiliates(affRes.data || []); } catch (e) {}
-    try { var salesRes = await supabase.from('sales').select('*, affiliates(name, coupon_code, avatar_initials)').order('created_at', { ascending: false }).limit(500); setAllSales(salesRes.data || []); } catch (e) {}
+    try { var salesRes = await supabase.from('sales').select('*, affiliates(name, coupon_code, avatar_initials, is_sponsored)').order('created_at', { ascending: false }).limit(500); setAllSales(salesRes.data || []); } catch (e) {}
     try { var withRes = await supabase.from('withdrawals').select('*, affiliates(name, coupon_code, avatar_initials, email)').order('created_at', { ascending: false }); setWithdrawals(withRes.data || []); } catch (e) {}
     try { var postsRes = await supabase.from('recent_posts').select('*').limit(50); setRecentPosts(postsRes.data || []); } catch (e) {}
+    try { var allPostsRes = await supabase.from('posts').select('*').gte('created_at', new Date(Date.now() - 60*24*60*60*1000).toISOString()); setAllPosts(allPostsRes.data || []); } catch (e) {}
+    try { var allObRes = await supabase.from('posting_obligations').select('*').eq('active', true); setAllObligations(allObRes.data || []); } catch (e) {}
     try { var monthRes = await supabase.from('monthly_sales').select('*'); setMonthlySales(monthRes.data || []); } catch (e) {}
     try { var topsRes = await supabase.from('monthly_top_affiliate').select('*'); setMonthlyTops(topsRes.data || []); } catch (e) {}
     try { var rwRes = await supabase.from('rewards').select('*').order('target_value', { ascending: true }); setRewards(rwRes.data || []); } catch (e) {}
   }
 
+  async function toggleSponsored(affiliateId, current) {
+    await supabase.from('affiliates').update({ is_sponsored: !current }).eq('id', affiliateId);
+    await loadAll();
+  }
+
   async function loadObligations(affiliateId) {
     setObligationsAffiliateId(affiliateId);
-    try {
-      var res = await supabase.from('posting_obligations').select('*').eq('affiliate_id', affiliateId).eq('active', true);
-      setObligationsList(res.data || []);
-    } catch(e) { setObligationsList([]); }
+    try { var res = await supabase.from('posting_obligations').select('*').eq('affiliate_id', affiliateId).eq('active', true); setObligationsList(res.data || []); } catch(e) { setObligationsList([]); }
   }
 
   async function toggleRecurringWeekday(weekday) {
     if (!obligationsAffiliateId) return;
     var existing = obligationsList.find(function(o) { return o.obligation_type === 'recurring' && o.weekday === weekday; });
-    if (existing) {
-      await supabase.from('posting_obligations').delete().eq('id', existing.id);
-    } else {
-      await supabase.from('posting_obligations').insert({ affiliate_id: obligationsAffiliateId, obligation_type: 'recurring', weekday: weekday, active: true });
-    }
+    if (existing) await supabase.from('posting_obligations').delete().eq('id', existing.id);
+    else await supabase.from('posting_obligations').insert({ affiliate_id: obligationsAffiliateId, obligation_type: 'recurring', weekday: weekday, active: true });
     await loadObligations(obligationsAffiliateId);
+    await loadAll();
   }
 
   async function toggleSpecificDate(dateStr) {
     if (!obligationsAffiliateId) return;
     var existing = obligationsList.find(function(o) { return o.obligation_type === 'specific' && o.specific_date === dateStr; });
-    if (existing) {
-      await supabase.from('posting_obligations').delete().eq('id', existing.id);
-    } else {
-      await supabase.from('posting_obligations').insert({ affiliate_id: obligationsAffiliateId, obligation_type: 'specific', specific_date: dateStr, active: true });
-    }
+    if (existing) await supabase.from('posting_obligations').delete().eq('id', existing.id);
+    else await supabase.from('posting_obligations').insert({ affiliate_id: obligationsAffiliateId, obligation_type: 'specific', specific_date: dateStr, active: true });
     await loadObligations(obligationsAffiliateId);
+    await loadAll();
   }
 
   async function clearAllObligations() {
@@ -92,6 +91,7 @@ export default function AdminDashboard() {
     if (!confirm('Limpar TODAS as obrigações deste afiliado?')) return;
     await supabase.from('posting_obligations').delete().eq('affiliate_id', obligationsAffiliateId);
     await loadObligations(obligationsAffiliateId);
+    await loadAll();
   }
 
   async function markPaid(wid) { await supabase.from('withdrawals').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', wid); await loadAll(); }
@@ -106,8 +106,7 @@ export default function AdminDashboard() {
       var uploadRes = await supabase.storage.from('receipts').upload(fileName, file, { cacheControl: '3600', upsert: false });
       if (uploadRes.error) throw uploadRes.error;
       var urlRes = supabase.storage.from('receipts').getPublicUrl(fileName);
-      var publicUrl = urlRes.data.publicUrl;
-      await supabase.from('withdrawals').update({ receipt_url: publicUrl, receipt_sent_at: new Date().toISOString() }).eq('id', wid);
+      await supabase.from('withdrawals').update({ receipt_url: urlRes.data.publicUrl, receipt_sent_at: new Date().toISOString() }).eq('id', wid);
       await loadAll();
     } catch (e) { alert('Erro: ' + (e.message || 'desconhecido')); }
     setUploadingId(null);
@@ -125,7 +124,7 @@ export default function AdminDashboard() {
   }
 
   async function saveReward() {
-    if (!rewardForm.target_value || !rewardForm.reward_title) { alert('Preencha os campos obrigatórios'); return; }
+    if (!rewardForm.target_value || !rewardForm.reward_title) { alert('Preencha os campos'); return; }
     var data = { target_type: rewardForm.target_type, target_value: Number(rewardForm.target_value), reward_title: rewardForm.reward_title.trim(), reward_description: rewardForm.reward_description.trim(), reward_emoji: rewardForm.reward_emoji || '🎁', reward_value_money: rewardForm.reward_value_money ? Number(rewardForm.reward_value_money) : 0, active: true };
     if (editingReward) await supabase.from('rewards').update(data).eq('id', editingReward.id);
     else await supabase.from('rewards').insert(data);
@@ -133,26 +132,35 @@ export default function AdminDashboard() {
     await loadAll();
   }
 
-  async function deleteReward(id) {
-    if (!confirm('Tem certeza?')) return;
-    await supabase.from('rewards').delete().eq('id', id);
-    await loadAll();
-  }
+  async function deleteReward(id) { if (!confirm('Deletar?')) return; await supabase.from('rewards').delete().eq('id', id); await loadAll(); }
+  async function toggleRewardActive(reward) { await supabase.from('rewards').update({ active: !reward.active }).eq('id', reward.id); await loadAll(); }
 
-  async function toggleRewardActive(reward) {
-    await supabase.from('rewards').update({ active: !reward.active }).eq('id', reward.id);
-    await loadAll();
+  // ==== Aplicar filtro de tipo (all/affiliate/sponsored) nos afiliados ====
+  function applyTypeFilter(list) {
+    if (typeFilter === 'all') return list;
+    if (typeFilter === 'sponsored') return list.filter(function(a) { return a.is_sponsored; });
+    return list.filter(function(a) { return !a.is_sponsored; });
   }
 
   var filteredSales = useMemo(function() {
-    if (dateRange === 'all') return allSales;
+    var sales = allSales;
+    if (typeFilter !== 'all') {
+      sales = sales.filter(function(s) {
+        if (!s.affiliates) return false;
+        if (typeFilter === 'sponsored') return s.affiliates.is_sponsored;
+        return !s.affiliates.is_sponsored;
+      });
+    }
+    if (dateRange === 'all') return sales;
     var days = parseInt(dateRange);
-    if (isNaN(days)) return allSales;
+    if (isNaN(days)) return sales;
     var cutoff;
     if (days === 1) { var today = new Date(); today.setHours(0, 0, 0, 0); cutoff = today.getTime(); }
     else { cutoff = Date.now() - days * 24 * 60 * 60 * 1000; }
-    return allSales.filter(function(s) { return new Date(s.created_at).getTime() >= cutoff; });
-  }, [allSales, dateRange]);
+    return sales.filter(function(s) { return new Date(s.created_at).getTime() >= cutoff; });
+  }, [allSales, dateRange, typeFilter]);
+
+  var filteredAffiliatesByType = useMemo(function() { return applyTypeFilter(affiliates); }, [affiliates, typeFilter]);
 
   var kpis = useMemo(function() {
     var revenue = filteredSales.reduce(function(s, v) { return s + Number(v.product_value || 0); }, 0);
@@ -160,16 +168,16 @@ export default function AdminDashboard() {
     var uniqueAffiliates = new Set(filteredSales.map(function(s) { return s.affiliate_id; })).size;
     return {
       totalSales: filteredSales.length, revenue: revenue, commissions: commissions, netRevenue: revenue - commissions,
-      activeAffiliates: uniqueAffiliates, totalAffiliates: affiliates.length,
+      activeAffiliates: uniqueAffiliates, totalAffiliates: filteredAffiliatesByType.length,
       avgTicket: filteredSales.length ? revenue / filteredSales.length : 0,
       pendingWithdrawals: withdrawals.filter(function(w) { return w.status === 'pending'; }).length
     };
-  }, [filteredSales, affiliates, withdrawals, dateRange]);
+  }, [filteredSales, filteredAffiliatesByType, withdrawals]);
 
   var pendingWithdrawals = withdrawals.filter(function(w) { return w.status === 'pending'; });
 
   var topAffiliates = useMemo(function() {
-    var filtered = affiliates.filter(function(a) {
+    var filtered = applyTypeFilter(affiliates).filter(function(a) {
       if (!searchTerm) return true;
       var q = searchTerm.toLowerCase();
       return (a.name || '').toLowerCase().includes(q) || (a.coupon_code || '').toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q);
@@ -181,9 +189,9 @@ export default function AdminDashboard() {
       if (sortBy === 'balance') return Number(b.available_balance) - Number(a.available_balance);
       return 0;
     });
-  }, [affiliates, searchTerm, sortBy]);
+  }, [affiliates, searchTerm, sortBy, typeFilter]);
 
-  var top10 = affiliates.slice().sort(function(a,b){return b.total_sales - a.total_sales;}).slice(0, 10);
+  var top10 = applyTypeFilter(affiliates).slice().sort(function(a,b){return b.total_sales - a.total_sales;}).slice(0, 10);
 
   var filteredMonthlySales = useMemo(function() {
     if (!selectedAffiliateFilter) return monthlySales;
@@ -198,6 +206,41 @@ export default function AdminDashboard() {
     });
     return Object.values(byMonth);
   }, [selectedAffiliateFilter, monthlySales, allSales]);
+
+  // ==== Cálculo de patrocinados em alerta ====
+  function getMissedDays(affiliateId) {
+    var obs = allObligations.filter(function(o) { return o.affiliate_id === affiliateId; });
+    if (obs.length === 0) return [];
+    var today = new Date(); today.setHours(0,0,0,0);
+    var posts = allPosts.filter(function(p) { return p.affiliate_id === affiliateId; });
+    var missed = [];
+    // Verifica os ultimos 30 dias
+    for (var i = 30; i >= 1; i--) {
+      var d = new Date(today); d.setDate(today.getDate() - i);
+      var weekday = d.getDay();
+      var dateStr = d.toISOString().split('T')[0];
+      var isObligatory = obs.some(function(o) {
+        if (o.obligation_type === 'recurring') return o.weekday === weekday;
+        if (o.obligation_type === 'specific') return o.specific_date === dateStr;
+        return false;
+      });
+      if (!isObligatory) continue;
+      var dStart = new Date(d).getTime();
+      var dEnd = new Date(d); dEnd.setHours(23,59,59,999);
+      var posted = posts.some(function(p) { var pt = new Date(p.created_at).getTime(); return pt >= dStart && pt <= dEnd.getTime(); });
+      if (!posted) missed.push({ date: d, dateStr: dateStr });
+    }
+    return missed;
+  }
+
+  var sponsoredAffiliates = affiliates.filter(function(a) { return a.is_sponsored; });
+  var sponsoredOK = [];
+  var sponsoredAlert = [];
+  sponsoredAffiliates.forEach(function(a) {
+    var missed = getMissedDays(a.id);
+    if (missed.length === 0) sponsoredOK.push({ ...a, missedDays: [] });
+    else sponsoredAlert.push({ ...a, missedDays: missed });
+  });
 
   function formatMoney(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 }); }
   function formatNumber(v) { return Number(v).toLocaleString('pt-BR'); }
@@ -225,7 +268,7 @@ export default function AdminDashboard() {
 
   var affiliateColors = ['#FFD700', '#0070F3', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#06B6D4'];
 
-  if (loading) return (<div style={{ minHeight: '100vh', background: '#FAFAFA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Carregando...</div>);
+  if (loading) return (<div style={{ minHeight: '100vh', background: '#FAFAFA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando...</div>);
 
   var menuItems = [
     { id: 'overview', label: 'Visão Geral', icon: '📊' },
@@ -233,7 +276,7 @@ export default function AdminDashboard() {
     { id: 'affiliates', label: 'Afiliados', icon: '👥' },
     { id: 'sales', label: 'Vendas', icon: '💰' },
     { id: 'rewards', label: 'Recompensas', icon: '🎁' },
-    { id: 'obligations', label: 'Obrigações', icon: '📅' },
+    { id: 'obligations', label: 'Obrigações', icon: '📅', alert: sponsoredAlert.length > 0 },
     { id: 'payments', label: 'Pagamentos', icon: '💳' },
     { id: 'withdrawals', label: 'Saques', icon: '💸' }
   ];
@@ -244,7 +287,6 @@ export default function AdminDashboard() {
   var emojiOptions = ['🎁','💰','🛴','✈️','🏖️','🏆','🚗','📱','💻','⌚','👜','💎','🎧','🚲','🎮','📷','🍾','🏝️','🥂','👑'];
   var weekdayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 
-  // ===== Calendário do mês para obrigações =====
   function getMonthCalendar(year, month) {
     var firstDay = new Date(year, month, 1);
     var lastDay = new Date(year, month + 1, 0);
@@ -263,32 +305,66 @@ export default function AdminDashboard() {
     return grid;
   }
 
+  function getMonthCalendarWithMissed(year, month, missedDays) {
+    var firstDay = new Date(year, month, 1);
+    var lastDay = new Date(year, month + 1, 0);
+    var startWeekday = firstDay.getDay();
+    var totalDays = lastDay.getDate();
+    var grid = [];
+    for (var i = 0; i < startWeekday; i++) grid.push(null);
+    for (var d = 1; d <= totalDays; d++) {
+      var dateObj = new Date(year, month, d);
+      var dateStr = dateObj.toISOString().split('T')[0];
+      var isMissed = missedDays.some(function(m) { return m.dateStr === dateStr; });
+      grid.push({ day: d, dateStr: dateStr, isMissed: isMissed });
+    }
+    return grid;
+  }
+
   var monthGrid = getMonthCalendar(obligationYear, obligationMonth);
   var selectedAffiliateData = obligationsAffiliateId ? affiliates.find(function(a) { return a.id === obligationsAffiliateId; }) : null;
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAFA', color: '#1A1A1A', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif', display: 'flex' }}>
+      <style>{`
+        @keyframes sirenPulse {
+          0%, 100% { background-color: rgba(239, 68, 68, 0.1); border-color: #EF4444; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+          50% { background-color: rgba(239, 68, 68, 0.25); border-color: #DC2626; box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+        }
+        @keyframes sirenSpin {
+          0%, 100% { transform: rotate(-15deg); }
+          50% { transform: rotate(15deg); }
+        }
+        @keyframes redFlash {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        @keyframes badgeBlink {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+        }
+      `}</style>
+
       <aside style={{ width: sidebarOpen ? 240 : 68, background: '#FFFFFF', borderRight: '1px solid #E5E5E5', position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>
         <div style={{ padding: '18px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1A1A1A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>JM</div>
-          {sidebarOpen && (<div style={{ minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Joias Maromba</div><div style={{ fontSize: 11, color: '#888' }}>Admin</div></div>)}
+          {sidebarOpen && (<div><div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Joias Maromba</div><div style={{ fontSize: 11, color: '#888' }}>Admin</div></div>)}
         </div>
-
         <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
           {menuItems.map(function(item) {
             var isActive = activeTab === item.id;
             var showBadge = item.id === 'withdrawals' && kpis.pendingWithdrawals > 0;
             return (
-              <button key={item.id} onClick={function() { setActiveTab(item.id); }} style={{ width: '100%', padding: '10px 12px', marginBottom: 2, background: isActive ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 8, color: isActive ? '#FFD700' : '#555', fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', position: 'relative' }} onMouseEnter={function(e) { if (!isActive) e.currentTarget.style.background = '#F3F4F6'; }} onMouseLeave={function(e) { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+              <button key={item.id} onClick={function() { setActiveTab(item.id); }} style={{ width: '100%', padding: '10px 12px', marginBottom: 2, background: isActive ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 8, color: isActive ? '#FFD700' : '#555', fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', position: 'relative' }}>
+                <span style={{ fontSize: 18, flexShrink: 0, animation: item.alert ? 'sirenSpin 0.5s ease-in-out infinite' : 'none' }}>{item.alert ? '🚨' : item.icon}</span>
                 {sidebarOpen && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>}
                 {sidebarOpen && showBadge && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{kpis.pendingWithdrawals}</span>)}
-                {!sidebarOpen && showBadge && (<span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, background: '#EF4444', borderRadius: 4 }} />)}
+                {sidebarOpen && item.alert && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, animation: 'badgeBlink 1s ease-in-out infinite' }}>{sponsoredAlert.length}</span>)}
+                {!sidebarOpen && (showBadge || item.alert) && (<span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, background: '#EF4444', borderRadius: 4 }} />)}
               </button>
             );
           })}
         </nav>
-
         <div style={{ padding: 12, borderTop: '1px solid #F0F0F0' }}>
           {sidebarOpen && (<div style={{ padding: '8px 12px', marginBottom: 8, background: '#FAFAFA', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: 16, background: '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{adminName.substring(0, 2).toUpperCase()}</div>
@@ -301,7 +377,7 @@ export default function AdminDashboard() {
       </aside>
 
       <main style={{ flex: 1, minWidth: 0, padding: 24, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ fontSize: 24, fontWeight: 700 }}>{(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}</div>
             <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
@@ -309,10 +385,10 @@ export default function AdminDashboard() {
               {activeTab === 'posts' && 'Feed em tempo real de postagens'}
               {activeTab === 'affiliates' && 'Gerenciar afiliados'}
               {activeTab === 'sales' && 'Todas as vendas registradas'}
-              {activeTab === 'rewards' && 'Metas e prêmios para afiliados'}
-              {activeTab === 'obligations' && 'Marque os dias obrigatórios de postagem por afiliado'}
-              {activeTab === 'payments' && 'Afiliados com saldo a pagar'}
-              {activeTab === 'withdrawals' && 'Processar saques solicitados'}
+              {activeTab === 'rewards' && 'Metas e prêmios'}
+              {activeTab === 'obligations' && 'Compromissos de postagem - patrocinados em alerta'}
+              {activeTab === 'payments' && 'Saldo a pagar'}
+              {activeTab === 'withdrawals' && 'Processar saques'}
             </div>
           </div>
           {(activeTab === 'overview' || activeTab === 'sales') && (
@@ -321,6 +397,19 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* Filtro Todos / Afiliados / Patrocinados */}
+        {(activeTab === 'overview' || activeTab === 'affiliates' || activeTab === 'sales') && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+            {[{v:'all', l:'👥 Todos', count: affiliates.length}, {v:'affiliate', l:'🤝 Afiliados', count: affiliates.filter(function(a){return !a.is_sponsored;}).length}, {v:'sponsored', l:'⭐ Patrocinados', count: affiliates.filter(function(a){return a.is_sponsored;}).length}].map(function(f) {
+              var sel = typeFilter === f.v;
+              return (<button key={f.v} onClick={function() { setTypeFilter(f.v); }} style={{ padding: '10px 16px', background: sel ? '#1A1A1A' : '#FFFFFF', color: sel ? '#FFD700' : '#555', border: '1px solid ' + (sel ? '#1A1A1A' : '#E5E5E5'), borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {f.l}
+                <span style={{ background: sel ? '#FFD700' : '#F3F4F6', color: sel ? '#1A1A1A' : '#666', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>{f.count}</span>
+              </button>);
+            })}
+          </div>
+        )}
 
         {activeTab === 'overview' && (
           <div>
@@ -353,10 +442,10 @@ export default function AdminDashboard() {
                 {top10.map(function(a, i) {
                   var perf = getPerformance(a);
                   return (<div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < 9 ? '1px solid #F0F0F0' : 'none' }}>
-                    <div style={{ width: 24, fontSize: 12, fontWeight: 600, color: i < 3 ? '#1A1A1A' : '#888' }}>{i + 1}</div>
+                    <div style={{ width: 24, fontSize: 12, fontWeight: 600 }}>{i + 1}</div>
                     <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{a.name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{a.name} {a.is_sponsored && <span style={{ fontSize: 10 }}>⭐</span>}</div>
                       <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code} · {a.total_sales} vendas</div>
                     </div>
                     <div style={{ padding: '2px 8px', background: perf.bg, color: perf.color, borderRadius: 4, fontSize: 10, fontWeight: 600 }}>{perf.label}</div>
@@ -387,21 +476,81 @@ export default function AdminDashboard() {
           <div>
             {!obligationsAffiliateId ? (
               <div>
-                <div style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #333 100%)', border: '1px solid #FFD700', borderRadius: 12, padding: 24, marginBottom: 20, color: '#FFD700' }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>📅 Obrigações de Postagem</div>
-                  <div style={{ fontSize: 13, opacity: 0.8 }}>Selecione um afiliado abaixo para configurar os dias obrigatórios</div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {affiliates.map(function(a) {
-                    return (<button key={a.id} onClick={function() { loadObligations(a.id); }} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 16, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 20, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>{a.name}</div>
-                        <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code} · {a.total_sales} vendas</div>
+                {/* SEÇÃO 1: PATROCINADOS EM ALERTA */}
+                {sponsoredAlert.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 28, animation: 'sirenSpin 0.5s ease-in-out infinite' }}>🚨</div>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: '#EF4444' }}>PATROCINADOS EM ALERTA — DEVENDO POSTAGEM</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Estes patrocinados não cumpriram dias obrigatórios. Clique pra ver detalhes</div>
                       </div>
-                      <span style={{ color: '#888' }}>›</span>
-                    </button>);
-                  })}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                      {sponsoredAlert.map(function(a) {
+                        return (<button key={a.id} onClick={function() { loadObligations(a.id); }} style={{ background: '#FEF2F2', border: '2px solid #EF4444', borderRadius: 10, padding: 16, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, animation: 'sirenPulse 1.2s ease-in-out infinite' }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 22, background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#991B1B', position: 'relative' }}>
+                            {a.avatar_initials}
+                            <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, background: '#EF4444', borderRadius: 9, fontSize: 10, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, animation: 'badgeBlink 1s ease-in-out infinite' }}>{a.missedDays.length}</div>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#991B1B' }}>{a.name}</div>
+                            <div style={{ fontSize: 11, color: '#7F1D1D' }}>{a.coupon_code}</div>
+                            <div style={{ fontSize: 11, color: '#EF4444', fontWeight: 700, marginTop: 4 }}>⚠️ Devendo {a.missedDays.length} {a.missedDays.length === 1 ? 'postagem' : 'postagens'}</div>
+                          </div>
+                        </button>);
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* SEÇÃO 2: PATROCINADOS POSTANDO OK */}
+                {sponsoredOK.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 24 }}>✅</div>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: '#10B981' }}>PATROCINADOS POSTANDO SEM ERRAR</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Patrocinados em dia com as obrigações</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                      {sponsoredOK.map(function(a) {
+                        return (<button key={a.id} onClick={function() { loadObligations(a.id); }} style={{ background: '#FFFFFF', border: '2px solid #10B981', borderRadius: 10, padding: 16, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 22, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#065F46' }}>{a.avatar_initials}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700 }}>{a.name}</div>
+                            <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code}</div>
+                            <div style={{ fontSize: 11, color: '#10B981', fontWeight: 700, marginTop: 4 }}>✓ Em dia com as postagens</div>
+                          </div>
+                        </button>);
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* SEÇÃO 3: AFILIADOS NORMAIS */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    <div style={{ fontSize: 24 }}>🤝</div>
+                    <div>
+                      <div style={{ fontSize: 18, fontWeight: 800 }}>AFILIADOS</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Afiliados sem obrigações fixas — clique pra adicionar</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                    {affiliates.filter(function(a) { return !a.is_sponsored; }).map(function(a) {
+                      return (<button key={a.id} onClick={function() { loadObligations(a.id); }} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 16, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 20, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>{a.name}</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code} · {a.total_sales} vendas</div>
+                        </div>
+                        <span style={{ color: '#888' }}>›</span>
+                      </button>);
+                    })}
+                    {affiliates.filter(function(a) { return !a.is_sponsored; }).length === 0 && (<div style={{ gridColumn: '1/-1', padding: 30, textAlign: 'center', color: '#888' }}>Nenhum afiliado normal</div>)}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -410,17 +559,36 @@ export default function AdminDashboard() {
                   <button onClick={function() { setObligationsAffiliateId(null); setObligationsList([]); }} style={{ padding: '8px 14px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>‹ Voltar</button>
                   {selectedAffiliateData && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 22, background: '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }}>{selectedAffiliateData.avatar_initials}</div>
+                      <div style={{ width: 44, height: 44, borderRadius: 22, background: selectedAffiliateData.is_sponsored ? '#FFD700' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }}>{selectedAffiliateData.avatar_initials}</div>
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 700 }}>{selectedAffiliateData.name}</div>
+                        <div style={{ fontSize: 16, fontWeight: 700 }}>{selectedAffiliateData.name} {selectedAffiliateData.is_sponsored && <span style={{ fontSize: 12, color: '#FFD700' }}>⭐ PATROCINADO</span>}</div>
                         <div style={{ fontSize: 12, color: '#888' }}>{selectedAffiliateData.coupon_code}</div>
                       </div>
                     </div>
                   )}
+                  <button onClick={function() { toggleSponsored(obligationsAffiliateId, selectedAffiliateData && selectedAffiliateData.is_sponsored); }} style={{ padding: '8px 14px', background: selectedAffiliateData && selectedAffiliateData.is_sponsored ? '#1A1A1A' : '#FFD700', color: selectedAffiliateData && selectedAffiliateData.is_sponsored ? '#FFD700' : '#1A1A1A', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>{selectedAffiliateData && selectedAffiliateData.is_sponsored ? 'Tornar Afiliado' : '⭐ Marcar Patrocinado'}</button>
                   <button onClick={clearAllObligations} style={{ padding: '8px 14px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 6, fontSize: 12, color: '#991B1B', cursor: 'pointer', fontWeight: 600 }}>🗑 Limpar tudo</button>
                 </div>
 
-                {/* Dias da semana recorrentes */}
+                {/* CALENDÁRIO COM DIAS FALHADOS EM VERMELHO */}
+                {selectedAffiliateData && selectedAffiliateData.is_sponsored && (function() {
+                  var missed = getMissedDays(selectedAffiliateData.id);
+                  if (missed.length === 0) return null;
+                  return (
+                    <div style={{ background: '#FEF2F2', border: '2px solid #EF4444', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <div style={{ fontSize: 24, animation: 'sirenSpin 0.5s ease-in-out infinite' }}>🚨</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: '#991B1B' }}>{missed.length} dia(s) sem postagem nos últimos 30 dias</div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {missed.map(function(m, i) {
+                          return (<div key={i} style={{ background: '#EF4444', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, animation: 'redFlash 1.2s ease-in-out infinite' }}>{formatDate(m.date)}</div>);
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 12, padding: 20, marginBottom: 20 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📌 Dias da semana recorrentes</div>
                   <div style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Marque os dias da semana em que ESTE afiliado deve postar TODA semana</div>
@@ -432,10 +600,9 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Datas específicas no calendário */}
                 <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 12, padding: 20 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📆 Datas específicas (manual)</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Clique em datas específicas para marcar como obrigatórias</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📆 Calendário do mês</div>
+                  <div style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Vermelho = dia falhado · Amarelo = obrigação · Click pra marcar/desmarcar manual</div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                     <button onClick={function() { var nm = obligationMonth - 1; if (nm < 0) { setObligationMonth(11); setObligationYear(obligationYear - 1); } else { setObligationMonth(nm); } }} style={{ padding: '6px 12px', background: '#F3F4F6', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>‹</button>
@@ -447,23 +614,33 @@ export default function AdminDashboard() {
                     {weekdayNames.map(function(n, i) { return (<div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#888', padding: 4 }}>{n}</div>); })}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-                    {monthGrid.map(function(cell, i) {
-                      if (!cell) return (<div key={i} style={{ minHeight: 50 }}></div>);
-                      var isMarked = cell.hasRecurring || cell.hasSpecific;
-                      var bg = cell.hasSpecific ? '#FFD700' : cell.hasRecurring ? '#FEF3C7' : '#FFFFFF';
-                      var color = cell.hasSpecific ? '#000' : cell.hasRecurring ? '#92400E' : '#1A1A1A';
-                      var border = cell.hasSpecific ? '2px solid #B8860B' : cell.hasRecurring ? '2px solid #FFD700' : '1px solid #E5E5E5';
-                      return (<button key={i} onClick={function() { toggleSpecificDate(cell.dateStr); }} style={{ minHeight: 50, padding: 4, background: bg, color: color, border: border, borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, position: 'relative' }}>
-                        {cell.day}
-                        {cell.hasRecurring && !cell.hasSpecific && <div style={{ position: 'absolute', top: 2, right: 2, fontSize: 9 }}>🔁</div>}
-                        {cell.hasSpecific && <div style={{ position: 'absolute', top: 2, right: 2, fontSize: 9 }}>📌</div>}
-                      </button>);
-                    })}
+                    {(function() {
+                      var missedSet = {};
+                      if (selectedAffiliateData && selectedAffiliateData.is_sponsored) {
+                        getMissedDays(selectedAffiliateData.id).forEach(function(m) { missedSet[m.dateStr] = true; });
+                      }
+                      return monthGrid.map(function(cell, i) {
+                        if (!cell) return (<div key={i} style={{ minHeight: 50 }}></div>);
+                        var isMissed = missedSet[cell.dateStr];
+                        var bg, color, border, anim = 'none';
+                        if (isMissed) { bg = '#EF4444'; color = '#fff'; border = '2px solid #DC2626'; anim = 'redFlash 1.2s ease-in-out infinite'; }
+                        else if (cell.hasSpecific) { bg = '#FFD700'; color = '#000'; border = '2px solid #B8860B'; }
+                        else if (cell.hasRecurring) { bg = '#FEF3C7'; color = '#92400E'; border = '2px solid #FFD700'; }
+                        else { bg = '#FFFFFF'; color = '#1A1A1A'; border = '1px solid #E5E5E5'; }
+                        return (<button key={i} onClick={function() { toggleSpecificDate(cell.dateStr); }} style={{ minHeight: 50, padding: 4, background: bg, color: color, border: border, borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, position: 'relative', animation: anim }}>
+                          {cell.day}
+                          {isMissed && <div style={{ position: 'absolute', top: 2, right: 2, fontSize: 9 }}>🚨</div>}
+                          {!isMissed && cell.hasRecurring && !cell.hasSpecific && <div style={{ position: 'absolute', top: 2, right: 2, fontSize: 9 }}>🔁</div>}
+                          {!isMissed && cell.hasSpecific && <div style={{ position: 'absolute', top: 2, right: 2, fontSize: 9 }}>📌</div>}
+                        </button>);
+                      });
+                    })()}
                   </div>
 
                   <div style={{ marginTop: 16, padding: 12, background: '#F9FAFB', borderRadius: 8, fontSize: 11, color: '#666', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <div>🔁 = Dia recorrente da semana</div>
-                    <div>📌 = Data específica marcada manualmente</div>
+                    <div>🔁 Recorrente</div>
+                    <div>📌 Específico</div>
+                    <div>🚨 Falhou</div>
                   </div>
                 </div>
               </div>
@@ -475,17 +652,16 @@ export default function AdminDashboard() {
           <div>
             <div style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #333 100%)', border: '1px solid #FFD700', borderRadius: 12, padding: 24, marginBottom: 20, color: '#FFD700' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                <div><div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>🎁 Gerenciar Recompensas</div><div style={{ fontSize: 13, opacity: 0.8 }}>Crie metas e prêmios que motivam seus afiliados</div></div>
+                <div><div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>🎁 Gerenciar Recompensas</div><div style={{ fontSize: 13, opacity: 0.8 }}>Crie metas e prêmios</div></div>
                 <button onClick={function() { openRewardModal(null); }} style={{ padding: '12px 24px', background: '#FFD700', border: 'none', borderRadius: 8, color: '#1A1A1A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>+ Nova Recompensa</button>
               </div>
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
               {rewards.map(function(r) {
                 return (<div key={r.id} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 12, padding: 20, opacity: r.active ? 1 : 0.5 }}>
                   <div style={{ fontSize: 48, marginBottom: 12, textAlign: 'center' }}>{r.reward_emoji}</div>
                   <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, textAlign: 'center' }}>{r.reward_title}</div>
-                  {r.reward_description && (<div style={{ fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center', minHeight: 16 }}>{r.reward_description}</div>)}
+                  {r.reward_description && (<div style={{ fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' }}>{r.reward_description}</div>)}
                   <div style={{ background: '#FFFBEB', border: '1px solid #FFD700', borderRadius: 8, padding: 12, textAlign: 'center', marginBottom: 12 }}>
                     <div style={{ fontSize: 10, color: '#92400E', textTransform: 'uppercase', fontWeight: 600 }}>META</div>
                     <div style={{ fontSize: 20, fontWeight: 800 }}>{r.target_type === 'sales' ? r.target_value + ' vendas' : formatMoney(r.target_value)}</div>
@@ -500,7 +676,7 @@ export default function AdminDashboard() {
               })}
               {rewards.length === 0 && (<div style={{ gridColumn: '1 / -1', background: '#FFFFFF', border: '2px dashed #E5E5E5', borderRadius: 12, padding: 60, textAlign: 'center', color: '#888' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🎁</div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>Nenhuma recompensa criada</div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>Nenhuma recompensa</div>
               </div>)}
             </div>
           </div>
@@ -508,19 +684,18 @@ export default function AdminDashboard() {
 
         {activeTab === 'posts' && (
           <div>
-            <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 8, height: 8, borderRadius: 4, background: '#10B981' }}></div>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
               <div style={{ fontSize: 13, color: '#666' }}><strong>{recentPosts.length}</strong> postagens · atualiza a cada 30s</div>
             </div>
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8 }}>
               <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E5E5', background: '#FAFAFA', display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 2fr', gap: 12, fontSize: 11, fontWeight: 600, color: '#666', textTransform: 'uppercase' }}>
-                <div></div><div>Afiliado</div><div>Rede</div><div>Data/Hora</div><div>Link / ID</div>
+                <div></div><div>Afiliado</div><div>Rede</div><div>Data/Hora</div><div>Link</div>
               </div>
               {recentPosts.map(function(p) {
                 return (<div key={p.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 2fr', gap: 12, alignItems: 'center', fontSize: 13 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>{p.avatar_initials}</div>
                   <div><div style={{ fontWeight: 500 }}>{p.affiliate_name}</div><div style={{ fontSize: 11, color: '#888' }}>{p.coupon_code}</div></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 16 }}>{getPlatformIcon(p.platform)}</span><span style={{ fontSize: 12, textTransform: 'capitalize' }}>{p.platform}</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span>{getPlatformIcon(p.platform)}</span><span style={{ fontSize: 12, textTransform: 'capitalize' }}>{p.platform}</span></div>
                   <div><div style={{ fontSize: 12, color: '#666' }}>{formatDateTime(p.created_at)}</div><div style={{ fontSize: 10, color: '#888' }}>{timeSince(p.created_at)}</div></div>
                   <div style={{ fontSize: 12, fontFamily: 'monospace', wordBreak: 'break-all' }}>{p.post_identifier ? (p.post_identifier.startsWith('http') ? (<a href={p.post_identifier} target="_blank" rel="noopener" style={{ color: '#0070F3' }}>{p.post_identifier} ↗</a>) : p.post_identifier) : (<span style={{ color: '#CCC' }}>sem link</span>)}</div>
                 </div>);
@@ -542,14 +717,15 @@ export default function AdminDashboard() {
               {topAffiliates.map(function(a) {
                 var perf = getPerformance(a);
                 return (<div key={a.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 18, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
+                  <div style={{ width: 36, height: 36, borderRadius: 18, background: a.is_sponsored ? '#FFD700' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: a.is_sponsored ? '#000' : '#666' }}>{a.avatar_initials}</div>
                   <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontWeight: 500, fontSize: 14 }}>{a.name}</div>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{a.name} {a.is_sponsored && <span style={{ fontSize: 10, color: '#FFD700', marginLeft: 6 }}>⭐ PATROCINADO</span>}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{a.email} · {a.coupon_code}</div>
                   </div>
                   <div style={{ textAlign: 'center' }}><div style={{ color: '#888', fontSize: 10 }}>Vendas</div><div style={{ fontWeight: 700, fontSize: 16 }}>{a.total_sales}</div></div>
                   <div style={{ textAlign: 'center' }}><div style={{ color: '#888', fontSize: 10 }}>Saldo</div><div style={{ fontWeight: 700, fontSize: 14, color: '#10B981' }}>{formatMoney(a.available_balance)}</div></div>
                   <div style={{ padding: '3px 10px', background: perf.bg, color: perf.color, borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{perf.label}</div>
+                  <button onClick={function() { toggleSponsored(a.id, a.is_sponsored); }} style={{ padding: '6px 10px', background: a.is_sponsored ? '#1A1A1A' : '#FFD700', color: a.is_sponsored ? '#FFD700' : '#1A1A1A', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{a.is_sponsored ? 'Tornar Afiliado' : '⭐ Marcar Patrocinado'}</button>
                 </div>);
               })}
               {topAffiliates.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhum afiliado</div>)}
@@ -567,7 +743,7 @@ export default function AdminDashboard() {
                 <div style={{ color: '#888', fontSize: 12 }}>{new Date(s.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
                 <div style={{ fontWeight: 500 }}>{s.product_name}</div>
                 <div style={{ color: '#666' }}>{s.buyer_name}</div>
-                <div style={{ color: '#666' }}>{s.affiliates && s.affiliates.coupon_code}</div>
+                <div style={{ color: '#666' }}>{s.affiliates && s.affiliates.coupon_code} {s.affiliates && s.affiliates.is_sponsored && <span style={{ color: '#FFD700' }}>⭐</span>}</div>
                 <div>{formatMoney(s.product_value || 0)}</div>
                 <div style={{ color: '#10B981', fontWeight: 600 }}>{formatMoney(s.commission_earned)}</div>
               </div>);
@@ -583,7 +759,7 @@ export default function AdminDashboard() {
                 <div style={{ width: 36, height: 36, borderRadius: 18, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>{a.name}</div>
-                  <div style={{ fontSize: 12, color: '#888' }}>{a.email} · {a.days_since_signup} dias</div>
+                  <div style={{ fontSize: 12, color: '#888' }}>{a.email}</div>
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#10B981' }}>{formatMoney(a.available_balance)}</div>
               </div>);
@@ -605,7 +781,7 @@ export default function AdminDashboard() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{af.name}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{af.coupon_code} · {w.affiliate_email || af.email}</div>
-                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Solicitado em {formatDateTime(w.created_at)}</div>
+                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{formatDateTime(w.created_at)}</div>
                   </div>
                   <div style={{ fontSize: 20, fontWeight: 700 }}>{formatMoney(w.amount)}</div>
                 </div>
@@ -616,27 +792,18 @@ export default function AdminDashboard() {
                   </div>
                   <button onClick={function() { navigator.clipboard.writeText(w.pix_key); alert('Copiado'); }} style={{ padding: '6px 10px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>Copiar</button>
                 </div>
-
-                {!isPaid && !isRejected && (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={function() { if (confirm('Pagar?')) markPaid(w.id); }} style={{ flex: 1, padding: 12, background: '#EF4444', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>MARCAR COMO PAGO</button>
-                    <button onClick={function() { if (confirm('Rejeitar?')) rejectWith(w.id); }} style={{ padding: '10px 16px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, cursor: 'pointer' }}>Rejeitar</button>
-                  </div>
-                )}
-
-                {isPaid && (
-                  <div>
-                    <div style={{ padding: '10px 14px', background: '#10B981', borderRadius: 6, color: '#FFFFFF', fontWeight: 800, fontSize: 13, textAlign: 'center', marginBottom: 10 }}>✓ PAGO em {formatDateTime(w.paid_at)}</div>
-                    {!hasReceipt && (
-                      <label style={{ display: 'block', padding: 12, background: '#EF4444', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'center' }}>
-                        {uploadingId === w.id ? 'ENVIANDO...' : '📎 ENVIAR COMPROVANTE'}
-                        <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={function(e) { if (e.target.files[0]) uploadReceipt(w.id, e.target.files[0]); }} />
-                      </label>
-                    )}
-                    {hasReceipt && (<button onClick={function() { setViewReceiptUrl(w.receipt_url); }} style={{ width: '100%', padding: 12, background: '#10B981', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>✓ COMPROVANTE ENVIADO</button>)}
-                  </div>
-                )}
-
+                {!isPaid && !isRejected && (<div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={function() { if (confirm('Pagar?')) markPaid(w.id); }} style={{ flex: 1, padding: 12, background: '#EF4444', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>MARCAR COMO PAGO</button>
+                  <button onClick={function() { if (confirm('Rejeitar?')) rejectWith(w.id); }} style={{ padding: '10px 16px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, cursor: 'pointer' }}>Rejeitar</button>
+                </div>)}
+                {isPaid && (<div>
+                  <div style={{ padding: '10px 14px', background: '#10B981', borderRadius: 6, color: '#FFFFFF', fontWeight: 800, fontSize: 13, textAlign: 'center', marginBottom: 10 }}>✓ PAGO em {formatDateTime(w.paid_at)}</div>
+                  {!hasReceipt && (<label style={{ display: 'block', padding: 12, background: '#EF4444', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'center' }}>
+                    {uploadingId === w.id ? 'ENVIANDO...' : '📎 ENVIAR COMPROVANTE'}
+                    <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={function(e) { if (e.target.files[0]) uploadReceipt(w.id, e.target.files[0]); }} />
+                  </label>)}
+                  {hasReceipt && (<button onClick={function() { setViewReceiptUrl(w.receipt_url); }} style={{ width: '100%', padding: 12, background: '#10B981', border: 'none', borderRadius: 6, color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>✓ COMPROVANTE ENVIADO</button>)}
+                </div>)}
                 {isRejected && (<div style={{ padding: '10px 14px', background: '#FEE2E2', borderRadius: 6, color: '#991B1B', fontWeight: 700, fontSize: 13, textAlign: 'center' }}>REJEITADO</div>)}
               </div>);
             })}
@@ -659,18 +826,18 @@ export default function AdminDashboard() {
               })}
             </div>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600 }}>Titulo *</label>
-            <input type="text" value={rewardForm.reward_title} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_title: e.target.value })); }} placeholder="Ex: Viagem para Paris" style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
+            <input type="text" value={rewardForm.reward_title} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_title: e.target.value })); }} style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
             <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600 }}>Descricao</label>
-            <input type="text" value={rewardForm.reward_description} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_description: e.target.value })); }} placeholder="Ex: Tudo pago" style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
+            <input type="text" value={rewardForm.reward_description} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_description: e.target.value })); }} style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
             <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600 }}>Tipo de meta</label>
             <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-              <button onClick={function() { setRewardForm(Object.assign({}, rewardForm, { target_type: 'sales' })); }} style={{ flex: 1, padding: 10, background: rewardForm.target_type === 'sales' ? '#1A1A1A' : '#F3F4F6', color: rewardForm.target_type === 'sales' ? '#FFD700' : '#666', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Numero de vendas</button>
-              <button onClick={function() { setRewardForm(Object.assign({}, rewardForm, { target_type: 'revenue' })); }} style={{ flex: 1, padding: 10, background: rewardForm.target_type === 'revenue' ? '#1A1A1A' : '#F3F4F6', color: rewardForm.target_type === 'revenue' ? '#FFD700' : '#666', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Valor em R$</button>
+              <button onClick={function() { setRewardForm(Object.assign({}, rewardForm, { target_type: 'sales' })); }} style={{ flex: 1, padding: 10, background: rewardForm.target_type === 'sales' ? '#1A1A1A' : '#F3F4F6', color: rewardForm.target_type === 'sales' ? '#FFD700' : '#666', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Vendas</button>
+              <button onClick={function() { setRewardForm(Object.assign({}, rewardForm, { target_type: 'revenue' })); }} style={{ flex: 1, padding: 10, background: rewardForm.target_type === 'revenue' ? '#1A1A1A' : '#F3F4F6', color: rewardForm.target_type === 'revenue' ? '#FFD700' : '#666', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>R$</button>
             </div>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600 }}>Meta *</label>
-            <input type="number" value={rewardForm.target_value} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { target_value: e.target.value })); }} placeholder={rewardForm.target_type === 'sales' ? 'Ex: 50' : 'Ex: 10000'} style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600 }}>Bonus em dinheiro</label>
-            <input type="number" value={rewardForm.reward_value_money} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_value_money: e.target.value })); }} placeholder="Ex: 200" style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 20, fontSize: 14 }} />
+            <input type="number" value={rewardForm.target_value} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { target_value: e.target.value })); }} style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 12, fontSize: 14 }} />
+            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 600 }}>Bonus dinheiro</label>
+            <input type="number" value={rewardForm.reward_value_money} onChange={function(e) { setRewardForm(Object.assign({}, rewardForm, { reward_value_money: e.target.value })); }} style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 20, fontSize: 14 }} />
             <button onClick={saveReward} style={{ width: '100%', padding: 12, background: '#1A1A1A', color: '#FFD700', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{editingReward ? 'Salvar' : 'Criar'}</button>
           </div>
         </div>
@@ -698,14 +865,11 @@ function MonthlyTowersChart({ monthlySales, monthlyTops, monthNames, formatMoney
   var levelStep = maxRevenue > 10000 ? 5000 : maxRevenue > 5000 ? 2500 : maxRevenue > 1000 ? 1000 : maxRevenue > 500 ? 500 : 250;
   var topLevel = Math.ceil(maxRevenue / levelStep) * levelStep;
   if (topLevel === 0) topLevel = levelStep;
-
   var levels = [];
   for (var i = 0; i <= 4; i++) { levels.push(Math.round((topLevel / 4) * i)); }
   levels.reverse();
-
   function getMonthData(monthNum) { return (monthlySales || []).find(function(m) { return m.month_num === monthNum; }) || { sales_count: 0, revenue: 0 }; }
   function getTopData(monthNum) { if (selectedAffiliate) return null; return monthlyTops.find(function(m) { return m.month_num === monthNum; }); }
-
   return (
     <div style={{ display: 'flex', gap: 0, alignItems: 'stretch', height: 380, position: 'relative' }}>
       <div style={{ width: 70, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingTop: 60, paddingBottom: 50, fontSize: 10, color: '#888', textAlign: 'right', paddingRight: 10, flexShrink: 0 }}>
@@ -725,22 +889,16 @@ function MonthlyTowersChart({ monthlySales, monthlyTops, monthNames, formatMoney
             var isFuture = m > currentMonth;
             return (
               <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', minWidth: 0, position: 'relative' }}>
-                {top && !isFuture && !selectedAffiliate && (
-                  <div style={{ position: 'absolute', top: -55, left: 0, right: 0, textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, lineHeight: 1 }}>🏆</div>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#FFD700', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80, margin: '2px auto 0' }}>{top.coupon_code}</div>
-                  </div>
-                )}
+                {top && !isFuture && !selectedAffiliate && (<div style={{ position: 'absolute', top: -55, left: 0, right: 0, textAlign: 'center' }}><div style={{ fontSize: 22 }}>🏆</div><div style={{ fontSize: 9, fontWeight: 700, color: '#FFD700', marginTop: 2 }}>{top.coupon_code}</div></div>)}
                 {revenue > 0 && (<div style={{ position: 'absolute', bottom: 'calc(' + Math.max(heightPct, 2) + '% + 52px)', fontSize: 10, fontWeight: 700, color: isCurrent ? '#B8860B' : '#666' }}>{data.sales_count}</div>)}
-                <div style={{ width: '100%', maxWidth: 60, height: Math.max(heightPct, isFuture ? 0 : 2) + '%', minHeight: isFuture ? 0 : 2, background: isFuture ? 'transparent' : (isCurrent ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' : 'linear-gradient(180deg, #FFD700 0%, #B8860B 100%)'), borderRadius: '6px 6px 0 0', transition: 'height 0.5s ease-out', boxShadow: isFuture ? 'none' : '0 2px 8px rgba(255,215,0,0.3)' }}></div>
+                <div style={{ width: '100%', maxWidth: 60, height: Math.max(heightPct, isFuture ? 0 : 2) + '%', minHeight: isFuture ? 0 : 2, background: isFuture ? 'transparent' : (isCurrent ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' : 'linear-gradient(180deg, #FFD700 0%, #B8860B 100%)'), borderRadius: '6px 6px 0 0' }}></div>
                 <div style={{ width: '100%', maxWidth: 60, height: 3, background: '#1A1A1A', borderRadius: 1 }}></div>
                 <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: isCurrent ? '#1A1A1A' : '#888' }}>{monthNames[m-1]}</div>
-                <div style={{ marginTop: 2, fontSize: 9, color: '#666', whiteSpace: 'nowrap' }}>{revenue > 0 ? formatMoney(revenue) : '–'}</div>
+                <div style={{ marginTop: 2, fontSize: 9, color: '#666' }}>{revenue > 0 ? formatMoney(revenue) : '–'}</div>
               </div>
             );
           })}
         </div>
-        {selectedAffiliate && (<div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: 13, fontWeight: 700 }}>Vendas de: <span style={{ color: '#B8860B' }}>{selectedAffiliate.name}</span></div>)}
       </div>
     </div>
   );
