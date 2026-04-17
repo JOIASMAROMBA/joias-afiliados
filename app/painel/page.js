@@ -635,23 +635,27 @@ export default function PainelPage() {
             </div>
           </div>
 
-          <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div>
-                <div style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Saldo Disponível</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#00ff88' }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <div style={{ background: 'rgba(0,255,136,0.06)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 14, padding: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 8px #00ff88' }}></span>
+                  <div style={{ color: '#fff', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>Saldo Disponível</div>
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: '#00ff88', lineHeight: 1.1, letterSpacing: -0.5 }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <div style={{ fontSize: 9, color: 'rgba(0,255,136,0.55)', marginTop: 4, fontWeight: 600 }}>pronto para saque</div>
               </div>
-              <div style={{ fontSize: 36 }}>💰</div>
-            </div>
-            <button onClick={function() { setShowWithdrawModal(true); }} disabled={Number(balance.available_balance) < 10} style={{ width: '100%', padding: 14, background: Number(balance.available_balance) >= 10 ? 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)' : '#1a1a1a', border: 'none', borderRadius: 14, color: Number(balance.available_balance) >= 10 ? '#000' : 'rgba(0,255,136,0.3)', fontWeight: 800, fontSize: 15, cursor: Number(balance.available_balance) >= 10 ? 'pointer' : 'not-allowed', boxShadow: Number(balance.available_balance) >= 10 ? '0 4px 20px rgba(0,255,136,0.4)' : 'none' }}>💸 Solicitar Saque</button>
-            <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>🔒 Saldo Bloqueado</div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: 'rgba(255,255,255,0.55)' }}>R${Number(balance.blocked_balance || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+              <div style={{ background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid rgba(255,255,255,0.15)', borderRadius: 14, padding: 16, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }}></span>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.8 }}>Saldo a Liberar</div>
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: 'rgba(255,255,255,0.55)', lineHeight: 1.1, letterSpacing: -0.5 }}>R${Number(balance.blocked_balance || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 4, fontWeight: 600 }}>libera em até 8 dias</div>
               </div>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 4, lineHeight: 1.4 }}>Cada venda fica bloqueada por 8 dias antes de liberar para saque.</div>
-              <button onClick={function() { setShowReleaseDatesModal(true); }} style={{ marginTop: 10, width: '100%', padding: '8px 12px', background: 'transparent', border: '1px solid rgba(201,169,97,0.5)', borderRadius: 10, color: '#C9A961', fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>📅 Datas de Liberação</button>
             </div>
+            <button onClick={function() { setShowWithdrawModal(true); }} disabled={Number(balance.available_balance) < 10} style={{ width: '100%', padding: 14, background: Number(balance.available_balance) >= 10 ? 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)' : 'rgba(26,26,26,0.6)', border: Number(balance.available_balance) >= 10 ? 'none' : '1px solid rgba(0,255,136,0.15)', borderRadius: 14, color: Number(balance.available_balance) >= 10 ? '#000' : 'rgba(0,255,136,0.3)', fontWeight: 800, fontSize: 15, cursor: Number(balance.available_balance) >= 10 ? 'pointer' : 'not-allowed', boxShadow: Number(balance.available_balance) >= 10 ? '0 4px 20px rgba(0,255,136,0.4)' : 'none', marginBottom: 8 }}>💸 Solicitar Saque</button>
+            <button onClick={function() { setShowReleaseDatesModal(true); }} style={{ width: '100%', padding: 11, background: 'transparent', border: '1px solid rgba(201,169,97,0.45)', borderRadius: 12, color: '#C9A961', fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>📅 Datas de Liberação</button>
           </div>
 
           <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.2)', borderRadius: 16, padding: 18, marginBottom: 16 }}>
