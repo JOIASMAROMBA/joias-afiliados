@@ -997,19 +997,27 @@ export default function AdminDashboard() {
                 <div></div><div>Afiliado</div><div>Rede</div><div>Data/Hora</div><div>Link</div>
               </div>
               {recentPosts.map(function(p) {
-                return (<div key={p.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 2fr', gap: 12, alignItems: 'center', fontSize: 13 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>{p.avatar_initials}</div>
-                  <div><div style={{ fontWeight: 500 }}>{p.affiliate_name}</div><div style={{ fontSize: 11, color: '#888' }}>{p.coupon_code}</div></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span>{getPlatformIcon(p.platform)}</span><span style={{ fontSize: 12, textTransform: 'capitalize' }}>{p.platform}</span></div>
-                  <div><div style={{ fontSize: 12, color: '#666' }}>{formatDateTime(p.created_at)}</div><div style={{ fontSize: 10, color: '#888' }}>{timeSince(p.created_at)}</div></div>
-                  <div style={{ fontSize: 12, wordBreak: 'break-all' }}>{(function() {
+                return (<div key={p.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'grid', gridTemplateColumns: '40px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr)', gap: 12, alignItems: 'center', fontSize: 13 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666', flexShrink: 0 }}>{p.avatar_initials}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.affiliate_name}>{p.affiliate_name}</div>
+                    <div style={{ fontSize: 11, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.coupon_code}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span>{getPlatformIcon(p.platform)}</span><span style={{ fontSize: 12, textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.platform}</span></div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatDateTime(p.created_at)}</div>
+                    <div style={{ fontSize: 10, color: '#888' }}>{timeSince(p.created_at)}</div>
+                  </div>
+                  <div style={{ fontSize: 12, minWidth: 0, whiteSpace: 'nowrap' }}>{(function() {
                     if (!p.post_identifier) return <span style={{ color: '#CCC' }}>sem link</span>;
-                    if (!p.post_identifier.startsWith('http')) return <span style={{ fontFamily: 'monospace' }}>{p.post_identifier}</span>;
-                    var info = analyzeLink(p.post_identifier, p.platform);
-                    var suspicious = !info.valid || !info.isTrusted || (info.expected.length > 0 && !info.matchesPlatform);
+                    var isUrl = /^https?:\/\//i.test(p.post_identifier);
+                    var info = isUrl ? analyzeLink(p.post_identifier, p.platform) : { valid: false };
+                    var suspicious = isUrl && (!info.isTrusted || (info.expected.length > 0 && !info.matchesPlatform));
+                    var color = !isUrl ? '#1A1A1A' : (suspicious ? '#B45309' : '#0070F3');
                     return (
-                      <button onClick={function() { setLinkPreview({ url: p.post_identifier, platform: p.platform, affiliate: p.affiliate_name }); }} style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: suspicious ? '#B45309' : '#0070F3', fontWeight: 700, textDecoration: 'underline', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        {suspicious && <span title="Link suspeito">⚠️</span>}
+                      <button onClick={function() { setLinkPreview({ url: p.post_identifier, platform: p.platform, affiliate: p.affiliate_name, isUrl: isUrl }); }} style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: color, fontWeight: 700, textDecoration: 'underline', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                        {!isUrl && <span title="Texto inválido — não abrível">⛔</span>}
+                        {isUrl && suspicious && <span title="Link suspeito">⚠️</span>}
                         LINK
                       </button>
                     );
@@ -1260,7 +1268,7 @@ export default function AdminDashboard() {
         var platformMismatch = info.valid && info.expected.length > 0 && !info.matchesPlatform;
         var untrusted = info.valid && !info.isTrusted;
         var invalid = !info.valid;
-        var showVirusAlert = invalid || untrusted;
+        var showVirusAlert = untrusted;
         return (
           <div onClick={function() { setLinkPreview(null); }} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: showVirusAlert ? 'rgba(60,0,0,0.75)' : 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <div onClick={function(e) { e.stopPropagation(); }} style={{ background: '#FFF', borderRadius: 14, padding: 24, maxWidth: 480, width: '100%', boxShadow: showVirusAlert ? '0 0 60px rgba(239,68,68,0.55)' : '0 20px 60px rgba(0,0,0,0.3)', border: showVirusAlert ? '2px solid #EF4444' : 'none' }}>
@@ -1299,8 +1307,9 @@ export default function AdminDashboard() {
               )}
 
               {invalid && (
-                <div style={{ marginTop: 14, padding: 12, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, color: '#991B1B', fontSize: 13, fontWeight: 600 }}>
-                  Link inválido ou mal formado. NÃO abrir.
+                <div style={{ marginTop: 14, padding: 12, background: '#F3F4F6', border: '1px solid #D1D5DB', borderRadius: 8, color: '#374151', fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Não é possível abrir</div>
+                  O afiliado digitou um texto que não é um link válido (não começa com <code>http</code> ou <code>https</code>). Para abrir, peça que reenvie copiando o link completo.
                 </div>
               )}
               {!invalid && untrusted && (
