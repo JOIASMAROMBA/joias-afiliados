@@ -49,6 +49,27 @@ button:active:not(:disabled) {
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes megaPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255,215,0,0.4); } 50% { transform: scale(1.08); box-shadow: 0 0 40px rgba(255,215,0,0.7); } }
 
+@keyframes confettiFall {
+  0% { transform: translate(0, -100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx, 20vw), 110vh) rotate(720deg); opacity: 0.9; }
+}
+@keyframes approvedPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes sadShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+@keyframes goldGlow {
+  0%, 100% { text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+  50% { text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 60px rgba(255,215,0,0.4); }
+}
+
 @keyframes materialHeartbeat {
   0%, 45%, 100% { transform: scale(1); box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 rgba(201,169,97,0); border-color: rgba(201,169,97,0.35); }
   8%  { transform: scale(1.025); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 40px rgba(201,169,97,0.55); border-color: rgba(201,169,97,0.9); }

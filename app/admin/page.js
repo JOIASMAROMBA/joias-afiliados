@@ -1429,10 +1429,13 @@ export default function AdminDashboard() {
           }
           var activeAffiliates = (affiliatesFull || []).filter(function(a) { return !a.deleted_at; });
           var deletedAffiliates = (affiliatesFull || []).filter(function(a) { return a.deleted_at; });
-          var sourceList = cadastrosFilter === 'deleted' ? deletedAffiliates : activeAffiliates;
+          var pendingAffiliates = activeAffiliates.filter(function(a) { return a.approval_status === 'pending'; });
+          var sourceList = cadastrosFilter === 'deleted' ? deletedAffiliates : (cadastrosFilter === 'pending' ? pendingAffiliates : activeAffiliates);
           var filtered = cadastrosFilter === 'deleted'
             ? deletedAffiliates.slice().sort(function(a, b) { return new Date(b.deleted_at) - new Date(a.deleted_at); })
-            : sourceList.filter(function(a) { return passFilter(a.created_at); });
+            : cadastrosFilter === 'pending'
+              ? pendingAffiliates.slice().sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); })
+              : sourceList.filter(function(a) { return passFilter(a.created_at); });
           var totalAll = activeAffiliates.length;
           var statsCards = [
             { label: 'Total', value: totalAll, tint: '#1A1A1A' },
@@ -1442,6 +1445,7 @@ export default function AdminDashboard() {
             { label: 'Este ano', value: activeAffiliates.filter(function(a) { return a.created_at && new Date(a.created_at).getTime() >= thisYear.getTime(); }).length, tint: '#F59E0B' },
           ];
           var filterOptions = [
+            { id: 'pending', label: '⏳ Aguardando liberação (' + pendingAffiliates.length + ')' },
             { id: 'new5', label: '✨ Novos (5 dias)' },
             { id: '7d', label: '7 dias' },
             { id: '30d', label: '30 dias' },
@@ -1954,6 +1958,80 @@ export default function AdminDashboard() {
               </div>
 
               <div style={{ padding: 20 }}>
+                {a.approval_status === 'pending' && !a.deleted_at && (
+                  <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 18 }}>⏳</span>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#92400E' }}>AGUARDANDO LIBERAÇÃO</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#78350F', marginBottom: 10, lineHeight: 1.4 }}>Confira os dados. Ao liberar, será enviado email de aprovação e a afiliada poderá usar o painel. Ao recusar, a conta é bloqueada e ela recebe email com o contato.</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={async function() {
+                          if (!confirm('Liberar cadastro de ' + a.name + '? Ela receberá email de aprovação.')) return;
+                          try {
+                            var r = await fetch('/api/admin/affiliates/approve', {
+                              method: 'POST', headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ affiliate_id: a.id, action: 'approve' }),
+                            });
+                            var d = await r.json().catch(function() { return {}; });
+                            if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+                            alert('Cadastro liberado' + (d.email_sent ? ' e email enviado.' : ' (email falhou — verificar).'));
+                            setSelectedCadastroId(null);
+                            await loadAll();
+                          } catch(e) { alert('Erro: ' + e.message); }
+                        }}
+                        style={{ flex: 1, padding: 12, background: '#10B981', color: '#FFF', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: 'pointer', letterSpacing: 0.5 }}
+                      >✓ LIBERAR</button>
+                      <button
+                        onClick={async function() {
+                          var reason = window.prompt('Motivo da recusa (opcional — aparecerá no email da afiliada):', '');
+                          if (reason === null) return;
+                          try {
+                            var r = await fetch('/api/admin/affiliates/approve', {
+                              method: 'POST', headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ affiliate_id: a.id, action: 'reject', reason: reason || null }),
+                            });
+                            var d = await r.json().catch(function() { return {}; });
+                            if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+                            alert('Cadastro recusado' + (d.email_sent ? ' e email enviado.' : '.'));
+                            setSelectedCadastroId(null);
+                            await loadAll();
+                          } catch(e) { alert('Erro: ' + e.message); }
+                        }}
+                        style={{ padding: '12px 16px', background: '#FFF', color: '#991B1B', border: '1px solid #FCA5A5', borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: 'pointer', letterSpacing: 0.5 }}
+                      >✕ Recusar</button>
+                    </div>
+                  </div>
+                )}
+
+                {a.approval_status === 'rejected' && !a.deleted_at && (
+                  <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 16 }}>🚫</span>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#991B1B' }}>CADASTRO RECUSADO</div>
+                    </div>
+                    {a.rejection_reason && (<div style={{ fontSize: 11, color: '#7F1D1D' }}>Motivo: {a.rejection_reason}</div>)}
+                    <button
+                      onClick={async function() {
+                        if (!confirm('Reverter recusa e aprovar ' + a.name + '?')) return;
+                        try {
+                          var r = await fetch('/api/admin/affiliates/approve', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ affiliate_id: a.id, action: 'approve' }),
+                          });
+                          var d = await r.json().catch(function() { return {}; });
+                          if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+                          alert('Aprovada.');
+                          setSelectedCadastroId(null);
+                          await loadAll();
+                        } catch(e) { alert('Erro: ' + e.message); }
+                      }}
+                      style={{ marginTop: 10, width: '100%', padding: 10, background: '#10B981', color: '#FFF', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
+                    >Reverter e Aprovar</button>
+                  </div>
+                )}
+
                 {a.deleted_at && (
                   <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 10, padding: 12, marginBottom: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>

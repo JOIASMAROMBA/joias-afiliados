@@ -48,6 +48,7 @@ export default function PainelPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [pendingNotifications, setPendingNotifications] = useState([]);
+  const [showApprovedModal, setShowApprovedModal] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [showConductView, setShowConductView] = useState(false);
@@ -202,12 +203,18 @@ export default function PainelPage() {
     try { var wd = await supabase.from('withdrawals').select('*').eq('affiliate_id', affiliateId).order('created_at', { ascending: false }); setMyWithdrawals(wd.data || []); } catch(e) {}
     try { var rw = await supabase.from('rewards').select('*').eq('active', true).order('target_value', { ascending: true }); setRewards(rw.data || []); } catch(e) {}
     if (!check.data.accepted_terms_at) setShowTerms(true);
+    if (check.data.approval_status === 'approved' && !check.data.approval_seen_at) setShowApprovedModal(true);
     try {
       var nRes = await fetch('/api/notifications/list');
       var nData = await nRes.json();
       if (nData && nData.ok && Array.isArray(nData.notifications)) setPendingNotifications(nData.notifications);
     } catch(e) {}
     setLoading(false);
+  }
+
+  async function dismissApprovedModal() {
+    setShowApprovedModal(false);
+    try { await fetch('/api/profile/mark-approval-seen', { method: 'POST' }); } catch(e) {}
   }
 
   async function acceptTerms() {
@@ -541,8 +548,66 @@ export default function PainelPage() {
   var rocketPos = calculateRocketPosition();
   var weekdayShort = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
 
-  return (
-    <div className="painel-root" style={{ margin: '0 auto', minHeight: '100vh', background: '#000', padding: 20, color: '#fff', position: 'relative', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif" }}>
+  var isPending = affiliate && affiliate.approval_status === 'pending';
+  var isRejected = affiliate && affiliate.approval_status === 'rejected';
+  var isBlocked = isPending || isRejected;
+
+  return (<>
+    {isPending && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 20000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 440, width: '100%', background: 'linear-gradient(180deg, #1a1306, #0a0604)', border: '2px solid #C9A961', borderRadius: 20, padding: 32, textAlign: 'center', boxShadow: '0 20px 80px rgba(201,169,97,0.35), 0 0 60px rgba(201,169,97,0.15)', animation: 'approvedPop 0.5s ease-out' }}>
+          <div style={{ fontSize: 48, marginBottom: 10 }}>⏳</div>
+          <div style={{ fontSize: 11, color: '#C9A961', letterSpacing: 3, fontWeight: 800, textTransform: 'uppercase', marginBottom: 10 }}>Programa de Afiliados</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: '#C9A961', marginBottom: 14, lineHeight: 1.25, letterSpacing: -0.3 }}>Seu cadastro está em análise</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 18 }}>Validamos cada cadastro em até <strong style={{ color: '#C9A961' }}>48 horas</strong>. Você receberá um email assim que for aprovado.</div>
+          <div style={{ padding: 14, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, marginBottom: 16 }}>
+            <div style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Cupom reservado</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#C9A961', fontFamily: 'monospace', letterSpacing: 3 }}>{affiliate && affiliate.coupon_code}</div>
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 18 }}>Em caso de dúvida: <strong style={{ color: '#C9A961' }}>contato@joiasmaromba.com.br</strong></div>
+          <button onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ width: '100%', padding: 12, background: 'transparent', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 10, color: 'rgba(201,169,97,0.7)', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>Sair</button>
+        </div>
+      </div>
+    )}
+
+    {isRejected && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 20000, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 440, width: '100%', background: 'linear-gradient(180deg, #1a0606, #0a0404)', border: '2px solid #EF4444', borderRadius: 20, padding: 32, textAlign: 'center', boxShadow: '0 20px 80px rgba(239,68,68,0.3)', animation: 'approvedPop 0.5s ease-out' }}>
+          <div style={{ fontSize: 56, marginBottom: 10, animation: 'sadShake 1s ease-in-out 0.4s 2' }}>😔</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: '#EF4444', marginBottom: 14, lineHeight: 1.25 }}>Seu cadastro foi recusado</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 18 }}>Entre em contato pelo email abaixo para mais informações:</div>
+          {affiliate && affiliate.rejection_reason && (
+            <div style={{ padding: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, marginBottom: 14, textAlign: 'left' }}>
+              <div style={{ fontSize: 10, color: '#FCA5A5', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Motivo</div>
+              <div style={{ fontSize: 12, color: '#fff' }}>{affiliate.rejection_reason}</div>
+            </div>
+          )}
+          <a href="mailto:contato@joiasmaromba.com.br" style={{ display: 'block', padding: 14, background: 'linear-gradient(135deg, #E8CF8B, #C9A961)', borderRadius: 12, color: '#000', fontWeight: 900, fontSize: 13, textDecoration: 'none', letterSpacing: 1, marginBottom: 14 }}>📧 CONTATO@JOIASMAROMBA.COM</a>
+          <button onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ width: '100%', padding: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>Sair</button>
+        </div>
+      </div>
+    )}
+
+    {showApprovedModal && !isBlocked && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 20001, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          {(function() { var items = []; for (var i = 0; i < 36; i++) { var left = Math.random() * 100; var delay = Math.random() * 1.6; var dur = 2.8 + Math.random() * 2.2; var size = 8 + Math.random() * 8; var hue = ['#FFD700', '#C9A961', '#E8CF8B', '#FFA500', '#F5C518'][i % 5]; var dx = (Math.random() - 0.5) * 60; items.push(<span key={i} style={{ position: 'absolute', top: -30, left: left + 'vw', width: size, height: size * 0.4, background: hue, borderRadius: 2, animation: 'confettiFall ' + dur + 's linear ' + delay + 's infinite', ['--dx']: dx + 'vw', boxShadow: '0 0 10px ' + hue }} />); } return items; })()}
+        </div>
+        <div style={{ maxWidth: 440, width: '100%', background: 'linear-gradient(180deg, #1a1306, #000)', border: '2px solid #FFD700', borderRadius: 20, padding: 32, textAlign: 'center', boxShadow: '0 0 80px rgba(255,215,0,0.4), 0 0 40px rgba(201,169,97,0.3)', animation: 'approvedPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)', position: 'relative', zIndex: 2 }}>
+          <div style={{ fontSize: 64, marginBottom: 8 }}>🎉</div>
+          <div style={{ fontSize: 11, color: '#FFD700', letterSpacing: 4, fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>Programa de Afiliadas</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: '#FFD700', marginBottom: 10, lineHeight: 1.2, animation: 'goldGlow 2s ease-in-out infinite' }}>Seu cadastro foi aprovado!</div>
+          <div style={{ fontSize: 15, color: '#C9A961', marginBottom: 20, fontWeight: 600 }}>Boas vendas! 💎</div>
+          <div style={{ padding: 14, background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.4)', borderRadius: 12, marginBottom: 18 }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)', fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Seu cupom</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: '#FFD700', fontFamily: 'monospace', letterSpacing: 3 }}>{affiliate && affiliate.coupon_code}</div>
+          </div>
+          <button onClick={dismissApprovedModal} style={{ width: '100%', padding: 14, background: 'linear-gradient(135deg, #FFD700, #C9A961)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 900, fontSize: 14, cursor: 'pointer', letterSpacing: 1, boxShadow: '0 4px 20px rgba(255,215,0,0.4)' }}>💎 COMEÇAR A VENDER</button>
+        </div>
+      </div>
+    )}
+
+    <div className="painel-root" style={{ margin: '0 auto', minHeight: '100vh', background: '#000', padding: 20, color: '#fff', position: 'relative', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif", filter: isBlocked ? 'blur(14px)' : 'none', pointerEvents: isBlocked ? 'none' : 'auto', userSelect: isBlocked ? 'none' : 'auto' }}>
       <style>{`
         .painel-root { max-width: 480px; }
         .painel-home-grid { display: block; }
@@ -1415,5 +1480,5 @@ export default function PainelPage() {
       })()}
 
     </div>
-  );
+  </>);
 }
