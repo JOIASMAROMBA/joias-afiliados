@@ -43,6 +43,9 @@ export default function PainelPage() {
   const [editMessage, setEditMessage] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [pendingNotifications, setPendingNotifications] = useState([]);
+  const [showTerms, setShowTerms] = useState(false);
+  const [acceptingTerms, setAcceptingTerms] = useState(false);
 
   var phrases = [
     '🔥 Bora pra cima! Você é brabo(a) e ninguém segura!',
@@ -114,7 +117,28 @@ export default function PainelPage() {
     try { var obData = await supabase.from('posting_obligations').select('*').eq('affiliate_id', affiliateId).eq('active', true); setObligations(obData.data || []); } catch(e) {}
     try { var wd = await supabase.from('withdrawals').select('*').eq('affiliate_id', affiliateId).order('created_at', { ascending: false }); setMyWithdrawals(wd.data || []); } catch(e) {}
     try { var rw = await supabase.from('rewards').select('*').eq('active', true).order('target_value', { ascending: true }); setRewards(rw.data || []); } catch(e) {}
+    if (!check.data.accepted_terms_at) setShowTerms(true);
+    try {
+      var nRes = await fetch('/api/notifications/list');
+      var nData = await nRes.json();
+      if (nData && nData.ok && Array.isArray(nData.notifications)) setPendingNotifications(nData.notifications);
+    } catch(e) {}
     setLoading(false);
+  }
+
+  async function acceptTerms() {
+    setAcceptingTerms(true);
+    try {
+      var res = await fetch('/api/auth/accept-terms', { method: 'POST' });
+      var data = await res.json().catch(function() { return {}; });
+      if (data && data.ok) setShowTerms(false);
+    } catch(e) {}
+    setAcceptingTerms(false);
+  }
+
+  async function dismissNotification(id) {
+    setPendingNotifications(function(prev) { return prev.filter(function(n) { return n.id !== id; }); });
+    try { await fetch('/api/notifications/dismiss', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) }); } catch(e) {}
   }
 
   function formatCurrency(digits) {
@@ -920,6 +944,97 @@ export default function PainelPage() {
           </div>
         </div>
       )}
+
+      {showTerms && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 11000, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(8px)' }}>
+          <div style={{ maxWidth: 560, width: '100%', maxHeight: '92vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1a1306 0%, #0f0a03 100%)', border: '2px solid #C9A961', borderRadius: 16, padding: 24, color: '#FFF', boxShadow: '0 20px 80px rgba(201,169,97,0.25)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <div style={{ fontSize: 38 }}>💎</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#C9A961', marginTop: 4, letterSpacing: 1 }}>TERMOS DE CONDUTA</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Programa de Afiliadas Joias Maromba</div>
+            </div>
+
+            <div style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.82)' }}>
+              <p style={{ marginBottom: 12 }}>Ao usar o painel e divulgar produtos da marca <strong style={{ color: '#C9A961' }}>Joias Maromba</strong>, você aceita expressamente as regras abaixo. A marca foi construída com anos de dedicação — divulgue com responsabilidade.</p>
+
+              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#C9A961', marginBottom: 6 }}>1. DIVULGAÇÃO HONESTA</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Não faça promessas falsas sobre efeitos, durabilidade ou material das joias.</li>
+                  <li>Não invente descontos, promoções, brindes ou condições que não existem.</li>
+                  <li>Divulgue apenas o site oficial: <strong>joiasmaromba.com.br</strong>. Links falsos, encurtadores suspeitos ou clones são terminantemente proibidos.</li>
+                  <li>Use preferencialmente os materiais oficiais fornecidos no painel.</li>
+                </ul>
+              </div>
+
+              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#FCA5A5', marginBottom: 6 }}>2. CONTEÚDO PROIBIDO</div>
+                <div style={{ marginBottom: 6 }}>É terminantemente vedado associar a marca a:</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Nudez, conteúdo sexual ou sensual explícito</li>
+                  <li>Crianças e adolescentes menores de 18 anos</li>
+                  <li>Maus-tratos a animais ou humanos</li>
+                  <li>Discurso político partidário ou religioso</li>
+                  <li>Discurso de ódio, preconceito, racismo</li>
+                  <li>Drogas ilícitas ou apologia a vícios</li>
+                </ul>
+              </div>
+
+              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#FCD34D', marginBottom: 6 }}>3. MEDIDAS DISCIPLINARES</div>
+                <div>Em caso de descumprimento, a marca pode:</div>
+                <ul style={{ paddingLeft: 18, margin: '4px 0 0 0' }}>
+                  <li><strong>NOTIFICAR</strong> você (primeira ocorrência — advertência formal)</li>
+                  <li><strong>BANIR DEFINITIVAMENTE</strong> na segunda notificação ou em caso grave</li>
+                </ul>
+                <div style={{ marginTop: 6, fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Após banimento, o acesso ao painel é encerrado e comissões pendentes são analisadas caso a caso.</div>
+              </div>
+
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 14, textAlign: 'center' }}>Ao clicar em <strong style={{ color: '#C9A961' }}>ACEITO</strong> você declara ter lido, compreendido e se comprometido a seguir integralmente estas regras.</p>
+            </div>
+
+            <button onClick={acceptTerms} disabled={acceptingTerms} style={{ width: '100%', marginTop: 18, padding: 14, background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', border: 'none', borderRadius: 10, color: '#000', fontWeight: 900, fontSize: 15, letterSpacing: 1, cursor: acceptingTerms ? 'wait' : 'pointer', opacity: acceptingTerms ? 0.6 : 1, boxShadow: '0 4px 20px rgba(201,169,97,0.4)' }}>
+              {acceptingTerms ? 'Registrando...' : '✓ ACEITO OS TERMOS'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showTerms && pendingNotifications.length > 0 && (function() {
+        var n = pendingNotifications[0];
+        var isPraise = n.type === 'praise';
+        var isWarning = n.type === 'warning';
+        var theme = isPraise
+          ? { bg: 'linear-gradient(135deg, #059669, #10B981)', border: '#10B981', shadow: 'rgba(16,185,129,0.4)', icon: '🎉', heading: 'PARABÉNS!' }
+          : isWarning
+          ? { bg: 'linear-gradient(135deg, #7F1D1D, #DC2626)', border: '#DC2626', shadow: 'rgba(220,38,38,0.5)', icon: '⚠️', heading: 'NOTIFICAÇÃO OFICIAL' }
+          : { bg: 'linear-gradient(135deg, #1E3A8A, #2563EB)', border: '#3B82F6', shadow: 'rgba(59,130,246,0.4)', icon: '📢', heading: 'AVISO' };
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10500, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div style={{ maxWidth: 440, width: '100%', background: '#0F0F0F', borderRadius: 14, overflow: 'hidden', border: '2px solid ' + theme.border, boxShadow: '0 20px 60px ' + theme.shadow }}>
+              <div style={{ background: theme.bg, padding: 22, color: '#FFF', textAlign: 'center' }}>
+                <div style={{ fontSize: 42, lineHeight: 1 }}>{theme.icon}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, marginTop: 6, letterSpacing: 1 }}>{theme.heading}</div>
+                {n.title && <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4, opacity: 0.9 }}>{n.title}</div>}
+              </div>
+              <div style={{ padding: 22, color: '#FFF' }}>
+                <div style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'rgba(255,255,255,0.9)' }}>{n.message}</div>
+                {isWarning && (
+                  <div style={{ marginTop: 14, padding: 10, background: 'rgba(220,38,38,0.18)', border: '1px solid rgba(220,38,38,0.5)', borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#FCA5A5', textAlign: 'center' }}>
+                    ⛔ Ao receber outra notificação você será <strong>banida permanentemente</strong> da plataforma.
+                  </div>
+                )}
+                <button onClick={function() { dismissNotification(n.id); }} style={{ width: '100%', marginTop: 16, padding: 13, background: isWarning ? '#DC2626' : isPraise ? '#10B981' : '#3B82F6', border: 'none', borderRadius: 10, color: '#FFF', fontWeight: 800, fontSize: 14, letterSpacing: 0.5, cursor: 'pointer' }}>
+                  {isWarning ? 'Entendi e vou corrigir' : isPraise ? 'Obrigada!' : 'Ok, entendi'}
+                </button>
+                {pendingNotifications.length > 1 && (
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 10 }}>+{pendingNotifications.length - 1} {pendingNotifications.length - 1 === 1 ? 'mensagem' : 'mensagens'} a seguir</div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

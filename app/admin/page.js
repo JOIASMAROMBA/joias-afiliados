@@ -131,6 +131,12 @@ export default function AdminDashboard() {
   const [selectedCadastroId, setSelectedCadastroId] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineIds, setOnlineIds] = useState(new Set());
+  const [notifyTarget, setNotifyTarget] = useState(null);
+  const [notifyType, setNotifyType] = useState('info');
+  const [notifyTitle, setNotifyTitle] = useState('');
+  const [notifyMessage, setNotifyMessage] = useState('');
+  const [notifySearch, setNotifySearch] = useState('');
+  const [notifySending, setNotifySending] = useState(false);
   const [obligationMonth, setObligationMonth] = useState(new Date().getMonth());
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
 
@@ -559,7 +565,8 @@ export default function AdminDashboard() {
     { id: 'materials', label: 'Material', icon: '📷' },
     { id: 'payments', label: 'Pagamentos', icon: '💳' },
     { id: 'withdrawals', label: 'Saques', icon: '💸' },
-    { id: 'cadastros', label: 'Cadastros', icon: '🗂️' }
+    { id: 'cadastros', label: 'Cadastros', icon: '🗂️' },
+    { id: 'notify', label: 'Notificar', icon: '📣' }
   ];
 
   var dateRangeOptions = [{ v: '1', l: 'Hoje' }, { v: '3', l: '3 dias' }, { v: '7', l: '7 dias' }, { v: '30', l: '30 dias' }, { v: '90', l: '90 dias' }, { v: 'all', l: 'Tudo' }];
@@ -1425,6 +1432,163 @@ export default function AdminDashboard() {
                   );
                 })}
               </div>
+            </div>
+          );
+        })()}
+
+        {activeTab === 'notify' && (function() {
+          var q = notifySearch.trim().toLowerCase();
+          var list = (affiliatesFull || []).filter(function(a) {
+            if (a.is_admin) return false;
+            if (!q) return true;
+            return (a.name || '').toLowerCase().includes(q) || (a.coupon_code || '').toLowerCase().includes(q);
+          }).slice(0, 30);
+
+          async function sendNotification(type) {
+            if (!notifyTarget) { alert('Selecione uma afiliada'); return; }
+            var msg = notifyMessage.trim();
+            if (!msg) { alert('Escreva a mensagem'); return; }
+            setNotifySending(true);
+            try {
+              var res = await fetch('/api/admin/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ affiliate_id: notifyTarget.id, type: type, title: notifyTitle.trim() || null, message: msg }) });
+              var data = await res.json().catch(function() { return {}; });
+              if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'falha ao enviar')); setNotifySending(false); return; }
+              if (type === 'warning' && data.banned) {
+                alert('Notificação enviada. Esta foi a 2ª advertência — afiliada BANIDA automaticamente.');
+              } else if (type === 'warning') {
+                alert('Notificação enviada (advertência ' + data.warnings_count + '/2).');
+              } else {
+                alert('Mensagem enviada.');
+              }
+              setNotifyMessage(''); setNotifyTitle('');
+              await loadAll();
+            } catch (e) { alert('Erro: ' + e.message); }
+            setNotifySending(false);
+          }
+          async function confirmBan() {
+            if (!notifyTarget) return;
+            if (!confirm('BANIR ' + notifyTarget.name + ' permanentemente? Ela perderá acesso ao painel imediatamente.')) return;
+            setNotifySending(true);
+            try {
+              var res = await fetch('/api/admin/ban', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ affiliate_id: notifyTarget.id }) });
+              var data = await res.json().catch(function() { return {}; });
+              if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'falha')); setNotifySending(false); return; }
+              alert('Afiliada banida.');
+              await loadAll();
+            } catch (e) { alert('Erro: ' + e.message); }
+            setNotifySending(false);
+          }
+          async function unban() {
+            if (!notifyTarget) return;
+            if (!confirm('Desbloquear ' + notifyTarget.name + ' e zerar advertências?')) return;
+            setNotifySending(true);
+            try {
+              var res = await fetch('/api/admin/ban', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ affiliate_id: notifyTarget.id, action: 'unban' }) });
+              var data = await res.json().catch(function() { return {}; });
+              if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'falha')); setNotifySending(false); return; }
+              alert('Desbloqueada.');
+              await loadAll();
+            } catch (e) { alert('Erro: ' + e.message); }
+            setNotifySending(false);
+          }
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 320px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
+              <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ padding: 12, borderBottom: '1px solid #E5E5E5', background: '#FAFAFA' }}>
+                  <input value={notifySearch} onChange={function(e) { setNotifySearch(e.target.value); }} placeholder="Buscar por nome ou cupom" style={{ width: '100%', padding: '9px 12px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, outline: 'none' }} />
+                </div>
+                <div style={{ maxHeight: 520, overflowY: 'auto' }}>
+                  {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum afiliado</div>}
+                  {list.map(function(a) {
+                    var selected = notifyTarget && notifyTarget.id === a.id;
+                    return (
+                      <button key={a.id} onClick={function() { setNotifyTarget(a); }} style={{ width: '100%', padding: '10px 14px', borderBottom: '1px solid #F0F0F0', background: selected ? '#FEF3C7' : 'transparent', border: 'none', borderLeft: selected ? '4px solid #F59E0B' : '4px solid transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 16, background: a.avatar_url ? 'transparent' : '#F3F4F6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#666', flexShrink: 0 }}>
+                          {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>
+                            {newAffiliateIds.has(a.id) && <NewBadge />}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#C9A961', fontWeight: 700 }}>{a.coupon_code}</div>
+                        </div>
+                        {a.blocked && <span style={{ fontSize: 10, fontWeight: 800, color: '#FFF', background: '#DC2626', padding: '2px 6px', borderRadius: 10 }}>BANIDA</span>}
+                        {!a.blocked && Number(a.warnings_count || 0) >= 1 && <span style={{ fontSize: 10, fontWeight: 800, color: '#92400E', background: '#FEF3C7', padding: '2px 6px', borderRadius: 10 }}>⚠ {a.warnings_count}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {!notifyTarget && (
+                <div style={{ background: '#FFF', border: '2px dashed #E5E5E5', borderRadius: 10, padding: 60, textAlign: 'center', color: '#888' }}>
+                  <div style={{ fontSize: 40, marginBottom: 8 }}>👈</div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>Selecione uma afiliada</div>
+                  <div style={{ fontSize: 12, marginTop: 6 }}>Busque por cupom ou nome ao lado e clique para enviar mensagem</div>
+                </div>
+              )}
+
+              {notifyTarget && (
+                <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid #F0F0F0' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 22, background: notifyTarget.avatar_url ? 'transparent' : 'linear-gradient(135deg, #FFD700, #B8860B)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>
+                      {notifyTarget.avatar_url ? <img src={storageProxyUrl(notifyTarget.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : notifyTarget.avatar_initials}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800 }}>{notifyTarget.name}</div>
+                      <div style={{ fontSize: 12, color: '#C9A961', fontWeight: 700 }}>{notifyTarget.coupon_code}</div>
+                      {notifyTarget.blocked && <div style={{ fontSize: 11, fontWeight: 800, color: '#DC2626', marginTop: 4 }}>⛔ BANIDA</div>}
+                      {!notifyTarget.blocked && Number(notifyTarget.warnings_count || 0) >= 1 && <div style={{ fontSize: 11, fontWeight: 700, color: '#92400E', marginTop: 4 }}>⚠ {notifyTarget.warnings_count} advertência(s) — mais 1 = ban automático</div>}
+                    </div>
+                    <button onClick={function() { setNotifyTarget(null); setNotifyMessage(''); setNotifyTitle(''); }} style={{ background: 'transparent', border: 'none', fontSize: 18, cursor: 'pointer', color: '#888', padding: 4 }}>✕</button>
+                  </div>
+
+                  {notifyTarget.blocked ? (
+                    <div>
+                      <div style={{ padding: 14, background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 8, color: '#991B1B', fontSize: 13, marginBottom: 14 }}>
+                        Esta afiliada está banida. Ela não consegue mais acessar o painel nem ver notificações.
+                      </div>
+                      <button onClick={unban} disabled={notifySending} style={{ width: '100%', padding: 12, background: '#10B981', color: '#FFF', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: notifySending ? 0.6 : 1 }}>Desbloquear e zerar advertências</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: 12, color: '#666', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Tipo de mensagem</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                        {[
+                          { id: 'praise', label: '🎉 Parabenizar', bg: '#10B981' },
+                          { id: 'info', label: '📢 Aviso', bg: '#3B82F6' },
+                          { id: 'warning', label: '⚠️ Advertir', bg: '#DC2626' },
+                        ].map(function(opt) {
+                          var selected = notifyType === opt.id;
+                          return (<button key={opt.id} onClick={function() { setNotifyType(opt.id); }} style={{ padding: '10px 12px', background: selected ? opt.bg : '#F3F4F6', color: selected ? '#FFF' : '#444', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{opt.label}</button>);
+                        })}
+                      </div>
+
+                      <div style={{ fontSize: 12, color: '#666', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Título (opcional)</div>
+                      <input value={notifyTitle} onChange={function(e) { setNotifyTitle(e.target.value); }} maxLength={120} placeholder="Ex: Você bateu 20 vendas!" style={{ width: '100%', padding: '10px 12px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, outline: 'none', marginBottom: 12 }} />
+
+                      <div style={{ fontSize: 12, color: '#666', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Mensagem</div>
+                      <textarea value={notifyMessage} onChange={function(e) { setNotifyMessage(e.target.value); }} maxLength={2000} rows={6} placeholder={notifyType === 'praise' ? 'Parabéns pelo seu desempenho! Você está...' : notifyType === 'warning' ? 'Identificamos que você divulgou... Isso viola o item X dos termos.' : 'Gostaríamos de informar que...'} style={{ width: '100%', padding: 12, border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'vertical', marginBottom: 14 }} />
+
+                      {notifyType === 'warning' && Number(notifyTarget.warnings_count || 0) >= 1 && (
+                        <div style={{ padding: 12, background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 8, color: '#991B1B', fontSize: 12, fontWeight: 700, marginBottom: 12 }}>
+                          ⛔ Esta afiliada já tem {notifyTarget.warnings_count} advertência(s). Enviar outra advertência vai BANI-LA automaticamente.
+                        </div>
+                      )}
+
+                      <button onClick={function() { sendNotification(notifyType); }} disabled={notifySending || !notifyMessage.trim()} style={{ width: '100%', padding: 14, background: notifyType === 'praise' ? '#10B981' : notifyType === 'warning' ? '#DC2626' : '#3B82F6', color: '#FFF', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 14, cursor: (notifySending || !notifyMessage.trim()) ? 'not-allowed' : 'pointer', opacity: (notifySending || !notifyMessage.trim()) ? 0.6 : 1, marginBottom: 10 }}>
+                        {notifySending ? 'Enviando...' : 'ENVIAR MENSAGEM'}
+                      </button>
+
+                      <button onClick={confirmBan} disabled={notifySending} style={{ width: '100%', padding: 11, background: '#FFF', color: '#DC2626', border: '1px solid #FCA5A5', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: notifySending ? 0.6 : 1 }}>
+                        🚫 Banir permanentemente agora
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })()}

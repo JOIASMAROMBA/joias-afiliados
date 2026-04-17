@@ -26,7 +26,7 @@ export default function LoginPage() {
         const retryMin = data.retry_in ? Math.ceil(data.retry_in / 60) : 5;
         const map = {
           invalid_credentials: 'Cupom ou senha incorretos.',
-          blocked: 'Conta bloqueada. Contate o suporte.',
+          blocked: '⛔ Você foi BANIDA da plataforma por violação dos Termos de Conduta. O banimento é definitivo.',
           no_password_set: 'Senha nao cadastrada. Faca o cadastro primeiro.',
           missing_fields: 'Preencha cupom e senha.',
           rate_limited: 'Muitas tentativas. Aguarde ' + retryMin + ' min.',
