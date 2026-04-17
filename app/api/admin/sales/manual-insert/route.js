@@ -61,5 +61,20 @@ export async function POST(request) {
 
   console.log('[manual-insert] push result:', JSON.stringify(pushResult), 'error:', pushError);
 
-  return NextResponse.json({ ok: true, inserted: quantity, commission_per_sale: commission, total: commission * quantity, push: pushResult, pushError: pushError });
+  var pubRaw = process.env.VAPID_PUBLIC_KEY || '';
+  var privRaw = process.env.VAPID_PRIVATE_KEY || '';
+  var subjRaw = process.env.VAPID_SUBJECT || '';
+  var envDebug = {
+    pub_len: pubRaw.length,
+    pub_trimmed_len: pubRaw.trim().length,
+    pub_first5: pubRaw.slice(0, 5),
+    pub_last5: pubRaw.slice(-5),
+    priv_len: privRaw.length,
+    priv_trimmed_len: privRaw.trim().length,
+    priv_first5: privRaw.slice(0, 5),
+    priv_last5: privRaw.slice(-5),
+    subj: subjRaw,
+  };
+
+  return NextResponse.json({ ok: true, inserted: quantity, commission_per_sale: commission, total: commission * quantity, push: pushResult, pushError: pushError, envDebug: envDebug });
 }
