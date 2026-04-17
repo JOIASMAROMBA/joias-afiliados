@@ -697,7 +697,7 @@ export default function PainelPage() {
             )}
           </div>
 
-          <div onClick={openMaterialsModal} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, padding: 0, marginBottom: 16, overflow: 'hidden', display: 'flex', alignItems: 'stretch', minHeight: 150, boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)', transition: 'all 0.3s' }}>
+          <div onClick={openMaterialsModal} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, padding: 0, marginBottom: 16, overflow: 'hidden', display: 'flex', alignItems: 'stretch', minHeight: 150, boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)', animation: 'materialHeartbeat 1.6s ease-in-out infinite', transformOrigin: 'center' }}>
             <div style={{ position: 'relative', width: 130, flexShrink: 0, overflow: 'hidden', background: '#000' }}>
               <img src="/pic.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85, display: 'block', position: 'absolute', inset: 0 }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(15,15,15,0.9) 100%)', pointerEvents: 'none' }} />
