@@ -545,8 +545,8 @@ export default function PainelPage() {
           </div>
 
           <div onClick={openMaterialsModal} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, padding: 0, marginBottom: 16, overflow: 'hidden', display: 'flex', alignItems: 'stretch', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)', transition: 'all 0.3s' }}>
-            <div style={{ position: 'relative', width: 110, minHeight: 110, flexShrink: 0, overflow: 'hidden', background: '#000' }}>
-              <img src="/pic.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+            <div style={{ position: 'relative', width: 110, height: 130, flexShrink: 0, overflow: 'hidden', background: '#000' }}>
+              <img src="/pic.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85, display: 'block' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(15,15,15,0.9) 100%)', pointerEvents: 'none' }} />
             </div>
             <div style={{ flex: 1, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
@@ -560,14 +560,19 @@ export default function PainelPage() {
           </div>
 
           {allSales.length > 0 && (
-            <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#C9A961' }}>💎 Ultima Venda</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ color: '#fff', fontWeight: 600 }}>{allSales[0].buyer_name}</div>
-                  {allSales[0].buyer_city && (<div style={{ color: 'rgba(201,169,97,0.4)', fontSize: 12 }}>{allSales[0].buyer_city}</div>)}
+            <div style={{ background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'stretch', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+              <div style={{ position: 'relative', width: 110, height: 130, flexShrink: 0, overflow: 'hidden', background: 'linear-gradient(135deg, #1a1306, #0a0a0a)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ fontSize: 48, filter: 'drop-shadow(0 0 20px rgba(201,169,97,0.5))', color: '#C9A961' }}>◆</div>
+                <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(201,169,97,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              </div>
+              <div style={{ flex: 1, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 14 }}>💎</span>
+                  <span style={{ fontSize: 9, color: '#C9A961', letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase' }}>Ultima Venda</span>
                 </div>
-                <div style={{ color: '#C9A961', fontSize: 20, fontWeight: 900 }}>+R${allSales[0].commission_earned}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2, textTransform: 'uppercase', letterSpacing: 0.3 }}>No seu cupom</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>{allSales[0].buyer_name}{allSales[0].buyer_city && <span style={{ color: 'rgba(201,169,97,0.5)', marginLeft: 6 }}>· {allSales[0].buyer_city}</span>}</div>
+                <div style={{ color: '#C9A961', fontSize: 20, fontWeight: 900, marginTop: 2, textShadow: '0 0 20px rgba(201,169,97,0.3)' }}>+R${allSales[0].commission_earned}</div>
               </div>
             </div>
           )}
