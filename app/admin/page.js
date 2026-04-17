@@ -827,7 +827,9 @@ export default function AdminDashboard() {
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: '#991B1B', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}</div>
                             <div style={{ fontSize: 11, color: '#7F1D1D' }}>{a.coupon_code}</div>
-                            <div style={{ fontSize: 11, color: '#EF4444', fontWeight: 700, marginTop: 4 }}>⚠️ Devendo {a.missedDays.length} {a.missedDays.length === 1 ? 'postagem' : 'postagens'}</div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '3px 10px', background: '#DC2626', borderRadius: 6, color: '#FFF', fontWeight: 900, fontSize: 12, letterSpacing: 1, animation: 'badgeBlink 1.2s ease-in-out infinite' }}>
+                              ⚠️ DEVENDO {a.missedDays.length} {a.missedDays.length === 1 ? 'DIA' : 'DIAS'}
+                            </div>
                           </div>
                         </button>);
                       })}
