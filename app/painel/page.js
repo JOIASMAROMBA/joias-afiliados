@@ -562,8 +562,11 @@ export default function PainelPage() {
           {allSales.length > 0 && (
             <div style={{ background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'stretch', minHeight: 150, boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
               <div style={{ position: 'relative', width: 130, flexShrink: 0, overflow: 'hidden', background: 'linear-gradient(135deg, #1a1306, #0a0a0a)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontSize: 56, filter: 'drop-shadow(0 0 20px rgba(201,169,97,0.6))' }}>🎟️</div>
-                <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(201,169,97,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                <div style={{ position: 'relative', background: '#C9A961', borderRadius: 8, width: 72, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ position: 'absolute', left: -8, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, borderRadius: '50%', background: '#0a0a0a' }}></span>
+                  <span style={{ position: 'absolute', right: -8, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, borderRadius: '50%', background: '#0a0a0a' }}></span>
+                  <span style={{ fontSize: 28, fontWeight: 900, color: '#000', letterSpacing: -1 }}>$</span>
+                </div>
               </div>
               <div style={{ flex: 1, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, minWidth: 0 }}>
                 <div style={{ fontSize: 10, color: '#C9A961', letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase', textShadow: '0 0 20px rgba(201,169,97,0.3)', whiteSpace: 'nowrap' }}>Ultima Venda no seu Cupom</div>
