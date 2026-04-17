@@ -44,6 +44,24 @@ export default function AdminDashboard() {
   useEffect(function() { init(); }, []);
   useEffect(function() { var i = setInterval(function() { loadAll(); }, 30000); return function() { clearInterval(i); }; }, []);
   useEffect(function() { if (activeTab === 'materials') loadMaterialFolders(); }, [activeTab]);
+  useEffect(function() {
+    function syncViewport() {
+      if (typeof window === 'undefined') return;
+      if (window.innerWidth <= 768) setSidebarOpen(false);
+      else setSidebarOpen(true);
+    }
+    syncViewport();
+    window.addEventListener('resize', syncViewport);
+    return function() { window.removeEventListener('resize', syncViewport); };
+  }, []);
+
+  function isMobileViewport() {
+    return typeof window !== 'undefined' && window.innerWidth <= 768;
+  }
+  function handleMenuClick(id) {
+    setActiveTab(id);
+    if (isMobileViewport()) setSidebarOpen(false);
+  }
 
   async function init() {
     var id = localStorage.getItem('affiliate_id');
@@ -464,10 +482,55 @@ export default function AdminDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAFA', color: '#1A1A1A', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif', display: 'flex' }}>
       <style>{`
+        .admin-mobile-topbar { display: none; }
+        .admin-sidebar-backdrop { display: none; }
         @media (max-width: 768px) {
-          .admin-sidebar { position: fixed !important; z-index: 100; }
+          .admin-sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            width: 280px !important;
+            z-index: 1001 !important;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1) !important;
+            box-shadow: none;
+          }
+          .admin-sidebar.mobile-open {
+            transform: translateX(0);
+            box-shadow: 12px 0 48px rgba(0,0,0,0.28);
+          }
+          .admin-sidebar-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0);
+            z-index: 1000;
+            pointer-events: none;
+            transition: background 0.3s ease;
+          }
+          .admin-sidebar-backdrop.mobile-open {
+            background: rgba(0,0,0,0.5);
+            pointer-events: auto;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+          }
+          .admin-mobile-topbar {
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            align-items: center;
+            gap: 12px;
+            height: 56px;
+            padding: 0 14px;
+            background: #FFFFFF;
+            border-bottom: 1px solid #E5E5E5;
+            margin: -16px -16px 12px -16px;
+          }
           .admin-content { padding: 16px !important; }
           .admin-kpi-grid { grid-template-columns: 1fr 1fr !important; }
+          .admin-mobile-hide { display: none !important; }
         }
         @keyframes sirenPulse {
           0%, 100% { background-color: rgba(239, 68, 68, 0.1); border-color: #EF4444; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
@@ -487,7 +550,9 @@ export default function AdminDashboard() {
         }
       `}</style>
 
-      <aside className="admin-sidebar" style={{ width: sidebarOpen ? 240 : 68, background: '#FFFFFF', borderRight: '1px solid #E5E5E5', position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>
+      <div className={"admin-sidebar-backdrop" + (sidebarOpen ? " mobile-open" : "")} onClick={function() { setSidebarOpen(false); }} />
+
+      <aside className={"admin-sidebar" + (sidebarOpen ? " mobile-open" : "")} style={{ width: sidebarOpen ? 240 : 68, background: '#FFFFFF', borderRight: '1px solid #E5E5E5', position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>
         <div style={{ padding: '18px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1A1A1A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>JM</div>
           {sidebarOpen && (<div><div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Joias Maromba</div><div style={{ fontSize: 11, color: '#888' }}>Admin</div></div>)}
@@ -497,7 +562,7 @@ export default function AdminDashboard() {
             var isActive = activeTab === item.id;
             var showBadge = item.id === 'withdrawals' && kpis.pendingWithdrawals > 0;
             return (
-              <button key={item.id} onClick={function() { setActiveTab(item.id); }} style={{ width: '100%', padding: '10px 12px', marginBottom: 2, background: isActive ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 8, color: isActive ? '#FFD700' : '#555', fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', position: 'relative' }}>
+              <button key={item.id} onClick={function() { handleMenuClick(item.id); }} style={{ width: '100%', padding: '10px 12px', marginBottom: 2, background: isActive ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 8, color: isActive ? '#FFD700' : '#555', fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', position: 'relative' }}>
                 <span style={{ fontSize: 18, flexShrink: 0, animation: item.alert ? 'sirenSpin 0.5s ease-in-out infinite' : 'none' }}>{item.alert ? '🚨' : item.icon}</span>
                 {sidebarOpen && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>}
                 {sidebarOpen && showBadge && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{kpis.pendingWithdrawals}</span>)}
@@ -518,7 +583,20 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      <main style={{ flex: 1, minWidth: 0, padding: 24, overflow: 'hidden' }}>
+      <main className="admin-content" style={{ flex: 1, minWidth: 0, padding: 24, overflow: 'hidden' }}>
+        <div className="admin-mobile-topbar">
+          <button onClick={function() { setSidebarOpen(true); }} aria-label="Abrir menu" style={{ background: 'transparent', border: 'none', padding: 6, cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, width: 40 }}>
+            <span style={{ display: 'block', height: 2, background: '#1A1A1A', borderRadius: 2 }} />
+            <span style={{ display: 'block', height: 2, background: '#1A1A1A', borderRadius: 2 }} />
+            <span style={{ display: 'block', height: 2, background: '#1A1A1A', borderRadius: 2 }} />
+          </button>
+          <div style={{ flex: 1, fontSize: 15, fontWeight: 700 }}>
+            {(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}
+          </div>
+          {kpis.pendingWithdrawals > 0 && (
+            <span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{kpis.pendingWithdrawals}</span>
+          )}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ fontSize: 24, fontWeight: 700 }}>{(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}</div>
