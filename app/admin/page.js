@@ -664,6 +664,11 @@ export default function AdminDashboard() {
           .admin-content { padding: 16px !important; }
           .admin-kpi-grid { grid-template-columns: 1fr 1fr !important; }
           .admin-mobile-hide { display: none !important; }
+          .admin-notify-grid { grid-template-columns: 1fr !important; }
+          .admin-notify-types { grid-template-columns: 1fr !important; }
+          .admin-notify-list { max-height: 340px !important; }
+          .admin-post-row { gap: 8px !important; padding: 12px !important; font-size: 12px !important; }
+          .admin-post-header { padding: 10px 12px !important; gap: 8px !important; font-size: 10px !important; }
         }
         @keyframes sirenPulse {
           0%, 100% { background-color: rgba(239, 68, 68, 0.1); border-color: #EF4444; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
@@ -1123,11 +1128,11 @@ export default function AdminDashboard() {
               <div style={{ fontSize: 13, color: '#666' }}><strong>{recentPosts.length}</strong> postagens · atualiza a cada 30s</div>
             </div>
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8 }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E5E5', background: '#FAFAFA', display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 2fr', gap: 12, fontSize: 11, fontWeight: 600, color: '#666', textTransform: 'uppercase' }}>
+              <div className="admin-post-header" style={{ padding: '12px 16px', borderBottom: '1px solid #E5E5E5', background: '#FAFAFA', display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 2fr', gap: 12, fontSize: 11, fontWeight: 600, color: '#666', textTransform: 'uppercase' }}>
                 <div></div><div>Afiliado</div><div>Rede</div><div>Data/Hora</div><div>Link</div>
               </div>
               {recentPosts.map(function(p) {
-                return (<div key={p.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'grid', gridTemplateColumns: '40px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr)', gap: 12, alignItems: 'center', fontSize: 13 }}>
+                return (<div key={p.id} className="admin-post-row" style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'grid', gridTemplateColumns: '40px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr)', gap: 12, alignItems: 'center', fontSize: 13 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666', flexShrink: 0 }}>{p.avatar_initials}</div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }} title={p.affiliate_name}>{p.affiliate_name}</span>{newAffiliateIds.has(p.affiliate_id) && <NewBadge />}</div>
@@ -1493,12 +1498,12 @@ export default function AdminDashboard() {
           }
 
           return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 320px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-              <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden' }}>
+            <div className="admin-notify-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 320px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
+              <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden', minWidth: 0 }}>
                 <div style={{ padding: 12, borderBottom: '1px solid #E5E5E5', background: '#FAFAFA' }}>
-                  <input value={notifySearch} onChange={function(e) { setNotifySearch(e.target.value); }} placeholder="Buscar por nome ou cupom" style={{ width: '100%', padding: '9px 12px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, outline: 'none' }} />
+                  <input value={notifySearch} onChange={function(e) { setNotifySearch(e.target.value); }} placeholder="Buscar por nome ou cupom" style={{ width: '100%', padding: '9px 12px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
-                <div style={{ maxHeight: 520, overflowY: 'auto' }}>
+                <div className="admin-notify-list" style={{ maxHeight: 520, overflowY: 'auto' }}>
                   {list.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum afiliado</div>}
                   {list.map(function(a) {
                     var selected = notifyTarget && notifyTarget.id === a.id;
@@ -1531,7 +1536,7 @@ export default function AdminDashboard() {
               )}
 
               {notifyTarget && (
-                <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 20 }}>
+                <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 20, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid #F0F0F0' }}>
                     <div style={{ width: 44, height: 44, borderRadius: 22, background: notifyTarget.avatar_url ? 'transparent' : 'linear-gradient(135deg, #FFD700, #B8860B)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>
                       {notifyTarget.avatar_url ? <img src={storageProxyUrl(notifyTarget.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : notifyTarget.avatar_initials}
@@ -1555,7 +1560,7 @@ export default function AdminDashboard() {
                   ) : (
                     <div>
                       <div style={{ fontSize: 12, color: '#666', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>Tipo de mensagem</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                      <div className="admin-notify-types" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
                         {[
                           { id: 'praise', label: '🎉 Parabenizar', bg: '#10B981' },
                           { id: 'info', label: '📢 Aviso', bg: '#3B82F6' },
