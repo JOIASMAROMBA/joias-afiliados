@@ -1970,6 +1970,33 @@ export default function AdminDashboard() {
                   })}
                   {extraFields.length === 0 && (<div style={{ background: '#FFF', padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum dado adicional cadastrado</div>)}
                 </div>
+
+                {!a.is_admin && (
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed #E5E5E5' }}>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>Zona de Perigo</div>
+                    <button
+                      onClick={async function() {
+                        var confirmText = 'EXCLUIR ' + (a.coupon_code || '');
+                        var resp = window.prompt('Esta acao e PERMANENTE. Vai apagar ' + a.name + ' e todos os dados dela (vendas, saques, postagens...). Para confirmar, digite:\n\n' + confirmText);
+                        if (resp !== confirmText) { if (resp !== null) alert('Texto nao confere. Exclusao cancelada.'); return; }
+                        try {
+                          var r = await fetch('/api/admin/affiliates/delete', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ affiliate_id: a.id }),
+                          });
+                          var d = await r.json().catch(function() { return {}; });
+                          if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha ao excluir') + (d.detail ? ' - ' + d.detail : '')); return; }
+                          alert('Afiliada excluida com sucesso.');
+                          setSelectedCadastroId(null);
+                          await loadAll();
+                        } catch (err) {
+                          alert('Erro de conexao: ' + (err && err.message ? err.message : 'erro'));
+                        }
+                      }}
+                      style={{ width: '100%', padding: 12, background: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer', letterSpacing: 0.5 }}
+                    >🗑️ EXCLUIR AFILIADA PERMANENTEMENTE</button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
