@@ -444,7 +444,7 @@ export default function PainelPage() {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>AFILIADO</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>Ola, {affiliate && affiliate.name && affiliate.name.split(' ')[0]}!</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 2 }}>
             <div onClick={openEditProfile} style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', cursor: 'pointer', textDecoration: 'underline' }}>Editar perfil</div>
             <div onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', cursor: 'pointer', textDecoration: 'underline' }}>Sair</div>
           </div>
