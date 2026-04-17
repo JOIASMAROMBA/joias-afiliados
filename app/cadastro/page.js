@@ -11,13 +11,20 @@ export default function CadastroPage() {
   const [couponChecking, setCouponChecking] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [form, setForm] = useState({ name: '', age: '', city: '', email: '', platforms: [], instagram: '', facebook: '', tiktok: '', outro: '', coupon: '', password: '', passwordConfirm: '', agreedCommission: false, agreedConduct: false });
+  const [form, setForm] = useState({ name: '', age: '', city: '', email: '', whatsapp: '', platforms: [], instagram: '', facebook: '', tiktok: '', outro: '', coupon: '', password: '', passwordConfirm: '', agreedCommission: false, agreedConduct: false });
   const [showTerms, setShowTerms] = useState(false);
   const [showConduct, setShowConduct] = useState(false);
 
   const handleChange = (field, value) => {
     if (field === 'coupon') { value = value.toUpperCase().replace(/[^A-Z0-9]/g, ''); setCouponStatus(''); }
     if (field === 'password' || field === 'passwordConfirm') { value = value.replace(/[^0-9]/g, '').substring(0, 6); }
+    if (field === 'whatsapp') {
+      var d = value.replace(/\D/g, '').slice(0, 11);
+      if (d.length === 0) value = '';
+      else if (d.length <= 2) value = '(' + d;
+      else if (d.length <= 7) value = '(' + d.slice(0, 2) + ') ' + d.slice(2);
+      else value = '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+    }
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -49,6 +56,8 @@ export default function CadastroPage() {
     if (!form.city.trim()) return 'Preencha sua cidade.';
     if (!form.email.trim()) return 'Preencha seu e-mail.';
     if (!form.email.includes('@')) return 'E-mail invalido.';
+    var waDigits = form.whatsapp.replace(/\D/g, '');
+    if (waDigits.length < 10 || waDigits.length > 11) return 'WhatsApp invalido (DDD + numero).';
     if (form.platforms.length === 0) return 'Selecione pelo menos uma rede social.';
     var hasHandle = false;
     form.platforms.forEach(function(p) { if (form[p.toLowerCase()] && form[p.toLowerCase()].trim()) hasHandle = true; });
@@ -83,12 +92,12 @@ export default function CadastroPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), coupon: form.coupon.trim(), password: form.password, age: form.age, city: form.city, platforms: form.platforms, social, accepted_conduct: form.agreedConduct }),
+        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), whatsapp: form.whatsapp.replace(/\D/g, ''), coupon: form.coupon.trim(), password: form.password, age: form.age, city: form.city, platforms: form.platforms, social, accepted_conduct: form.agreedConduct }),
       });
       let data;
       try { data = await res.json(); } catch { data = {}; }
       if (!res.ok || !data.ok) {
-        const map = { coupon_taken: 'Esse cupom ja foi usado.', email_taken: 'Esse e-mail ja esta cadastrado.', invalid_name: 'Nome invalido.', invalid_email: 'E-mail invalido.', invalid_coupon: 'Cupom invalido.', invalid_password: 'Senha deve ter 6 digitos.', rate_limited: 'Muitas tentativas. Aguarde.' };
+        const map = { coupon_taken: 'Esse cupom ja foi usado.', email_taken: 'Esse e-mail ja esta cadastrado.', invalid_name: 'Nome invalido.', invalid_email: 'E-mail invalido.', invalid_coupon: 'Cupom invalido.', invalid_password: 'Senha deve ter 6 digitos.', invalid_whatsapp: 'WhatsApp invalido.', rate_limited: 'Muitas tentativas. Aguarde.' };
         setError(map[data.error] || 'Erro ao cadastrar.');
         setLoading(false);
         return;
@@ -253,6 +262,11 @@ export default function CadastroPage() {
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>E-mail</label>
               <input type="email" className="premium" value={form.email} onChange={(e) => handleChange('email', e.target.value)} placeholder="seu@email.com" style={inputStyle(false)} />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>WhatsApp</label>
+              <input type="tel" inputMode="numeric" className="premium" value={form.whatsapp} onChange={(e) => handleChange('whatsapp', e.target.value)} placeholder="(00) 00000-0000" style={inputStyle(false)} />
             </div>
 
             <div style={{ marginBottom: 16 }}>

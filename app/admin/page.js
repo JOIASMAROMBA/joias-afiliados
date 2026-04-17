@@ -1946,17 +1946,80 @@ export default function AdminDashboard() {
           var d = new Date(iso);
           return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
-        var whatsappDigits = (a.phone || a.whatsapp || '').replace(/\D/g, '');
+        var whatsappDigits = (a.whatsapp || a.phone || '').replace(/\D/g, '');
         var whatsappUrl = whatsappDigits.length >= 10 ? 'https://wa.me/' + (whatsappDigits.length === 11 || whatsappDigits.length === 10 ? '55' + whatsappDigits : whatsappDigits) : null;
-        var SKIP_FIELDS = { id: 1, password_hash: 1, avatar_initials: 1, avatar_url: 1, name: 1, coupon_code: 1, created_at: 1 };
-        var FIELD_LABELS = { email: 'Email', phone: 'Telefone', whatsapp: 'WhatsApp', pix_key: 'Chave PIX', pix_type: 'Tipo PIX', commission_value: 'Comissão', is_admin: 'Admin', is_sponsored: 'Patrocinado', blocked: 'Bloqueada', weekly_goal: 'Meta semanal', weekly_posts_goal: 'Meta posts/semana', city: 'Cidade', state: 'Estado', birthday: 'Aniversário', notes: 'Observações', updated_at: 'Atualizado em' };
-        var extraFields = Object.keys(a).filter(function(k) { return !SKIP_FIELDS[k] && a[k] !== null && a[k] !== '' && a[k] !== undefined; });
-        function displayValue(k, v) {
-          if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
-          if (k === 'commission_value') return 'R$ ' + Number(v).toFixed(2);
-          if (k === 'updated_at' || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v))) return fmtDate(v);
-          return String(v);
+        function fmtPhone(d) {
+          if (!d) return '';
+          var s = String(d).replace(/\D/g, '');
+          if (s.length === 11) return '(' + s.slice(0, 2) + ') ' + s.slice(2, 7) + '-' + s.slice(7);
+          if (s.length === 10) return '(' + s.slice(0, 2) + ') ' + s.slice(2, 6) + '-' + s.slice(6);
+          return String(d);
         }
+        function fmtMoney(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+        function approvalLabel(s) {
+          if (s === 'approved') return { text: 'Aprovada', bg: '#D1FAE5', fg: '#065F46' };
+          if (s === 'rejected') return { text: 'Recusada', bg: '#FEE2E2', fg: '#991B1B' };
+          return { text: 'Aguardando liberação', bg: '#FEF3C7', fg: '#92400E' };
+        }
+        function Row(props) {
+          return (
+            <div style={{ background: '#FFF', padding: '10px 14px', display: 'grid', gridTemplateColumns: '130px 1fr', gap: 12, alignItems: 'center', borderBottom: props.last ? 'none' : '1px solid #F3F4F6' }}>
+              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.3 }}>{props.label}</div>
+              <div style={{ fontSize: 13, color: '#1A1A1A', wordBreak: 'break-word' }}>{props.value}</div>
+            </div>
+          );
+        }
+        function Section(props) {
+          return (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 10, color: '#888', fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6, paddingLeft: 4 }}>{props.title}</div>
+              <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden' }}>
+                {props.children}
+              </div>
+            </div>
+          );
+        }
+        var contactRows = [];
+        if (a.email) contactRows.push({ label: 'Email', value: a.email });
+        if (whatsappDigits) contactRows.push({ label: 'WhatsApp', value: fmtPhone(whatsappDigits) });
+        if (a.phone && a.phone !== a.whatsapp) contactRows.push({ label: 'Telefone', value: fmtPhone(a.phone) });
+        if (a.city) contactRows.push({ label: 'Cidade', value: a.city });
+        if (a.state) contactRows.push({ label: 'Estado', value: a.state });
+        if (a.age) contactRows.push({ label: 'Idade', value: a.age });
+        if (a.birthday) contactRows.push({ label: 'Aniversário', value: a.birthday });
+
+        var socialRows = [];
+        if (a.instagram) socialRows.push({ label: 'Instagram', value: a.instagram });
+        if (a.facebook) socialRows.push({ label: 'Facebook', value: a.facebook });
+        if (a.tiktok) socialRows.push({ label: 'TikTok', value: a.tiktok });
+        if (a.social_outro) socialRows.push({ label: 'Outros', value: a.social_outro });
+        if (Array.isArray(a.platforms) && a.platforms.length > 0) socialRows.push({ label: 'Plataformas', value: a.platforms.join(', ') });
+
+        var financeRows = [];
+        financeRows.push({ label: 'Comissão', value: fmtMoney(a.commission_value) });
+        if (a.commission_type) financeRows.push({ label: 'Tipo', value: a.commission_type === 'fixed_per_sale' ? 'Fixa por venda' : String(a.commission_type) });
+        if (a.pix_key) financeRows.push({ label: 'Chave PIX', value: a.pix_key + (a.pix_type ? ' (' + a.pix_type + ')' : '') });
+        if (a.weekly_goal) financeRows.push({ label: 'Meta semanal', value: a.weekly_goal });
+        if (a.weekly_posts_goal) financeRows.push({ label: 'Meta posts/semana', value: a.weekly_posts_goal });
+
+        var ap = approvalLabel(a.approval_status);
+        var statusRows = [];
+        statusRows.push({ label: 'Status', value: (<span style={{ display: 'inline-block', padding: '3px 10px', background: ap.bg, color: ap.fg, borderRadius: 12, fontSize: 11, fontWeight: 800 }}>{ap.text}</span>) });
+        statusRows.push({ label: 'Ativa', value: a.active === false ? 'Não' : 'Sim' });
+        if (a.tier) statusRows.push({ label: 'Classificação', value: a.tier });
+        if (a.is_sponsored) statusRows.push({ label: 'Patrocinada', value: 'Sim' });
+        if (a.blocked) statusRows.push({ label: 'Bloqueada', value: 'Sim' });
+        if (a.is_admin) statusRows.push({ label: 'Admin', value: 'Sim' });
+        if (typeof a.warnings_count === 'number' && a.warnings_count > 0) statusRows.push({ label: 'Advertências', value: a.warnings_count });
+
+        var dateRows = [];
+        if (a.created_at) dateRows.push({ label: 'Cadastro', value: fmtDate(a.created_at) });
+        if (a.accepted_terms_at) dateRows.push({ label: 'Aceitou termos', value: fmtDate(a.accepted_terms_at) });
+        if (a.approved_at) dateRows.push({ label: 'Aprovada em', value: fmtDate(a.approved_at) });
+        if (a.rejected_at) dateRows.push({ label: 'Recusada em', value: fmtDate(a.rejected_at) });
+        if (a.updated_at) dateRows.push({ label: 'Atualizado', value: fmtDate(a.updated_at) });
+
+        if (a.notes) financeRows.push({ label: 'Observações', value: a.notes });
         return (
           <div onClick={function() { setSelectedCadastroId(null); }} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <div onClick={function(e) { e.stopPropagation(); }} style={{ background: '#FFF', borderRadius: 14, maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
@@ -2075,17 +2138,37 @@ export default function AdminDashboard() {
                   </a>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1, background: '#E5E5E5', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden' }}>
-                  {extraFields.map(function(k) {
-                    return (
-                      <div key={k} style={{ background: '#FFF', padding: '10px 14px', display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'center' }}>
-                        <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.3 }}>{FIELD_LABELS[k] || k}</div>
-                        <div style={{ fontSize: 13, color: '#1A1A1A', wordBreak: 'break-word' }}>{displayValue(k, a[k])}</div>
-                      </div>
-                    );
-                  })}
-                  {extraFields.length === 0 && (<div style={{ background: '#FFF', padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum dado adicional cadastrado</div>)}
+                <div style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%)', border: '2px solid #FFD700', borderRadius: 12, padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden', boxShadow: '0 4px 20px rgba(255,215,0,0.2)' }}>
+                  <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,215,0,0.03) 10px, rgba(255,215,0,0.03) 20px)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>Cupom exclusivo</div>
+                    <div style={{ fontSize: 26, fontWeight: 900, color: '#FFD700', letterSpacing: 4, fontFamily: 'monospace', textShadow: '0 0 20px rgba(255,215,0,0.3)' }}>{a.coupon_code}</div>
+                    <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>Comissão por venda: <strong style={{ color: '#FFD700' }}>{fmtMoney(a.commission_value)}</strong></div>
+                  </div>
                 </div>
+
+                <Section title="Contato">
+                  {contactRows.map(function(r, i) { return <Row key={r.label} label={r.label} value={r.value} last={i === contactRows.length - 1} />; })}
+                  {contactRows.length === 0 && (<div style={{ padding: 16, textAlign: 'center', color: '#888', fontSize: 12 }}>—</div>)}
+                </Section>
+
+                {socialRows.length > 0 && (
+                  <Section title="Redes Sociais">
+                    {socialRows.map(function(r, i) { return <Row key={r.label} label={r.label} value={r.value} last={i === socialRows.length - 1} />; })}
+                  </Section>
+                )}
+
+                <Section title="Status">
+                  {statusRows.map(function(r, i) { return <Row key={r.label} label={r.label} value={r.value} last={i === statusRows.length - 1} />; })}
+                </Section>
+
+                <Section title="Financeiro">
+                  {financeRows.map(function(r, i) { return <Row key={r.label} label={r.label} value={r.value} last={i === financeRows.length - 1} />; })}
+                </Section>
+
+                <Section title="Datas">
+                  {dateRows.map(function(r, i) { return <Row key={r.label} label={r.label} value={r.value} last={i === dateRows.length - 1} />; })}
+                </Section>
 
                 {a.deleted_at && (
                   <div style={{ marginTop: 18 }}>

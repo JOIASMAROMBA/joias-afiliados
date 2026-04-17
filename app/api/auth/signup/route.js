@@ -28,6 +28,8 @@ export async function POST(request) {
     const password = String(body?.password || '').trim();
     const age = String(body?.age || '').trim().slice(0, 10);
     const city = String(body?.city || '').trim().slice(0, 120);
+    const whatsappRaw = String(body?.whatsapp || '').trim().slice(0, 30);
+    const whatsappDigits = whatsappRaw.replace(/\D/g, '');
     const platforms = Array.isArray(body?.platforms) ? body.platforms.slice(0, 10).map(x => String(x).slice(0, 40)) : [];
     const social = (body?.social && typeof body.social === 'object') ? body.social : {};
 
@@ -35,6 +37,7 @@ export async function POST(request) {
     if (!validEmail(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
     if (!/^[A-Z0-9]{3,40}$/.test(coupon)) return NextResponse.json({ error: 'invalid_coupon' }, { status: 400 });
     if (!/^\d{6}$/.test(password)) return NextResponse.json({ error: 'invalid_password' }, { status: 400 });
+    if (whatsappDigits.length < 10 || whatsappDigits.length > 13) return NextResponse.json({ error: 'invalid_whatsapp' }, { status: 400 });
 
     const { data: existingCoupon } = await supabaseAdmin
       .from('affiliates').select('id').ilike('coupon_code', coupon).maybeSingle();
@@ -67,8 +70,15 @@ export async function POST(request) {
     const insertResult = await supabaseAdmin.from('affiliates').insert({
       name,
       email,
-      phone: city,
-      instagram: JSON.stringify({ age, city, platforms, social: safeSocial }),
+      whatsapp: whatsappDigits,
+      phone: whatsappDigits,
+      age: age || null,
+      city: city || null,
+      instagram: safeSocial.instagram || null,
+      facebook: safeSocial.facebook || null,
+      tiktok: safeSocial.tiktok || null,
+      social_outro: safeSocial.outro || null,
+      platforms: platforms.length > 0 ? platforms : null,
       coupon_code: coupon,
       avatar_initials: initials,
       tier: 'Divulgadora',
