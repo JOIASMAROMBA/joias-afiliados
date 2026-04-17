@@ -927,7 +927,31 @@ export default function PainelPage() {
 
       {activeTab === 'withdrawals' && (
         <div className="painel-withdrawals">
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#C9A961', marginBottom: 16 }}>Historico de Saques</div>
+          <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: 20, marginBottom: 18, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+              <div style={{ display: 'flex', gap: 20, flex: 1, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo Disponível</div>
+                  <div style={{ fontSize: 26, fontWeight: 900, color: '#00ff88', lineHeight: 1.1, letterSpacing: -0.5, marginTop: 2 }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                </div>
+                <div onClick={function() { setShowReleaseDatesModal(true); }} style={{ cursor: 'pointer' }}>
+                  <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo a Liberar</div>
+                  <div style={{ fontSize: 26, fontWeight: 900, color: 'rgba(255,255,255,0.5)', lineHeight: 1.1, letterSpacing: -0.5, marginTop: 2 }}>R${Number(balance.blocked_balance || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 36, lineHeight: 1 }}>💰</div>
+            </div>
+            <button onClick={function() { setShowWithdrawModal(true); }} disabled={Number(balance.available_balance) < 10} style={{ width: '100%', padding: 14, background: Number(balance.available_balance) >= 10 ? 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)' : '#1a1a1a', border: 'none', borderRadius: 14, color: Number(balance.available_balance) >= 10 ? '#000' : 'rgba(0,255,136,0.3)', fontWeight: 800, fontSize: 15, cursor: Number(balance.available_balance) >= 10 ? 'pointer' : 'not-allowed', boxShadow: Number(balance.available_balance) >= 10 ? '0 4px 20px rgba(0,255,136,0.4)' : 'none' }}>💸 Realizar Outro Saque</button>
+            <div style={{ marginTop: 10, fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 1.4 }}>Cada venda fica bloqueada por 8 dias antes de liberar para saque.</div>
+            <button onClick={function() { setShowReleaseDatesModal(true); }} style={{ marginTop: 10, width: '100%', padding: '9px 12px', background: 'transparent', border: '1px solid rgba(201,169,97,0.5)', borderRadius: 10, color: '#C9A961', fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>📅 Datas de Liberação</button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{ flex: 1, height: 1, background: 'rgba(201,169,97,0.2)' }} />
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(201,169,97,0.8)', letterSpacing: 2, textTransform: 'uppercase' }}>Histórico de Saques</div>
+            <div style={{ flex: 1, height: 1, background: 'rgba(201,169,97,0.2)' }} />
+          </div>
+
           {myWithdrawals.length === 0 && (<div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 16, padding: 40, textAlign: 'center', color: 'rgba(201,169,97,0.5)' }}>Nenhum saque solicitado ainda</div>)}
           {myWithdrawals.map(function(w) {
             var isPaid = w.status === 'paid';
