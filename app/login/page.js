@@ -80,6 +80,10 @@ export default function LoginPage() {
           0% { background-position: -200% center; }
           100% { background-position: 200% center; }
         }
+        @keyframes saibaMaisPulse {
+          0%, 100% { transform: scale(1); opacity: 0.85; text-shadow: 0 0 12px rgba(201,169,97,0.4); }
+          50% { transform: scale(1.08); opacity: 1; text-shadow: 0 0 24px rgba(201,169,97,0.7); }
+        }
         input.premium::placeholder {
           color: rgba(255, 255, 255, 0.25);
           font-weight: 400;
@@ -173,6 +177,26 @@ export default function LoginPage() {
             }}>
               Área de Afiliados
             </div>
+            <button
+              onClick={() => router.push('/como-funciona')}
+              style={{
+                marginTop: 14,
+                background: 'none',
+                border: 'none',
+                color: '#C9A961',
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: 3,
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                padding: 6,
+                textShadow: '0 0 12px rgba(201,169,97,0.4)',
+                animation: 'saibaMaisPulse 3s ease-in-out infinite',
+                display: 'inline-block',
+              }}
+            >
+              Saiba mais →
+            </button>
           </div>
 
           <div style={{
