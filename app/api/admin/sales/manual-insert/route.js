@@ -42,18 +42,24 @@ export async function POST(request) {
   var { error: insErr } = await supabaseAdmin.from('sales').insert(rows);
   if (insErr) return NextResponse.json({ error: 'insert_failed', detail: insErr.message }, { status: 500 });
 
+  var pushResult = null;
+  var pushError = null;
   try {
     var valor = Number(commission * quantity).toFixed(2).replace('.', ',');
     var bodyMsg = quantity > 1
       ? '+R$' + valor + ' (' + quantity + ' vendas) acabou de cair!'
       : '+R$' + valor + ' de comissao acabou de cair!';
-    await sendPushToAffiliate(affiliate.id, {
+    pushResult = await sendPushToAffiliate(affiliate.id, {
       title: 'VENDA NOVA',
       body: bodyMsg,
       url: '/painel',
       tag: 'venda-manual-' + now,
     });
-  } catch (e) {}
+  } catch (e) {
+    pushError = (e && e.message) ? e.message : String(e);
+  }
 
-  return NextResponse.json({ ok: true, inserted: quantity, commission_per_sale: commission, total: commission * quantity });
+  console.log('[manual-insert] push result:', JSON.stringify(pushResult), 'error:', pushError);
+
+  return NextResponse.json({ ok: true, inserted: quantity, commission_per_sale: commission, total: commission * quantity, push: pushResult, pushError: pushError });
 }
