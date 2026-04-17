@@ -25,6 +25,9 @@ export default function PainelPage() {
   const [withdrawEmail, setWithdrawEmail] = useState('');
   const [withdrawMessage, setWithdrawMessage] = useState('');
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [withdrawCodeStep, setWithdrawCodeStep] = useState(false);
+  const [withdrawCode, setWithdrawCode] = useState('');
+  const [withdrawSending, setWithdrawSending] = useState(false);
   const [postPlatform, setPostPlatform] = useState('');
   const [postLink, setPostLink] = useState('');
   const [postMessage, setPostMessage] = useState('');
@@ -241,8 +244,10 @@ export default function PainelPage() {
     if (!pixType) { setWithdrawMessage('Selecione o tipo de chave PIX'); return; }
     if (!pixKey.trim()) { setWithdrawMessage('Informe sua chave PIX'); return; }
     if (!withdrawEmail.trim() || !withdrawEmail.includes('@')) { setWithdrawMessage('Email invalido'); return; }
+    setWithdrawMessage('');
+    setWithdrawSending(true);
     try {
-      const res = await fetch('/api/withdrawals/create', {
+      const res = await fetch('/api/withdrawals/request-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -262,21 +267,72 @@ export default function PainelPage() {
           invalid_email: 'Email invalido.',
           insufficient_balance: 'Saldo insuficiente. Disponivel: R$' + (data.available || 0),
           has_pending: 'Voce ja tem um saque pendente. Aguarde o admin processar.',
-          daily_limit_reached: 'Limite diario de saques atingido (3 por dia).',
+          too_many_codes: 'Muitos codigos solicitados. Aguarde alguns minutos.',
+          email_not_configured: 'Servico de email indisponivel. Contate o suporte.',
+          send_failed: 'Nao foi possivel enviar o email. Verifique o endereco.',
           unauthorized: 'Sessao expirada. Faca login novamente.',
         };
-        setWithdrawMessage(map[data.error] || 'Erro ao solicitar saque.');
+        setWithdrawMessage(map[data.error] || 'Erro ao solicitar codigo.');
+        setWithdrawSending(false);
+        return;
+      }
+      setWithdrawCodeStep(true);
+      setWithdrawCode('');
+      setWithdrawSending(false);
+    } catch (err) {
+      setWithdrawMessage('Erro de conexao. Tente novamente.');
+      setWithdrawSending(false);
+    }
+  }
+
+  async function handleConfirmWithdrawCode() {
+    const amountNum = withdrawAmount ? parseInt(withdrawAmount, 10) / 100 : 0;
+    if (!/^\d{6}$/.test(withdrawCode.trim())) { setWithdrawMessage('Digite o codigo de 6 digitos.'); return; }
+    setWithdrawMessage('');
+    setWithdrawSending(true);
+    try {
+      const res = await fetch('/api/withdrawals/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amountNum,
+          pix_key: pixKey.trim(),
+          pix_type: pixType,
+          email: withdrawEmail.trim(),
+          code: withdrawCode.trim(),
+        }),
+      });
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok || !data.ok) {
+        const map = {
+          invalid_code: 'Codigo invalido.',
+          no_active_code: 'Codigo nao encontrado. Volte e solicite outro.',
+          code_expired: 'Codigo expirou. Volte e solicite outro.',
+          wrong_code: 'Codigo incorreto.',
+          code_mismatch: 'Dados nao conferem. Volte e solicite outro codigo.',
+          too_many_attempts: 'Muitas tentativas erradas. Solicite outro codigo.',
+          insufficient_balance: 'Saldo insuficiente.',
+          has_pending: 'Voce ja tem saque pendente.',
+          daily_limit_reached: 'Limite diario atingido.',
+        };
+        setWithdrawMessage(map[data.error] || 'Erro ao confirmar saque.');
+        setWithdrawSending(false);
         return;
       }
       setWithdrawSuccess(true);
+      setWithdrawCodeStep(false);
+      setWithdrawSending(false);
     } catch (err) {
       setWithdrawMessage('Erro de conexao. Tente novamente.');
+      setWithdrawSending(false);
     }
   }
 
   function closeWithdrawModal() {
     setShowWithdrawModal(false);
     setWithdrawAmount(''); setPixKey(''); setPixType(''); setWithdrawMessage(''); setWithdrawSuccess(false);
+    setWithdrawCodeStep(false); setWithdrawCode(''); setWithdrawSending(false);
     var id = localStorage.getItem('affiliate_id');
     if (id) loadData(id);
   }
@@ -905,6 +961,32 @@ export default function PainelPage() {
                 <div style={{ fontSize: 13, color: 'rgba(201,169,97,0.7)', lineHeight: 1.5, marginBottom: 20 }}>O prazo de recebimento é de até 24 horas. Fique atenta ao seu email.</div>
                 <button onClick={closeWithdrawModal} style={{ width: '100%', padding: 14, background: 'linear-gradient(135deg, #C9A961 0%, #8B6914 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>Fechar</button>
               </div>
+            ) : withdrawCodeStep ? (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#C9A961' }}>🔐 Confirmar Saque</div>
+                  <button onClick={closeWithdrawModal} style={{ background: 'none', border: 'none', color: '#C9A961', fontSize: 20, cursor: 'pointer' }}>✕</button>
+                </div>
+                <div style={{ background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: '#C9A961', fontWeight: 700, marginBottom: 4 }}>📧 Enviamos um código para</div>
+                  <div style={{ fontSize: 13, color: '#fff', wordBreak: 'break-all' }}>{withdrawEmail}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 6, lineHeight: 1.4 }}>Abre seu email (ou spam) e digita o código de 6 dígitos abaixo. Expira em 10 minutos.</div>
+                </div>
+                <label style={{ display: 'block', marginBottom: 6, color: 'rgba(201,169,97,0.7)', fontSize: 12, fontWeight: 700 }}>CÓDIGO DE CONFIRMAÇÃO</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={withdrawCode}
+                  onChange={function(e) { setWithdrawCode(e.target.value.replace(/\D/g, '').slice(0, 6)); }}
+                  placeholder="000000"
+                  autoFocus
+                  style={{ width: '100%', padding: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, color: '#C9A961', fontSize: 26, fontWeight: 900, marginBottom: 14, outline: 'none', textAlign: 'center', letterSpacing: 10 }}
+                />
+                {withdrawMessage && (<div style={{ padding: 10, borderRadius: 10, textAlign: 'center', fontSize: 13, marginBottom: 12, background: 'rgba(255,80,80,0.1)', color: '#ff6b6b' }}>{withdrawMessage}</div>)}
+                <button onClick={handleConfirmWithdrawCode} disabled={withdrawSending} style={{ width: '100%', padding: 14, background: withdrawSending ? 'rgba(0,255,136,0.35)' : 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 15, cursor: withdrawSending ? 'wait' : 'pointer', marginBottom: 8 }}>{withdrawSending ? 'Confirmando...' : 'Confirmar Saque'}</button>
+                <button onClick={function() { setWithdrawCodeStep(false); setWithdrawCode(''); setWithdrawMessage(''); }} style={{ width: '100%', padding: 10, background: 'transparent', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, color: 'rgba(201,169,97,0.7)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>← Voltar</button>
+              </div>
             ) : (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -924,8 +1006,9 @@ export default function PainelPage() {
                 <input type="text" value={pixKey} onChange={function(e) { setPixKey(e.target.value); }} placeholder="Digite sua chave PIX" style={{ width: '100%', padding: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, color: '#C9A961', marginBottom: 14, outline: 'none' }} />
                 <label style={{ display: 'block', marginBottom: 6, color: 'rgba(201,169,97,0.7)', fontSize: 12, fontWeight: 700 }}>DIGITE SEU EMAIL PARA RECEBER O COMPROVANTE</label>
                 <input type="email" value={withdrawEmail} onChange={function(e) { setWithdrawEmail(e.target.value); }} placeholder="seu@email.com" style={{ width: '100%', padding: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, color: '#C9A961', marginBottom: 14, outline: 'none' }} />
+                <div style={{ padding: 10, borderRadius: 10, fontSize: 11, marginBottom: 12, background: 'rgba(201,169,97,0.08)', color: 'rgba(201,169,97,0.85)', lineHeight: 1.5 }}>🔐 Por segurança, enviaremos um código para seu email antes de confirmar o saque.</div>
                 {withdrawMessage && (<div style={{ padding: 10, borderRadius: 10, textAlign: 'center', fontSize: 13, marginBottom: 12, background: 'rgba(255,80,80,0.1)', color: '#ff6b6b' }}>{withdrawMessage}</div>)}
-                <button onClick={handleRequestWithdraw} style={{ width: '100%', padding: 14, background: 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>Confirmar</button>
+                <button onClick={handleRequestWithdraw} disabled={withdrawSending} style={{ width: '100%', padding: 14, background: withdrawSending ? 'rgba(0,255,136,0.35)' : 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 15, cursor: withdrawSending ? 'wait' : 'pointer' }}>{withdrawSending ? 'Enviando código...' : 'Enviar código por email'}</button>
               </div>
             )}
           </div>
@@ -1172,6 +1255,18 @@ export default function PainelPage() {
               {editAvatarUrl && (
                 <button onClick={function() { setEditAvatarUrl(''); }} style={{ marginTop: 8, background: 'none', border: 'none', color: 'rgba(255,107,107,0.8)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}>Remover foto</button>
               )}
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(201,169,97,0.7)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Cupom (bloqueado)</label>
+              <div
+                onClick={function() { alert('O cupom nao pode ser alterado depois de criado. Para solicitar mudanca, envie email para contato@joiasmaromba.com.br'); }}
+                style={{ width: '100%', padding: '12px 14px', background: 'rgba(201,169,97,0.1)', border: '1px dashed rgba(201,169,97,0.4)', borderRadius: 10, color: '#C9A961', fontSize: 14, fontFamily: 'monospace', letterSpacing: 2, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+              >
+                <span>{affiliate && affiliate.coupon_code}</span>
+                <span style={{ fontSize: 14 }}>🔒</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(201,169,97,0.5)', marginTop: 4, lineHeight: 1.4 }}>Cupom nao pode ser alterado. Para solicitar mudanca, envie email para <strong>contato@joiasmaromba.com.br</strong>.</div>
             </div>
 
             <div style={{ marginBottom: 14 }}>
