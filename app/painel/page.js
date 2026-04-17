@@ -562,7 +562,7 @@ export default function PainelPage() {
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 18 }}>Validamos cada cadastro em até <strong style={{ color: '#C9A961' }}>48 horas</strong>. Você receberá um email assim que for aprovado.</div>
           <div style={{ padding: 14, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, marginBottom: 16 }}>
             <div style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Cupom reservado</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: '#C9A961', fontFamily: 'monospace', letterSpacing: 3 }}>{affiliate && affiliate.coupon_code}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#FFF', fontFamily: 'monospace', letterSpacing: 3 }}>{affiliate && affiliate.coupon_code}</div>
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 18 }}>Em caso de dúvida: <strong style={{ color: '#C9A961' }}>contato@joiasmaromba.com.br</strong></div>
           <button onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ width: '100%', padding: 12, background: 'transparent', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 10, color: 'rgba(201,169,97,0.7)', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>Sair</button>
@@ -607,7 +607,7 @@ export default function PainelPage() {
       </div>
     )}
 
-    <div className="painel-root" style={{ margin: '0 auto', minHeight: '100vh', background: '#000', padding: 20, color: '#fff', position: 'relative', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif", filter: isBlocked ? 'blur(14px)' : 'none', pointerEvents: isBlocked ? 'none' : 'auto', userSelect: isBlocked ? 'none' : 'auto' }}>
+    <div className="painel-root" style={{ margin: '0 auto', minHeight: '100vh', background: '#000', padding: 20, color: '#fff', position: 'relative', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', sans-serif", filter: isBlocked ? 'blur(10px)' : 'none', pointerEvents: isBlocked ? 'none' : 'auto', userSelect: isBlocked ? 'none' : 'auto' }}>
       <style>{`
         .painel-root { max-width: 480px; }
         .painel-home-grid { display: block; }
