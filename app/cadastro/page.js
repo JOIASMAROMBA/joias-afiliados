@@ -154,12 +154,22 @@ export default function CadastroPage() {
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 400, width: '100%', textAlign: 'center', animation: 'ticketEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           <div style={{ background: 'linear-gradient(145deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)', borderRadius: 16, padding: '36px 28px', boxShadow: '0 0 80px rgba(201,169,97,0.4), 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.3)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg, transparent, transparent 14px, rgba(0,0,0,0.04) 14px, rgba(0,0,0,0.04) 28px)', pointerEvents: 'none' }} />
+            <div aria-hidden="true" style={{ position: 'absolute', top: -7, left: 8, right: 8, height: 14, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none' }}>
+              {Array.from({ length: 22 }).map((_, i) => (
+                <span key={'t' + i} style={{ width: 12, height: 12, background: '#000', borderRadius: '50%' }} />
+              ))}
+            </div>
+            <div aria-hidden="true" style={{ position: 'absolute', bottom: -7, left: 8, right: 8, height: 14, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none' }}>
+              {Array.from({ length: 22 }).map((_, i) => (
+                <span key={'b' + i} style={{ width: 12, height: 12, background: '#000', borderRadius: '50%' }} />
+              ))}
+            </div>
             <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ fontSize: 11, color: 'rgba(26,19,6,0.6)', textTransform: 'uppercase', letterSpacing: 3, fontWeight: 700, marginBottom: 10 }}>Golden Ticket</div>
-              <div style={{ width: 40, height: 1, background: 'rgba(26,19,6,0.3)', margin: '0 auto 16px' }} />
-              <div style={{ fontSize: 12, color: 'rgba(26,19,6,0.6)', marginBottom: 4 }}>Cupom exclusivo de</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: '#1a1306', marginBottom: 12, letterSpacing: -0.5 }}>{form.name.split(' ')[0]}</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: '#1a1306', letterSpacing: 4, padding: '14px 0', borderTop: '1.5px dashed rgba(26,19,6,0.3)', borderBottom: '1.5px dashed rgba(26,19,6,0.3)', margin: '12px 0' }}>{form.coupon}</div>
+              <div style={{ fontSize: 11, color: 'rgba(26,19,6,0.6)', textTransform: 'uppercase', letterSpacing: 3, fontWeight: 700, marginBottom: 6 }}>Novo Afiliado</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1306', marginBottom: 12, letterSpacing: -0.2 }}>{form.name.split(' ')[0]}</div>
+              <div style={{ width: 40, height: 1, background: 'rgba(26,19,6,0.3)', margin: '0 auto 14px' }} />
+              <div style={{ fontSize: 11, color: 'rgba(26,19,6,0.6)', marginBottom: 4, letterSpacing: 0.5 }}>Cupom exclusivo de</div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: '#1a1306', letterSpacing: 4, padding: '14px 0', borderTop: '1.5px dashed rgba(26,19,6,0.3)', borderBottom: '1.5px dashed rgba(26,19,6,0.3)', margin: '6px 0 12px' }}>{form.coupon}</div>
               <div style={{ fontSize: 12, color: 'rgba(26,19,6,0.6)', marginTop: 12, marginBottom: 4 }}>Comissão por venda</div>
               <div style={{ fontSize: 26, fontWeight: 900, color: '#1a1306' }}>R$ 25,00</div>
             </div>
