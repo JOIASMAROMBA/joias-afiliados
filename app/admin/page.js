@@ -467,9 +467,10 @@ export default function AdminDashboard() {
       totalSales: filteredSales.length, revenue: revenue, commissions: commissions, netRevenue: revenue - commissions,
       activeAffiliates: uniqueAffiliates, totalAffiliates: filteredAffiliatesByType.length,
       avgTicket: filteredSales.length ? revenue / filteredSales.length : 0,
-      pendingWithdrawals: withdrawals.filter(function(w) { return w.status === 'pending'; }).length
+      pendingWithdrawals: withdrawals.filter(function(w) { return w.status === 'pending'; }).length,
+      pendingApproval: (affiliatesFull || []).filter(function(a) { return !a.deleted_at && a.approval_status === 'pending'; }).length
     };
-  }, [filteredSales, filteredAffiliatesByType, withdrawals]);
+  }, [filteredSales, filteredAffiliatesByType, withdrawals, affiliatesFull]);
 
   var pendingWithdrawals = withdrawals.filter(function(w) { return w.status === 'pending'; });
 
@@ -719,12 +720,15 @@ export default function AdminDashboard() {
         <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
           {menuItems.map(function(item) {
             var isActive = activeTab === item.id;
-            var showBadge = item.id === 'withdrawals' && kpis.pendingWithdrawals > 0;
+            var badgeCount = 0;
+            if (item.id === 'withdrawals') badgeCount = kpis.pendingWithdrawals;
+            else if (item.id === 'cadastros') badgeCount = kpis.pendingApproval;
+            var showBadge = badgeCount > 0;
             return (
               <button key={item.id} onClick={function() { handleMenuClick(item.id); }} style={{ width: '100%', padding: '10px 12px', marginBottom: 2, background: isActive ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 8, color: isActive ? '#FFD700' : '#555', fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', position: 'relative' }}>
                 <span style={{ fontSize: 18, flexShrink: 0, animation: item.alert ? 'sirenSpin 0.5s ease-in-out infinite' : 'none' }}>{item.alert ? '🚨' : item.icon}</span>
                 {sidebarOpen && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>}
-                {sidebarOpen && showBadge && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700 }}>{kpis.pendingWithdrawals}</span>)}
+                {sidebarOpen && showBadge && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, animation: 'badgeBlink 1s ease-in-out infinite' }}>{badgeCount}</span>)}
                 {sidebarOpen && item.alert && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, animation: 'badgeBlink 1s ease-in-out infinite' }}>{sponsoredAlert.length}</span>)}
                 {!sidebarOpen && (showBadge || item.alert) && (<span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, background: '#EF4444', borderRadius: 4 }} />)}
               </button>
@@ -1475,7 +1479,22 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
                 {filterOptions.map(function(f) {
                   var active = cadastrosFilter === f.id;
-                  return (<button key={f.id} onClick={function() { setCadastrosFilter(f.id); }} style={{ padding: '8px 14px', background: active ? '#1A1A1A' : '#FFF', border: '1px solid ' + (active ? '#1A1A1A' : '#E5E5E5'), borderRadius: 20, color: active ? '#FFD700' : '#555', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{f.label}</button>);
+                  var shouldPulse = f.id === 'pending' && pendingAffiliates.length > 0 && !active;
+                  return (<button
+                    key={f.id}
+                    onClick={function() { setCadastrosFilter(f.id); }}
+                    style={{
+                      padding: '8px 14px',
+                      background: active ? '#1A1A1A' : (shouldPulse ? '#FEE2E2' : '#FFF'),
+                      border: '1px solid ' + (active ? '#1A1A1A' : (shouldPulse ? '#EF4444' : '#E5E5E5')),
+                      borderRadius: 20,
+                      color: active ? '#FFD700' : (shouldPulse ? '#991B1B' : '#555'),
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      animation: shouldPulse ? 'badgeBlink 1s ease-in-out infinite' : 'none',
+                    }}
+                  >{f.label}</button>);
                 })}
               </div>
 
