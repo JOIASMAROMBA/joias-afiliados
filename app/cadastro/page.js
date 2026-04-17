@@ -217,8 +217,8 @@ export default function CadastroPage() {
               <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,169,97,0.18) 0%, transparent 70%)', filter: 'blur(20px)' }} />
               <img src="/logo.png" alt="Joias Maromba" style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.92, filter: 'drop-shadow(0 4px 20px rgba(201,169,97,0.35))', position: 'relative', zIndex: 1 }} />
             </div>
-            <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, letterSpacing: -0.3, margin: 0, marginBottom: 6 }}>Seja Afiliada</h1>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0 }}>Ganhe <strong style={{ color: '#C9A961' }}>R$ 30 por venda</strong> divulgando nossas joias</p>
+            <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, letterSpacing: -0.3, margin: 0, marginBottom: 6, textTransform: 'uppercase' }}>Seja Afiliado(a)</h1>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 500 }}>Ganhe <strong style={{ color: '#C9A961' }}>R$ 20,00 por venda</strong> no seu cupom divulgando nossas joias</p>
           </div>
 
           <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
@@ -276,10 +276,10 @@ export default function CadastroPage() {
               <div style={{ display: 'inline-block', marginBottom: 10, animation: 'couponPulse 2.4s ease-in-out infinite' }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#C9A961', letterSpacing: 2, textTransform: 'uppercase', textShadow: '0 0 16px rgba(201,169,97,0.5)' }}>Crie seu cupom</span>
               </div>
-              <input type="text" className="premium" value={form.coupon} onChange={(e) => handleChange('coupon', e.target.value)} placeholder="SEU CUPOM" maxLength={20} style={{ ...inputStyle(couponStatus === 'available'), fontSize: 15, fontWeight: 700, textAlign: 'center', letterSpacing: 2, color: couponStatus === 'available' ? '#C9A961' : couponStatus === 'taken' ? '#ff6b6b' : '#fff', borderColor: couponStatus === 'taken' ? 'rgba(255,107,107,0.4)' : (couponStatus === 'available' ? 'rgba(201,169,97,0.5)' : 'rgba(255,255,255,0.1)') }} />
+              <input type="text" className="premium" value={form.coupon} onChange={(e) => handleChange('coupon', e.target.value)} placeholder="SEU CUPOM" maxLength={20} style={{ ...inputStyle(couponStatus === 'available'), fontSize: 15, fontWeight: 700, textAlign: 'center', letterSpacing: 2, color: couponStatus === 'taken' ? '#ff6b6b' : '#fff', borderColor: couponStatus === 'taken' ? 'rgba(255,107,107,0.4)' : (couponStatus === 'available' ? 'rgba(0,255,136,0.5)' : 'rgba(255,255,255,0.1)') }} />
               <div style={{ textAlign: 'center', marginTop: 6, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, minHeight: 14 }}>
                 {couponChecking && <span style={{ color: 'rgba(255,255,255,0.4)' }}>Verificando...</span>}
-                {couponStatus === 'available' && <span style={{ color: '#C9A961' }}>✓ DISPONÍVEL</span>}
+                {couponStatus === 'available' && <span style={{ color: '#00ff88' }}>✓ DISPONÍVEL</span>}
                 {couponStatus === 'taken' && <span style={{ color: '#ff6b6b' }}>✗ CUPOM EM USO</span>}
               </div>
             </div>
