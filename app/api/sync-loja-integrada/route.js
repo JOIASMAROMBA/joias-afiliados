@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { sendPushToAffiliate } from '../../../lib/push';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -121,6 +122,17 @@ async function processOrder(order) {
   });
 
   if (insertError) return { error: insertError.message, externalId };
+
+  try {
+    const valor = Number(commission).toFixed(2).replace('.', ',');
+    await sendPushToAffiliate(affiliate.id, {
+      title: 'VENDA NOVA',
+      body: '+R$' + valor + ' de comissao acabou de cair!',
+      url: '/painel',
+      tag: 'venda-' + (externalId || Date.now()),
+    });
+  } catch (e) {}
+
   return { inserted: true, affiliate_id: affiliate.id, commission, coupon, externalId };
 }
 

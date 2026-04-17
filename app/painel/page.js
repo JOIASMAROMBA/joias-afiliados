@@ -48,6 +48,8 @@ export default function PainelPage() {
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [showConductView, setShowConductView] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [pushStatus, setPushStatus] = useState('idle'); // idle | unsupported | denied | disabled | enabled | busy
+  const [pushBannerDismissed, setPushBannerDismissed] = useState(false);
 
   var phrases = [
     '🔥 Bora pra cima! Você é brabo(a) e ninguém segura!',
@@ -72,7 +74,83 @@ export default function PainelPage() {
     if (!id) { router.push('/login'); return; }
     loadData(id);
     setMotivationalPhrase(phrases[Math.floor(Math.random() * phrases.length)]);
+    try { if (localStorage.getItem('push_banner_dismissed') === '1') setPushBannerDismissed(true); } catch(e) {}
   }, []);
+
+  useEffect(function() {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushStatus('unsupported');
+      return;
+    }
+    navigator.serviceWorker.register('/sw.js').catch(function() {});
+    if (Notification.permission === 'denied') { setPushStatus('denied'); return; }
+    navigator.serviceWorker.ready.then(function(reg) {
+      return reg.pushManager.getSubscription();
+    }).then(function(sub) {
+      if (sub) setPushStatus('enabled');
+      else setPushStatus(Notification.permission === 'granted' ? 'disabled' : 'idle');
+    }).catch(function() {});
+  }, []);
+
+  function urlB64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(base64);
+    var arr = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return arr;
+  }
+
+  async function enablePush() {
+    if (pushStatus === 'busy') return;
+    setPushStatus('busy');
+    try {
+      var publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey) { alert('Servidor nao configurado para notificacoes.'); setPushStatus('idle'); return; }
+      var perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setPushStatus(perm === 'denied' ? 'denied' : 'idle'); return; }
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8Array(publicKey),
+        });
+      }
+      var res = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub, userAgent: navigator.userAgent }),
+      });
+      if (!res.ok) { setPushStatus('idle'); alert('Falha ao registrar. Tente novamente.'); return; }
+      setPushStatus('enabled');
+    } catch (e) {
+      setPushStatus('idle');
+      alert('Nao foi possivel ativar: ' + (e && e.message ? e.message : 'erro'));
+    }
+  }
+
+  async function disablePush() {
+    if (pushStatus === 'busy') return;
+    setPushStatus('busy');
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        try { await fetch('/api/push/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) }); } catch(e) {}
+        try { await sub.unsubscribe(); } catch(e) {}
+      }
+      setPushStatus('disabled');
+    } catch(e) {
+      setPushStatus('idle');
+    }
+  }
+
+  function dismissPushBanner() {
+    setPushBannerDismissed(true);
+    try { localStorage.setItem('push_banner_dismissed', '1'); } catch(e) {}
+  }
 
   useEffect(function() {
     var interval = setInterval(function() {
@@ -475,6 +553,26 @@ export default function PainelPage() {
         }
         input[type=number] { -moz-appearance: textfield; }
       `}</style>
+
+      {pushStatus !== 'enabled' && pushStatus !== 'unsupported' && !pushBannerDismissed && (
+        <div style={{ background: 'linear-gradient(135deg, #C9A961, #E8CF8B)', color: '#1a1306', padding: '10px 12px', borderRadius: 10, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 2px 12px rgba(201,169,97,0.35)' }}>
+          <div style={{ fontSize: 20 }}>🔔</div>
+          <div style={{ flex: 1, fontSize: 12, lineHeight: 1.3 }}>
+            {pushStatus === 'denied' ? (
+              <span><b>Notificacoes bloqueadas.</b> Libere nas configuracoes do navegador para avisar quando vender.</span>
+            ) : (
+              <span><b>Receba aviso na hora da venda!</b> Mesmo com o site fechado.</span>
+            )}
+          </div>
+          {pushStatus !== 'denied' && (
+            <button onClick={enablePush} disabled={pushStatus === 'busy'} style={{ padding: '7px 12px', background: '#000', color: '#FFD700', border: 'none', borderRadius: 20, fontWeight: 800, fontSize: 11, cursor: 'pointer', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{pushStatus === 'busy' ? '...' : 'ATIVAR'}</button>
+          )}
+          <button onClick={dismissPushBanner} aria-label="fechar" style={{ background: 'transparent', border: 'none', color: '#1a1306', fontSize: 16, cursor: 'pointer', padding: '0 4px' }}>✕</button>
+        </div>
+      )}
+      {pushStatus === 'enabled' && (
+        <div style={{ display: 'none' }} data-push-enabled onClick={disablePush} />
+      )}
 
       <div className="painel-header" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
         <div onClick={openEditProfile} style={{ width: 52, height: 52, borderRadius: '50%', background: affiliate && affiliate.avatar_url ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#1a1306', boxShadow: '0 4px 20px rgba(201,169,97,0.3)', overflow: 'hidden', cursor: 'pointer', border: '1.5px solid rgba(201,169,97,0.6)' }}>

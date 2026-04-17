@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { sendPushToAffiliate } from '../../../../lib/push';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,6 +120,16 @@ export async function POST(request) {
     if (insertError) {
       return NextResponse.json({ error: 'insert failed', details: insertError.message }, { status: 500 });
     }
+
+    try {
+      var valor = Number(commission).toFixed(2).replace('.', ',');
+      await sendPushToAffiliate(affiliate.id, {
+        title: 'VENDA NOVA',
+        body: '+R$' + valor + ' de comissao acabou de cair!',
+        url: '/painel',
+        tag: 'venda-' + (externalId || Date.now()),
+      });
+    } catch (e) {}
 
     return NextResponse.json({ ok: true, affiliate_id: affiliate.id, commission });
   } catch (err) {
