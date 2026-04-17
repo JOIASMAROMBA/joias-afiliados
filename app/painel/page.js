@@ -346,7 +346,7 @@ export default function PainelPage() {
   var compensated = Math.min(missedCount, extraPostsCount);
   var pendingMissed = Math.max(0, missedCount - extraPostsCount);
 
-  if (loading) return (<div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ fontSize: 40 }}>💎</div></div>);
+  if (loading) return (<div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ fontSize: 56, animation: 'diamondSpin 2.2s linear infinite', display: 'inline-block', filter: 'drop-shadow(0 0 22px rgba(201,169,97,0.65))' }}>💎</div></div>);
 
   var platforms = [{ id: 'instagram', label: 'Instagram', icon: '📸' }, { id: 'tiktok', label: 'TikTok', icon: '🎵' }, { id: 'facebook', label: 'Facebook', icon: '👤' }, { id: 'outro', label: 'Outro', icon: '🌐' }];
 

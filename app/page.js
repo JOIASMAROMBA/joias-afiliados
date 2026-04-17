@@ -20,7 +20,7 @@ export default function Home() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'linear-gradient(135deg, #0f0520 0%, #1a0a2e 40%, #0d0a1a 100%)',
     }}>
-      <div style={{ fontSize: 40, animation: 'pulse 1.5s ease-in-out infinite' }}>💎</div>
+      <div style={{ fontSize: 56, animation: 'diamondSpin 2.2s linear infinite', display: 'inline-block', filter: 'drop-shadow(0 0 22px rgba(201,169,97,0.65))' }}>💎</div>
     </div>
   );
 }

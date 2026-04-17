@@ -75,3 +75,7 @@ button:active:not(:disabled) {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+@keyframes diamondSpin {
+  from { transform: perspective(400px) rotateZ(-14deg) rotateY(0deg); }
+  to   { transform: perspective(400px) rotateZ(-14deg) rotateY(360deg); }
+}
