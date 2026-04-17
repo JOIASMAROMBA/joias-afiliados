@@ -733,7 +733,13 @@ export default function PainelPage() {
                       {dtStr && (
                         <div style={{ fontSize: 11, color: 'rgba(201,169,97,0.6)', marginTop: isManual ? 6 : 2, fontWeight: 500 }}>🕒 {dtStr}</div>
                       )}
-                      <div style={{ color: '#C9A961', fontSize: 15, fontWeight: 800, marginTop: 6, lineHeight: 1.25, textShadow: '0 0 20px rgba(201,169,97,0.3)' }}>VOCÊ GANHOU <span style={{ fontSize: 18, fontWeight: 900 }}>R${commissionStr}</span> POR ESSA VENDA</div>
+                      <div style={{ marginTop: 6, textAlign: 'center' }}>
+                        <div style={{ lineHeight: 1.2 }}>
+                          <span style={{ color: '#fff', fontSize: 15, fontWeight: 800 }}>VOCÊ GANHOU </span>
+                          <span style={{ color: '#C9A961', fontSize: 18, fontWeight: 900, textShadow: '0 0 20px rgba(201,169,97,0.3)' }}>R${commissionStr}</span>
+                        </div>
+                        <div style={{ color: '#fff', fontSize: 10, fontWeight: 700, marginTop: 2, letterSpacing: 0.5, opacity: 0.85 }}>POR ESSA VENDA</div>
+                      </div>
                     </>
                   );
                 })()}
