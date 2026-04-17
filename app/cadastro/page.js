@@ -114,7 +114,7 @@ export default function CadastroPage() {
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes ticketEntry { 0% { opacity: 0; transform: scale(0.8) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) rotate(0deg); } }
     @keyframes sparkleRain { 0% { transform: translateY(-20px); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(100vh); opacity: 0; } }
-    @keyframes couponPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(201,169,97,0.2); } 50% { transform: scale(1.06); box-shadow: 0 0 30px rgba(201,169,97,0.45); } }
+    @keyframes couponPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.08); opacity: 1; } }
     input.premium::placeholder { color: rgba(255,255,255,0.25); font-weight: 400; }
     input.premium:-webkit-autofill { -webkit-box-shadow: 0 0 0 1000px rgba(20,20,20,0.8) inset !important; -webkit-text-fill-color: #fff !important; transition: background-color 9999s ease-out; }
   `}</style>);
@@ -272,8 +272,8 @@ export default function CadastroPage() {
             )}
 
             <div style={{ marginBottom: 16, textAlign: 'center' }}>
-              <div style={{ display: 'inline-block', padding: '6px 18px', marginBottom: 10, borderRadius: 999, background: 'linear-gradient(135deg, rgba(232,207,139,0.15), rgba(201,169,97,0.05))', border: '1px solid rgba(201,169,97,0.4)', animation: 'couponPulse 2.4s ease-in-out infinite', boxShadow: '0 0 20px rgba(201,169,97,0.2)' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#C9A961', letterSpacing: 2, textTransform: 'uppercase' }}>Crie seu cupom</span>
+              <div style={{ display: 'inline-block', marginBottom: 10, animation: 'couponPulse 2.4s ease-in-out infinite' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#C9A961', letterSpacing: 2, textTransform: 'uppercase', textShadow: '0 0 16px rgba(201,169,97,0.5)' }}>Crie seu cupom</span>
               </div>
               <input type="text" className="premium" value={form.coupon} onChange={(e) => handleChange('coupon', e.target.value)} placeholder="SEU CUPOM" maxLength={20} style={{ ...inputStyle(couponStatus === 'available'), fontSize: 15, fontWeight: 700, textAlign: 'center', letterSpacing: 2, color: couponStatus === 'available' ? '#C9A961' : couponStatus === 'taken' ? '#ff6b6b' : '#fff', borderColor: couponStatus === 'taken' ? 'rgba(255,107,107,0.4)' : (couponStatus === 'available' ? 'rgba(201,169,97,0.5)' : 'rgba(255,255,255,0.1)') }} />
               <div style={{ textAlign: 'center', marginTop: 6, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, minHeight: 14 }}>
