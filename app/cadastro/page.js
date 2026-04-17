@@ -11,8 +11,9 @@ export default function CadastroPage() {
   const [couponChecking, setCouponChecking] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [form, setForm] = useState({ name: '', age: '', city: '', email: '', platforms: [], instagram: '', facebook: '', tiktok: '', outro: '', coupon: '', password: '', passwordConfirm: '', agreedCommission: false });
+  const [form, setForm] = useState({ name: '', age: '', city: '', email: '', platforms: [], instagram: '', facebook: '', tiktok: '', outro: '', coupon: '', password: '', passwordConfirm: '', agreedCommission: false, agreedConduct: false });
   const [showTerms, setShowTerms] = useState(false);
+  const [showConduct, setShowConduct] = useState(false);
 
   const handleChange = (field, value) => {
     if (field === 'coupon') { value = value.toUpperCase().replace(/[^A-Z0-9]/g, ''); setCouponStatus(''); }
@@ -62,6 +63,7 @@ export default function CadastroPage() {
     var err = validateStep1();
     if (err) { setError(err); return; }
     setError('');
+    if (!form.agreedConduct) { setShowConduct(true); return; }
     setShowTicket(true);
   };
 
@@ -81,7 +83,7 @@ export default function CadastroPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), coupon: form.coupon.trim(), password: form.password, age: form.age, city: form.city, platforms: form.platforms, social }),
+        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), coupon: form.coupon.trim(), password: form.password, age: form.age, city: form.city, platforms: form.platforms, social, accepted_conduct: form.agreedConduct }),
       });
       let data;
       try { data = await res.json(); } catch { data = {}; }
@@ -321,6 +323,58 @@ export default function CadastroPage() {
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(201,169,97,0.15)', display: 'flex', gap: 12 }}>
               <button onClick={() => { handleChange('agreedCommission', true); setShowTerms(false); }} style={{ flex: 1, padding: 13, background: 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)', border: '1px solid rgba(201,169,97,0.6)', borderRadius: 10, color: '#1a1306', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Aceitar e fechar</button>
               <button onClick={() => setShowTerms(false)} style={{ padding: '13px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConduct && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10002, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ maxWidth: 560, width: '100%', maxHeight: '92vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1a1306 0%, #0f0a03 100%)', border: '2px solid #C9A961', borderRadius: 16, padding: 24, color: '#FFF', boxShadow: '0 20px 80px rgba(201,169,97,0.25)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 36 }}>💎</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#C9A961', marginTop: 4, letterSpacing: 1 }}>TERMOS DE CONDUTA</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Ainda falta aceitar para concluir o cadastro</div>
+            </div>
+
+            <div style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.82)' }}>
+              <p style={{ marginBottom: 12 }}>Ao divulgar produtos <strong style={{ color: '#C9A961' }}>Joias Maromba</strong>, você se compromete a seguir estas regras. Infrações levam a advertência e, na reincidência, banimento definitivo.</p>
+
+              <div style={{ marginBottom: 12, padding: 12, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#C9A961', marginBottom: 6 }}>1. DIVULGAÇÃO HONESTA</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Sem promessas falsas sobre efeitos, durabilidade ou material</li>
+                  <li>Sem descontos, promoções ou brindes inventados</li>
+                  <li>Apenas o site oficial joiasmaromba.com.br — links falsos/clones proibidos</li>
+                </ul>
+              </div>
+
+              <div style={{ marginBottom: 12, padding: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#FCA5A5', marginBottom: 6 }}>2. CONTEÚDO PROIBIDO</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Nudez, conteúdo sexual, menores de 18 anos</li>
+                  <li>Maus-tratos a animais ou humanos</li>
+                  <li>Política partidária ou religião</li>
+                  <li>Discurso de ódio, preconceito, drogas, vícios</li>
+                </ul>
+              </div>
+
+              <div style={{ padding: 12, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#FCD34D', marginBottom: 6 }}>3. MEDIDAS DISCIPLINARES</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li><strong>Advertência</strong> na 1ª ocorrência</li>
+                  <li><strong>Banimento permanente</strong> na 2ª</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18, display: 'flex', gap: 10 }}>
+              <button onClick={() => { setShowConduct(false); }} style={{ padding: '13px 18px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                Voltar
+              </button>
+              <button onClick={() => { handleChange('agreedConduct', true); setShowConduct(false); setShowTicket(true); }} style={{ flex: 1, padding: 13, background: 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)', border: 'none', borderRadius: 10, color: '#1a1306', fontWeight: 900, fontSize: 14, cursor: 'pointer', letterSpacing: 0.5 }}>
+                ✓ ACEITO OS TERMOS DE CONDUTA
+              </button>
             </div>
           </div>
         </div>

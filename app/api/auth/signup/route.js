@@ -62,6 +62,8 @@ export async function POST(request) {
 
     const password_hash = await hashPassword(password);
 
+    const acceptedConduct = body?.accepted_conduct === true;
+
     const insertResult = await supabaseAdmin.from('affiliates').insert({
       name,
       email,
@@ -75,6 +77,7 @@ export async function POST(request) {
       commission_type: 'fixed_per_sale',
       active: true,
       password_hash,
+      accepted_terms_at: acceptedConduct ? new Date().toISOString() : null,
     }).select('id, name, coupon_code, is_admin').single();
 
     if (insertResult.error || !insertResult.data) {

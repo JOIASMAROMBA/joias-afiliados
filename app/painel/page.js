@@ -46,6 +46,8 @@ export default function PainelPage() {
   const [pendingNotifications, setPendingNotifications] = useState([]);
   const [showTerms, setShowTerms] = useState(false);
   const [acceptingTerms, setAcceptingTerms] = useState(false);
+  const [showConductView, setShowConductView] = useState(false);
+  const [showContact, setShowContact] = useState(false);
 
   var phrases = [
     '🔥 Bora pra cima! Você é brabo(a) e ninguém segura!',
@@ -890,6 +892,75 @@ export default function PainelPage() {
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      <div style={{ textAlign: 'center', padding: '40px 20px 30px', marginTop: 30, borderTop: '1px solid rgba(201,169,97,0.1)' }}>
+        <button onClick={function() { setShowConductView(true); }} style={{ background: 'none', border: 'none', padding: 6, color: '#C9A961', fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', cursor: 'pointer', display: 'block', margin: '0 auto 12px auto' }}>
+          TERMOS DE CONDUTA
+        </button>
+        <button onClick={function() { setShowContact(true); }} style={{ background: 'none', border: 'none', padding: 6, color: '#C9A961', fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', cursor: 'pointer', display: 'block', margin: '0 auto' }}>
+          CONTATO
+        </button>
+      </div>
+
+      {showConductView && (
+        <div onClick={function() { setShowConductView(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10800, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1a1306 0%, #0f0a03 100%)', border: '2px solid #C9A961', borderRadius: 16, padding: 24, color: '#FFF' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#C9A961', letterSpacing: 1 }}>💎 TERMOS DE CONDUTA</div>
+              <button onClick={function() { setShowConductView(false); }} style={{ background: 'transparent', border: 'none', color: '#C9A961', fontSize: 22, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.82)' }}>
+              <p style={{ marginBottom: 12 }}>Ao divulgar produtos <strong style={{ color: '#C9A961' }}>Joias Maromba</strong>, você concorda com estas regras.</p>
+
+              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#C9A961', marginBottom: 6 }}>1. DIVULGAÇÃO HONESTA</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Não faça promessas falsas sobre efeitos, durabilidade ou material.</li>
+                  <li>Não invente descontos, promoções ou condições que não existem.</li>
+                  <li>Use apenas o site oficial <strong>joiasmaromba.com.br</strong>. Links falsos/clones são proibidos.</li>
+                  <li>Prefira os materiais oficiais do painel.</li>
+                </ul>
+              </div>
+
+              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#FCA5A5', marginBottom: 6 }}>2. CONTEÚDO PROIBIDO</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Nudez ou conteúdo sexual</li>
+                  <li>Menores de 18 anos</li>
+                  <li>Maus-tratos a animais ou humanos</li>
+                  <li>Política partidária ou religião</li>
+                  <li>Discurso de ódio, preconceito, racismo</li>
+                  <li>Drogas ilícitas ou apologia a vícios</li>
+                </ul>
+              </div>
+
+              <div style={{ padding: 12, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 8 }}>
+                <div style={{ fontWeight: 800, color: '#FCD34D', marginBottom: 6 }}>3. MEDIDAS DISCIPLINARES</div>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li><strong>Notificação</strong> na 1ª ocorrência</li>
+                  <li><strong>Banimento definitivo</strong> na 2ª</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showContact && (
+        <div onClick={function() { setShowContact(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10800, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 380, width: '100%', background: 'linear-gradient(180deg, #1a1306 0%, #0f0a03 100%)', border: '2px solid #C9A961', borderRadius: 16, padding: 28, textAlign: 'center', color: '#FFF' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>✉️</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#C9A961', letterSpacing: 2, marginBottom: 14 }}>CONTATO</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 10 }}>Fale com a gente pelo email:</div>
+            <a href="mailto:contato@joiasmaromba.com" style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#FFF', background: 'rgba(201,169,97,0.12)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, padding: '12px 14px', textDecoration: 'none', letterSpacing: 0.5, marginBottom: 14 }}>
+              contato@joiasmaromba.com
+            </a>
+            <button onClick={function() { try { navigator.clipboard.writeText('contato@joiasmaromba.com'); } catch(e) {} setShowContact(false); }} style={{ background: 'none', border: 'none', color: '#C9A961', fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', cursor: 'pointer', padding: 6 }}>
+              Copiar email
+            </button>
           </div>
         </div>
       )}
