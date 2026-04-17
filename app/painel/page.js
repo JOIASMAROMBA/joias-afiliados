@@ -7,7 +7,8 @@ export default function PainelPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [affiliate, setAffiliate] = useState(null);
-  const [balance, setBalance] = useState({ available_balance: 0, pending_withdrawals: 0 });
+  const [balance, setBalance] = useState({ available_balance: 0, blocked_balance: 0, pending_withdrawals: 0 });
+  const [showReleaseDatesModal, setShowReleaseDatesModal] = useState(false);
   const [allSales, setAllSales] = useState([]);
   const [salesFilter, setSalesFilter] = useState('30');
   const [weekPosts, setWeekPosts] = useState([]);
@@ -643,6 +644,14 @@ export default function PainelPage() {
               <div style={{ fontSize: 36 }}>💰</div>
             </div>
             <button onClick={function() { setShowWithdrawModal(true); }} disabled={Number(balance.available_balance) < 10} style={{ width: '100%', padding: 14, background: Number(balance.available_balance) >= 10 ? 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)' : '#1a1a1a', border: 'none', borderRadius: 14, color: Number(balance.available_balance) >= 10 ? '#000' : 'rgba(0,255,136,0.3)', fontWeight: 800, fontSize: 15, cursor: Number(balance.available_balance) >= 10 ? 'pointer' : 'not-allowed', boxShadow: Number(balance.available_balance) >= 10 ? '0 4px 20px rgba(0,255,136,0.4)' : 'none' }}>💸 Solicitar Saque</button>
+            <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>🔒 Saldo Bloqueado</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: 'rgba(255,255,255,0.55)' }}>R${Number(balance.blocked_balance || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+              </div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginTop: 4, lineHeight: 1.4 }}>Cada venda fica bloqueada por 8 dias antes de liberar para saque.</div>
+              <button onClick={function() { setShowReleaseDatesModal(true); }} style={{ marginTop: 10, width: '100%', padding: '8px 12px', background: 'transparent', border: '1px solid rgba(201,169,97,0.5)', borderRadius: 10, color: '#C9A961', fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>📅 Datas de Liberação</button>
+            </div>
           </div>
 
           <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.2)', borderRadius: 16, padding: 18, marginBottom: 16 }}>
@@ -919,6 +928,65 @@ export default function PainelPage() {
           </div>
         </div>
       )}
+
+      {showReleaseDatesModal && (function() {
+        var LOCK_MS = 8 * 24 * 60 * 60 * 1000;
+        var nowTs = Date.now();
+        var blockedRows = (allSales || [])
+          .filter(function(s) {
+            var t = s.created_at ? new Date(s.created_at).getTime() : 0;
+            return t > 0 && (nowTs - t) < LOCK_MS;
+          })
+          .map(function(s) {
+            var created = new Date(s.created_at).getTime();
+            var release = created + LOCK_MS;
+            var daysLeft = Math.max(0, Math.ceil((release - nowTs) / 86400000));
+            return { id: s.id, amount: Number(s.commission_earned || 0), created_at: s.created_at, release_at: new Date(release).toISOString(), days_left: daysLeft };
+          })
+          .sort(function(a, b) { return new Date(a.release_at) - new Date(b.release_at); });
+        var totalBlocked = blockedRows.reduce(function(sum, r) { return sum + r.amount; }, 0);
+        function fmtDate(iso) {
+          var d = new Date(iso);
+          return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        }
+        return (
+          <div onClick={function() { setShowReleaseDatesModal(false); }} style={{ position: 'fixed', inset: 0, zIndex: 9800, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 520, width: '100%', background: 'linear-gradient(180deg, #1a1306, #0a0604)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, maxHeight: '88vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: 18, borderBottom: '1px solid rgba(201,169,97,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#C9A961' }}>📅 Datas de Liberação</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>Cada venda libera 8 dias após entrar</div>
+                </div>
+                <button onClick={function() { setShowReleaseDatesModal(false); }} style={{ background: 'transparent', border: 'none', color: '#C9A961', fontSize: 22, cursor: 'pointer' }}>✕</button>
+              </div>
+              <div style={{ padding: 16, borderBottom: '1px solid rgba(201,169,97,0.15)', background: 'rgba(201,169,97,0.05)' }}>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>Total bloqueado</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#C9A961' }}>R${totalBlocked.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{blockedRows.length} {blockedRows.length === 1 ? 'venda bloqueada' : 'vendas bloqueadas'}</div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+                {blockedRows.length === 0 && (<div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: 36, fontSize: 13 }}>Nenhuma venda bloqueada no momento.<br/>Tudo liberado para saque! ✓</div>)}
+                {blockedRows.map(function(r) {
+                  return (
+                    <div key={r.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 10, padding: 10, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 18, background: 'rgba(201,169,97,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>🔒</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: '#C9A961' }}>R${r.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Venda em {fmtDate(r.created_at)}</div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700 }}>Libera em</div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#00ff88' }}>{fmtDate(r.release_at)}</div>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>{r.days_left === 0 ? 'hoje' : r.days_left === 1 ? 'em 1 dia' : 'em ' + r.days_left + ' dias'}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showReceiptModal && (
         <div onClick={function() { setShowReceiptModal(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.95)', padding: 20 }}>
