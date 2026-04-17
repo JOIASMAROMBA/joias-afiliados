@@ -591,18 +591,18 @@ export default function PainelPage() {
     {showApprovedModal && !isBlocked && (
       <div style={{ position: 'fixed', inset: 0, zIndex: 20001, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {(function() { var items = []; for (var i = 0; i < 36; i++) { var left = Math.random() * 100; var delay = Math.random() * 1.6; var dur = 2.8 + Math.random() * 2.2; var size = 8 + Math.random() * 8; var hue = ['#FFD700', '#C9A961', '#E8CF8B', '#FFA500', '#F5C518'][i % 5]; var dx = (Math.random() - 0.5) * 60; items.push(<span key={i} style={{ position: 'absolute', top: -30, left: left + 'vw', width: size, height: size * 0.4, background: hue, borderRadius: 2, animation: 'confettiFall ' + dur + 's linear ' + delay + 's infinite', ['--dx']: dx + 'vw', boxShadow: '0 0 10px ' + hue }} />); } return items; })()}
+          {(function() { var items = []; for (var i = 0; i < 36; i++) { var left = Math.random() * 100; var delay = Math.random() * 1.6; var dur = 2.8 + Math.random() * 2.2; var size = 8 + Math.random() * 8; var hue = ['#C9A961', '#E8CF8B', '#8B6914', '#B8860B', '#D4AF37'][i % 5]; var dx = (Math.random() - 0.5) * 60; items.push(<span key={i} style={{ position: 'absolute', top: -30, left: left + 'vw', width: size, height: size * 0.4, background: hue, borderRadius: 2, animation: 'confettiFall ' + dur + 's linear ' + delay + 's infinite', ['--dx']: dx + 'vw', boxShadow: '0 0 10px ' + hue }} />); } return items; })()}
         </div>
-        <div style={{ maxWidth: 440, width: '100%', background: 'linear-gradient(180deg, #1a1306, #000)', border: '2px solid #FFD700', borderRadius: 20, padding: 32, textAlign: 'center', boxShadow: '0 0 80px rgba(255,215,0,0.4), 0 0 40px rgba(201,169,97,0.3)', animation: 'approvedPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)', position: 'relative', zIndex: 2 }}>
+        <div style={{ maxWidth: 440, width: '100%', background: 'linear-gradient(180deg, #1a1306, #000)', border: '2px solid #C9A961', borderRadius: 20, padding: 32, textAlign: 'center', boxShadow: '0 0 80px rgba(201,169,97,0.35), 0 0 40px rgba(201,169,97,0.2)', animation: 'approvedPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)', position: 'relative', zIndex: 2 }}>
           <div style={{ fontSize: 64, marginBottom: 8 }}>🎉</div>
-          <div style={{ fontSize: 11, color: '#FFD700', letterSpacing: 4, fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>Programa de Afiliadas</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: '#FFD700', marginBottom: 10, lineHeight: 1.2, animation: 'goldGlow 2s ease-in-out infinite' }}>Seu cadastro foi aprovado!</div>
-          <div style={{ fontSize: 15, color: '#C9A961', marginBottom: 20, fontWeight: 600 }}>Boas vendas! 💎</div>
-          <div style={{ padding: 14, background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.4)', borderRadius: 12, marginBottom: 18 }}>
-            <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)', fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Seu cupom</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#FFD700', fontFamily: 'monospace', letterSpacing: 3 }}>{affiliate && affiliate.coupon_code}</div>
+          <div style={{ fontSize: 11, color: '#C9A961', letterSpacing: 4, fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>Programa de Afiliadas</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: '#C9A961', marginBottom: 10, lineHeight: 1.2, textShadow: '0 0 20px rgba(201,169,97,0.4)' }}>Seu cadastro foi aprovado!</div>
+          <div style={{ fontSize: 15, color: '#E8CF8B', marginBottom: 20, fontWeight: 600 }}>Boas vendas! 💎</div>
+          <div style={{ padding: 14, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 12, marginBottom: 18 }}>
+            <div style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Seu cupom</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: '#FFF', fontFamily: 'monospace', letterSpacing: 3 }}>{affiliate && affiliate.coupon_code}</div>
           </div>
-          <button onClick={dismissApprovedModal} style={{ width: '100%', padding: 14, background: 'linear-gradient(135deg, #FFD700, #C9A961)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 900, fontSize: 14, cursor: 'pointer', letterSpacing: 1, boxShadow: '0 4px 20px rgba(255,215,0,0.4)' }}>💎 COMEÇAR A VENDER</button>
+          <button onClick={dismissApprovedModal} style={{ width: '100%', padding: 14, background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', border: 'none', borderRadius: 12, color: '#1a1306', fontWeight: 900, fontSize: 14, cursor: 'pointer', letterSpacing: 1, boxShadow: '0 4px 20px rgba(201,169,97,0.4)' }}>💎 COMEÇAR A VENDER</button>
         </div>
       </div>
     )}
