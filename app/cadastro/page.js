@@ -218,7 +218,7 @@ export default function CadastroPage() {
               <img src="/logo.png" alt="Joias Maromba" style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.92, filter: 'drop-shadow(0 4px 20px rgba(201,169,97,0.35))', position: 'relative', zIndex: 1 }} />
             </div>
             <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, letterSpacing: -0.3, margin: 0, marginBottom: 6, textTransform: 'uppercase' }}>Seja Afiliado(a)</h1>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 500 }}>Ganhe <strong style={{ color: '#C9A961' }}>R$ 25,00 por venda</strong> no seu cupom divulgando nossas joias</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 500, lineHeight: 1.5 }}>Ganhe <strong style={{ color: '#C9A961' }}>R$ 25,00 por venda</strong> no seu cupom<br/>divulgando nossas joias</p>
           </div>
 
           <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
