@@ -255,7 +255,10 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/materials/upload', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'upload falhou') + (data.detail ? ' - ' + data.detail : '')); }
-      else await loadMaterialFiles(selectedMatFolder.id);
+      else {
+        await loadMaterialFiles(selectedMatFolder.id);
+        await loadMaterialFolders();
+      }
     } catch (e) { alert('Erro: ' + e.message); }
     setUploadingMaterial(false);
   }
@@ -265,6 +268,7 @@ export default function AdminDashboard() {
     const ok = await apiCall('/api/admin/materials/file', { action: 'delete', id });
     if (!ok) return;
     if (selectedMatFolder) await loadMaterialFiles(selectedMatFolder.id);
+    await loadMaterialFolders();
   }
 
   // ==== Aplicar filtro de tipo (all/affiliate/sponsored) nos afiliados ====
