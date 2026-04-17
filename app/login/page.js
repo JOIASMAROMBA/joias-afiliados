@@ -191,7 +191,7 @@ export default function LoginPage() {
                 cursor: 'pointer',
                 padding: 6,
                 textShadow: '0 0 12px rgba(201,169,97,0.4)',
-                animation: 'saibaMaisPulse 3s ease-in-out infinite',
+                animation: 'saibaMaisPulse 1.5s ease-in-out infinite',
                 display: 'inline-block',
               }}
             >

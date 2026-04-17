@@ -444,7 +444,10 @@ export default function PainelPage() {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>AFILIADO</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>Ola, {affiliate && affiliate.name && affiliate.name.split(' ')[0]}!</div>
-          <div onClick={openEditProfile} style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', cursor: 'pointer', textDecoration: 'underline', marginTop: 2 }}>Editar perfil</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+            <div onClick={openEditProfile} style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', cursor: 'pointer', textDecoration: 'underline' }}>Editar perfil</div>
+            <div onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', cursor: 'pointer', textDecoration: 'underline' }}>Sair</div>
+          </div>
         </div>
         <div style={{ background: '#F5C518', color: '#000', padding: '8px 10px', borderRadius: 6, fontWeight: 900, letterSpacing: 1, boxShadow: '0 2px 12px rgba(245,197,24,0.45)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, position: 'relative', minWidth: 68 }}>
           <span style={{ position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)', width: 10, height: 10, borderRadius: '50%', background: '#000' }}></span>
@@ -905,9 +908,6 @@ export default function PainelPage() {
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: 20, right: 20 }}>
-        <button onClick={function() { localStorage.clear(); router.push('/login'); }} style={{ background: 'rgba(201,169,97,0.1)', border: '1px solid rgba(201,169,97,0.2)', borderRadius: 12, padding: '8px 16px', color: '#C9A961', fontSize: 12, cursor: 'pointer' }}>Sair</button>
-      </div>
     </div>
   );
 }
