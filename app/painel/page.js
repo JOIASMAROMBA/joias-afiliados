@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, supabaseRealtime } from '../../lib/supabase';
+import { supabase, supabaseRealtime, storageProxyUrl } from '../../lib/supabase';
 
 export default function PainelPage() {
   const router = useRouter();
@@ -452,7 +452,7 @@ export default function PainelPage() {
 
       <div className="painel-header" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
         <div onClick={openEditProfile} style={{ width: 52, height: 52, borderRadius: '50%', background: affiliate && affiliate.avatar_url ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#1a1306', boxShadow: '0 4px 20px rgba(201,169,97,0.3)', overflow: 'hidden', cursor: 'pointer', border: '1.5px solid rgba(201,169,97,0.6)' }}>
-          {affiliate && affiliate.avatar_url ? (<img src={affiliate.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
+          {affiliate && affiliate.avatar_url ? (<img src={storageProxyUrl(affiliate.avatar_url)} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>AFILIADO</div>
@@ -880,7 +880,7 @@ export default function PainelPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
               <div style={{ width: 100, height: 100, borderRadius: '50%', background: editAvatarUrl ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 800, color: '#000', boxShadow: '0 4px 20px rgba(201,169,97,0.5)', overflow: 'hidden', border: '3px solid #C9A961', marginBottom: 12 }}>
-                {editAvatarUrl ? (<img src={editAvatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
+                {editAvatarUrl ? (<img src={storageProxyUrl(editAvatarUrl)} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
               </div>
               <label style={{ cursor: uploadingAvatar ? 'wait' : 'pointer', padding: '8px 16px', background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', borderRadius: 10, color: '#000', fontWeight: 800, fontSize: 12, opacity: uploadingAvatar ? 0.6 : 1 }}>
                 {uploadingAvatar ? 'Enviando...' : '📷 Escolher Foto'}

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, supabaseRealtime } from '../../lib/supabase';
+import { supabase, supabaseRealtime, storageProxyUrl } from '../../lib/supabase';
 
 const PLATFORM_DOMAINS = {
   instagram: ['instagram.com', 'instagr.am'],
@@ -1407,7 +1407,7 @@ export default function AdminDashboard() {
                   return (
                     <button key={a.id} onClick={function() { setSelectedCadastroId(a.id); }} style={{ width: '100%', padding: '14px 16px', borderBottom: i < filtered.length - 1 ? '1px solid #F0F0F0' : 'none', display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) auto', gap: 12, alignItems: 'center', background: 'transparent', border: 'none', borderBottomColor: i < filtered.length - 1 ? '#F0F0F0' : 'transparent', borderBottomWidth: 1, borderBottomStyle: 'solid', cursor: 'pointer', textAlign: 'left' }}>
                       <div style={{ position: 'relative', width: 40, height: 40, borderRadius: 20, background: a.avatar_url ? 'transparent' : '#F3F4F6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#666', flexShrink: 0 }}>
-                        {a.avatar_url ? <img src={a.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                        {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
                         {isOnline && <span style={{ position: 'absolute', bottom: 0, right: 0, width: 11, height: 11, borderRadius: 6, background: '#10B981', border: '2px solid #FFF', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />}
                       </div>
                       <div style={{ minWidth: 0 }}>
@@ -1500,7 +1500,7 @@ export default function AdminDashboard() {
             <div onClick={function(e) { e.stopPropagation(); }} style={{ background: '#FFF', borderRadius: 14, maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
               <div style={{ padding: 22, background: 'linear-gradient(135deg, #1A1A1A, #333)', color: '#FFF', borderRadius: '14px 14px 0 0', display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ position: 'relative', width: 64, height: 64, borderRadius: 32, background: a.avatar_url ? 'transparent' : 'linear-gradient(135deg, #FFD700, #B8860B)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#1A1A1A', flexShrink: 0 }}>
-                  {a.avatar_url ? <img src={a.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                  {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
                   {isOnline && <span style={{ position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, borderRadius: 8, background: '#10B981', border: '3px solid #1A1A1A', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
