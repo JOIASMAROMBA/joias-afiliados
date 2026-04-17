@@ -140,6 +140,10 @@ export default function AdminDashboard() {
   const [obligationMonth, setObligationMonth] = useState(new Date().getMonth());
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
   const [withdrawalsFilter, setWithdrawalsFilter] = useState('today');
+  const [vendasManualSearch, setVendasManualSearch] = useState('');
+  const [vendasManualQty, setVendasManualQty] = useState({}); // { [affiliate_id]: number }
+  const [vendasManualConfirm, setVendasManualConfirm] = useState(null); // { affiliate, quantity }
+  const [vendasManualBusy, setVendasManualBusy] = useState(false);
   const [showExtrato, setShowExtrato] = useState(false);
   const [extratoDate, setExtratoDate] = useState(function() {
     var d = new Date();
@@ -572,6 +576,7 @@ export default function AdminDashboard() {
     { id: 'payments', label: 'Pagamentos', icon: '💳' },
     { id: 'withdrawals', label: 'Saques', icon: '💸' },
     { id: 'cadastros', label: 'Cadastros', icon: '🗂️' },
+    { id: 'vendas-manual', label: 'Vendas Manual', icon: '➕' },
     { id: 'notify', label: 'Notificar', icon: '📣' }
   ];
 
@@ -1495,6 +1500,97 @@ export default function AdminDashboard() {
           );
         })()}
 
+        {activeTab === 'vendas-manual' && (function() {
+          var mm = new Date(); mm.setDate(1); mm.setHours(0,0,0,0);
+          var monthStart = mm.getTime();
+          var salesByAf = {};
+          (allSales || []).forEach(function(s) {
+            var t = s.created_at ? new Date(s.created_at).getTime() : 0;
+            if (t >= monthStart && s.affiliate_id) {
+              salesByAf[s.affiliate_id] = (salesByAf[s.affiliate_id] || 0) + 1;
+            }
+          });
+          var pool = (affiliatesFull || []).filter(function(a) { return !a.is_admin && !a.blocked; });
+          var top10 = pool.slice().sort(function(a, b) { return (salesByAf[b.id] || 0) - (salesByAf[a.id] || 0); }).slice(0, 10).filter(function(a) { return (salesByAf[a.id] || 0) > 0; });
+          var q = vendasManualSearch.trim().toLowerCase();
+          var searchResults = q ? pool.filter(function(a) {
+            return (a.coupon_code || '').toLowerCase().includes(q) || (a.name || '').toLowerCase().includes(q);
+          }).slice(0, 20) : [];
+
+          function getQty(id) { return Math.max(1, Number(vendasManualQty[id]) || 1); }
+          function setQty(id, n) {
+            var clamped = Math.max(1, Math.min(50, Math.floor(n)));
+            setVendasManualQty(function(prev) { var p = Object.assign({}, prev); p[id] = clamped; return p; });
+          }
+          function incQty(id) { setQty(id, getQty(id) + 1); }
+          function decQty(id) { setQty(id, getQty(id) - 1); }
+          function askAdd(a) { setVendasManualConfirm({ affiliate: a, quantity: getQty(a.id) }); }
+
+          function Card(props) {
+            var a = props.affiliate;
+            var count = salesByAf[a.id] || 0;
+            var qty = getQty(a.id);
+            var rank = props.rank;
+            return (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                {typeof rank === 'number' && (
+                  <div style={{ width: 26, height: 26, borderRadius: 13, background: rank <= 3 ? '#FFD700' : '#F3F4F6', color: rank <= 3 ? '#1a1306' : '#666', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{rank}</div>
+                )}
+                <div style={{ width: 38, height: 38, borderRadius: 19, background: a.avatar_url ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#1a1306', flexShrink: 0 }}>
+                  {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                </div>
+                <div style={{ flex: '1 1 140px', minWidth: 120 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                    <span style={{ fontSize: 11, color: '#888', fontFamily: 'monospace', letterSpacing: 0.5 }}>{a.coupon_code}</span>
+                    <span title="vendas no mes" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px', background: '#FEF3C7', borderRadius: 10, fontSize: 10, fontWeight: 700, color: '#92400E' }}>🏷️ {count}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <button onClick={function() { decQty(a.id); }} disabled={qty <= 1} style={{ width: 30, height: 30, borderRadius: 15, background: qty <= 1 ? '#F3F4F6' : '#FFFFFF', border: '1px solid #E5E5E5', fontSize: 16, fontWeight: 700, cursor: qty <= 1 ? 'not-allowed' : 'pointer', color: qty <= 1 ? '#CCC' : '#1A1A1A', lineHeight: 1 }}>−</button>
+                  <div style={{ minWidth: 36, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', background: '#1A1A1A', color: '#FFD700', borderRadius: 6, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{qty}</div>
+                  <button onClick={function() { incQty(a.id); }} disabled={qty >= 50} style={{ width: 30, height: 30, borderRadius: 15, background: '#FFFFFF', border: '1px solid #E5E5E5', fontSize: 16, fontWeight: 700, cursor: 'pointer', color: '#1A1A1A', lineHeight: 1 }}>+</button>
+                  <button onClick={function() { askAdd(a); }} style={{ padding: '6px 12px', background: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5 }}>ADD</button>
+                </div>
+              </div>
+            );
+          }
+
+          return (<div>
+            <div style={{ background: '#FFF7E6', border: '1px solid #FFD700', borderRadius: 10, padding: 10, marginBottom: 14, fontSize: 12, color: '#6B4E00' }}>
+              <b>⚠️ Ferramenta manual.</b> Insere vendas direto no sistema, usa o valor de comissao da afiliada e dispara notificacao. Nao afeta o fluxo automatico do webhook.
+            </div>
+
+            <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>Buscar por cupom ou nome</div>
+              <input
+                type="text"
+                value={vendasManualSearch}
+                onChange={function(e) { setVendasManualSearch(e.target.value); }}
+                placeholder="Digite o cupom (ex: MARIA10) ou nome..."
+                style={{ width: '100%', padding: 12, border: '1px solid #E5E5E5', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+              />
+              {q && (
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {searchResults.length === 0 && (<div style={{ padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum resultado</div>)}
+                  {searchResults.map(function(a) { return <Card key={a.id} affiliate={a} />; })}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: '#1A1A1A' }}>🏆 TOP 10 DO MES</div>
+                <div style={{ fontSize: 11, color: '#888' }}>{(function() { var names = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; var d = new Date(); return names[d.getMonth()] + '/' + d.getFullYear(); })()}</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {top10.length === 0 && (<div style={{ padding: 30, textAlign: 'center', color: '#888', fontSize: 13, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10 }}>Ninguem vendeu este mes ainda</div>)}
+                {top10.map(function(a, idx) { return <Card key={a.id} affiliate={a} rank={idx + 1} />; })}
+              </div>
+            </div>
+          </div>);
+        })()}
+
         {activeTab === 'notify' && (function() {
           var q = notifySearch.trim().toLowerCase();
           var list = (affiliatesFull || []).filter(function(a) {
@@ -1683,6 +1779,61 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {vendasManualConfirm && (function() {
+        var a = vendasManualConfirm.affiliate;
+        var qty = vendasManualConfirm.quantity;
+        var commission = Number(a.commission_value || 25);
+        var total = commission * qty;
+        async function doConfirm() {
+          if (vendasManualBusy) return;
+          setVendasManualBusy(true);
+          try {
+            var res = await fetch('/api/admin/sales/manual-insert', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ affiliate_id: a.id, quantity: qty }),
+            });
+            var data = await res.json().catch(function() { return {}; });
+            if (!res.ok || !data.ok) {
+              alert('Erro: ' + (data.error || 'falha ao inserir'));
+            } else {
+              setVendasManualQty(function(prev) { var p = Object.assign({}, prev); p[a.id] = 1; return p; });
+              setVendasManualConfirm(null);
+              await loadAll();
+            }
+          } catch (e) {
+            alert('Erro de conexao: ' + (e && e.message ? e.message : 'erro'));
+          }
+          setVendasManualBusy(false);
+        }
+        return (
+          <div onClick={function() { if (!vendasManualBusy) setVendasManualConfirm(null); }} style={{ position: 'fixed', inset: 0, zIndex: 9800, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 420, width: '100%', background: '#FFF', borderRadius: 14, padding: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+              <div style={{ textAlign: 'center', fontSize: 34, marginBottom: 6 }}>🛒</div>
+              <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 800, marginBottom: 14 }}>Tem certeza?</div>
+              <div style={{ background: '#FAFAFA', border: '1px solid #E5E5E5', borderRadius: 10, padding: 14, marginBottom: 14, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Inserir {qty} {qty === 1 ? 'venda' : 'vendas'} para</div>
+                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{a.name}</div>
+                <div style={{ fontSize: 12, color: '#888', fontFamily: 'monospace', letterSpacing: 0.5, marginBottom: 10 }}>{a.coupon_code}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ padding: 8, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8 }}>
+                    <div style={{ fontSize: 9, color: '#888', textTransform: 'uppercase', fontWeight: 700 }}>Cada</div>
+                    <div style={{ fontSize: 13, fontWeight: 800 }}>R$ {commission.toFixed(2).replace('.', ',')}</div>
+                  </div>
+                  <div style={{ padding: 8, background: '#D1FAE5', border: '1px solid #10B981', borderRadius: 8 }}>
+                    <div style={{ fontSize: 9, color: '#065F46', textTransform: 'uppercase', fontWeight: 700 }}>Total</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#065F46' }}>R$ {total.toFixed(2).replace('.', ',')}</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={function() { if (!vendasManualBusy) setVendasManualConfirm(null); }} disabled={vendasManualBusy} style={{ flex: 1, padding: 12, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: vendasManualBusy ? 'not-allowed' : 'pointer', color: '#1A1A1A' }}>NAO</button>
+                <button onClick={doConfirm} disabled={vendasManualBusy} style={{ flex: 1, padding: 12, background: '#10B981', border: 'none', borderRadius: 8, color: '#FFF', fontSize: 14, fontWeight: 800, cursor: vendasManualBusy ? 'wait' : 'pointer', letterSpacing: 0.5 }}>{vendasManualBusy ? 'INSERINDO...' : 'SIM'}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showExtrato && (function() {
         var paidOnDay = (withdrawals || []).filter(function(w) {
