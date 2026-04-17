@@ -123,6 +123,9 @@ export default function AdminDashboard() {
   const [obligationsAffiliateId, setObligationsAffiliateId] = useState(null);
   const [obligationsList, setObligationsList] = useState([]);
   const [linkPreview, setLinkPreview] = useState(null);
+  const [newAffiliateIds, setNewAffiliateIds] = useState(new Set());
+  const [postsView, setPostsView] = useState('feed');
+  const [rankingWindow, setRankingWindow] = useState('today');
   const [obligationMonth, setObligationMonth] = useState(new Date().getMonth());
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
 
@@ -148,6 +151,15 @@ export default function AdminDashboard() {
     if (isMobileViewport()) setSidebarOpen(false);
   }
 
+  function NewBadge() {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 7px 1px 4px', background: 'linear-gradient(135deg, #10B981, #059669)', borderRadius: 20, fontSize: 9, fontWeight: 900, color: '#000', letterSpacing: 0.5, verticalAlign: 'middle', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 0 8px rgba(16,185,129,0.45)' }}>
+        <span style={{ display: 'inline-block', animation: 'newStarSpin 1.6s linear infinite', fontSize: 11, lineHeight: 1 }}>⭐</span>
+        NEW
+      </span>
+    );
+  }
+
   async function init() {
     var id = localStorage.getItem('affiliate_id');
     if (!id) { router.push('/login'); return; }
@@ -168,6 +180,16 @@ export default function AdminDashboard() {
     try { var monthRes = await supabase.from('monthly_sales').select('*'); setMonthlySales(monthRes.data || []); } catch (e) {}
     try { var topsRes = await supabase.from('monthly_top_affiliate').select('*'); setMonthlyTops(topsRes.data || []); } catch (e) {}
     try { var rwRes = await supabase.from('rewards').select('*').order('target_value', { ascending: true }); setRewards(rwRes.data || []); } catch (e) {}
+    try {
+      var createdRes = await supabase.from('affiliates').select('id, created_at');
+      var cutoff = Date.now() - 5 * 24 * 60 * 60 * 1000;
+      var set = new Set();
+      (createdRes.data || []).forEach(function(a) {
+        var t = a.created_at ? new Date(a.created_at).getTime() : 0;
+        if (t && t >= cutoff) set.add(a.id);
+      });
+      setNewAffiliateIds(set);
+    } catch (e) {}
   }
 
   async function toggleSponsored(affiliateId, current) {
@@ -633,6 +655,10 @@ export default function AdminDashboard() {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.15); }
         }
+        @keyframes newStarSpin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
       `}</style>
 
       <div className={"admin-sidebar-backdrop" + (sidebarOpen ? " mobile-open" : "")} onClick={function() { setSidebarOpen(false); }} />
@@ -750,7 +776,7 @@ export default function AdminDashboard() {
                     <div style={{ width: 24, fontSize: 12, fontWeight: 600 }}>{i + 1}</div>
                     <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{a.name} {a.is_sponsored && <span style={{ fontSize: 10 }}>⭐</span>}</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}{a.is_sponsored && <span style={{ fontSize: 10, flexShrink: 0 }}>⭐</span>}</div>
                       <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code} · {a.total_sales} vendas</div>
                     </div>
                     <div style={{ padding: '2px 8px', background: perf.bg, color: perf.color, borderRadius: 4, fontSize: 10, fontWeight: 600 }}>{perf.label}</div>
@@ -766,7 +792,7 @@ export default function AdminDashboard() {
                   return (<div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #F0F0F0' }}>
                     <div style={{ width: 32, height: 32, borderRadius: 16, background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#92400E' }}>{w.affiliates && w.affiliates.avatar_initials || '?'}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{w.affiliates && w.affiliates.name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{w.affiliates && w.affiliates.name}</span>{w.affiliate_id && newAffiliateIds.has(w.affiliate_id) && <NewBadge />}</div>
                       <div style={{ fontSize: 11, color: '#888' }}>{formatDate(w.created_at)}</div>
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{formatMoney(w.amount)}</div>
@@ -799,7 +825,7 @@ export default function AdminDashboard() {
                             <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, background: '#EF4444', borderRadius: 9, fontSize: 10, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, animation: 'badgeBlink 1s ease-in-out infinite' }}>{a.missedDays.length}</div>
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: '#991B1B' }}>{a.name}</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#991B1B', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}</div>
                             <div style={{ fontSize: 11, color: '#7F1D1D' }}>{a.coupon_code}</div>
                             <div style={{ fontSize: 11, color: '#EF4444', fontWeight: 700, marginTop: 4 }}>⚠️ Devendo {a.missedDays.length} {a.missedDays.length === 1 ? 'postagem' : 'postagens'}</div>
                           </div>
@@ -824,7 +850,7 @@ export default function AdminDashboard() {
                         return (<button key={a.id} onClick={function() { loadObligations(a.id); }} style={{ background: '#FFFFFF', border: '2px solid #10B981', borderRadius: 10, padding: 16, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div style={{ width: 44, height: 44, borderRadius: 22, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#065F46' }}>{a.avatar_initials}</div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700 }}>{a.name}</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}</div>
                             <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code}</div>
                             <div style={{ fontSize: 11, color: '#10B981', fontWeight: 700, marginTop: 4 }}>✓ Em dia com as postagens</div>
                           </div>
@@ -848,7 +874,7 @@ export default function AdminDashboard() {
                       return (<button key={a.id} onClick={function() { loadObligations(a.id); }} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 16, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ width: 40, height: 40, borderRadius: 20, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600 }}>{a.name}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}</div>
                           <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code} · {a.total_sales} vendas</div>
                         </div>
                         <span style={{ color: '#888' }}>›</span>
@@ -866,7 +892,7 @@ export default function AdminDashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
                       <div style={{ width: 44, height: 44, borderRadius: 22, background: selectedAffiliateData.is_sponsored ? '#FFD700' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }}>{selectedAffiliateData.avatar_initials}</div>
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 700 }}>{selectedAffiliateData.name} {selectedAffiliateData.is_sponsored && <span style={{ fontSize: 12, color: '#FFD700' }}>⭐ PATROCINADO</span>}</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{selectedAffiliateData.name}</span>{newAffiliateIds.has(selectedAffiliateData.id) && <NewBadge />}{selectedAffiliateData.is_sponsored && <span style={{ fontSize: 12, color: '#FFD700', flexShrink: 0 }}>⭐ PATROCINADO</span>}</div>
                         <div style={{ fontSize: 12, color: '#888' }}>{selectedAffiliateData.coupon_code}</div>
                       </div>
                     </div>
@@ -989,6 +1015,68 @@ export default function AdminDashboard() {
 
         {activeTab === 'posts' && (
           <div>
+            <div style={{ display: 'flex', gap: 4, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 4, marginBottom: 12 }}>
+              {[{ id: 'feed', label: '📰 Feed em tempo real' }, { id: 'ranking', label: '🏆 Quem mais posta' }].map(function(v) {
+                var active = postsView === v.id;
+                return (<button key={v.id} onClick={function() { setPostsView(v.id); }} style={{ flex: 1, padding: '10px 12px', background: active ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 7, color: active ? '#FFD700' : '#555', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{v.label}</button>);
+              })}
+            </div>
+
+            {postsView === 'ranking' && (function() {
+              var now = Date.now();
+              var windows = { today: (function() { var d = new Date(); d.setHours(0,0,0,0); return d.getTime(); })(), '7d': now - 7*24*60*60*1000, '15d': now - 15*24*60*60*1000, '30d': now - 30*24*60*60*1000 };
+              var since = windows[rankingWindow] || windows.today;
+              var counts = {};
+              (allPosts || []).forEach(function(p) {
+                var t = new Date(p.created_at).getTime();
+                if (t < since) return;
+                counts[p.affiliate_id] = (counts[p.affiliate_id] || 0) + 1;
+              });
+              var ranking = Object.keys(counts).map(function(id) {
+                var aff = affiliates.find(function(a) { return a.id === id; });
+                return { id: id, count: counts[id], name: aff ? aff.name : 'Afiliado removido', coupon: aff ? aff.coupon_code : '', avatar: aff ? aff.avatar_initials : '??' };
+              }).sort(function(a, b) { return b.count - a.count; });
+              var windowLabels = { today: 'hoje', '7d': 'nos últimos 7 dias', '15d': 'nos últimos 15 dias', '30d': 'nos últimos 30 dias' };
+              return (
+                <div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                    {[{ id: 'today', label: 'Hoje' }, { id: '7d', label: '7 dias' }, { id: '15d', label: '15 dias' }, { id: '30d', label: '30 dias' }].map(function(f) {
+                      var active = rankingWindow === f.id;
+                      return (<button key={f.id} onClick={function() { setRankingWindow(f.id); }} style={{ padding: '8px 16px', background: active ? '#1A1A1A' : '#FFFFFF', border: '1px solid ' + (active ? '#1A1A1A' : '#E5E5E5'), borderRadius: 20, color: active ? '#FFD700' : '#555', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{f.label}</button>);
+                    })}
+                  </div>
+                  <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 14, marginBottom: 12, fontSize: 13, color: '#666' }}>
+                    <strong>{ranking.length}</strong> afiliadas postaram {windowLabels[rankingWindow]} · <strong>{ranking.reduce(function(s, r) { return s + r.count; }, 0)}</strong> posts no total
+                  </div>
+                  <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden' }}>
+                    {ranking.length === 0 && (<div style={{ padding: 48, textAlign: 'center', color: '#888' }}>Nenhuma postagem no período</div>)}
+                    {ranking.map(function(r, i) {
+                      var trophy = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : ('#' + (i+1));
+                      var isTop = i === 0;
+                      return (
+                        <div key={r.id} style={{ padding: '14px 16px', borderBottom: i < ranking.length - 1 ? '1px solid #F0F0F0' : 'none', display: 'grid', gridTemplateColumns: '44px 44px minmax(0, 1fr) auto', gap: 12, alignItems: 'center', background: isTop ? 'linear-gradient(90deg, rgba(255,215,0,0.12), transparent 70%)' : 'transparent' }}>
+                          <div style={{ fontSize: isTop ? 26 : 16, fontWeight: 800, textAlign: 'center', color: i < 3 ? '#1A1A1A' : '#888' }}>{trophy}</div>
+                          <div style={{ width: 40, height: 40, borderRadius: 20, background: isTop ? 'linear-gradient(135deg, #FFD700, #B8860B)' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: isTop ? '#1A1A1A' : '#666', flexShrink: 0 }}>{r.avatar}</div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{r.name}</span>
+                              {newAffiliateIds.has(r.id) && <NewBadge />}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#888' }}>{r.coupon}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: isTop ? '#B8860B' : '#1A1A1A', lineHeight: 1 }}>{r.count}</div>
+                            <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>{r.count === 1 ? 'post' : 'posts'}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {postsView === 'feed' && (<>
             <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
               <div style={{ fontSize: 13, color: '#666' }}><strong>{recentPosts.length}</strong> postagens · atualiza a cada 30s</div>
             </div>
@@ -1000,7 +1088,7 @@ export default function AdminDashboard() {
                 return (<div key={p.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'grid', gridTemplateColumns: '40px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr)', gap: 12, alignItems: 'center', fontSize: 13 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666', flexShrink: 0 }}>{p.avatar_initials}</div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.affiliate_name}>{p.affiliate_name}</div>
+                    <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }} title={p.affiliate_name}>{p.affiliate_name}</span>{newAffiliateIds.has(p.affiliate_id) && <NewBadge />}</div>
                     <div style={{ fontSize: 11, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.coupon_code}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span>{getPlatformIcon(p.platform)}</span><span style={{ fontSize: 12, textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.platform}</span></div>
@@ -1026,6 +1114,7 @@ export default function AdminDashboard() {
               })}
               {recentPosts.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma postagem</div>)}
             </div>
+            </>)}
           </div>
         )}
 
@@ -1043,7 +1132,7 @@ export default function AdminDashboard() {
                 return (<div key={a.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 18, background: a.is_sponsored ? '#FFD700' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: a.is_sponsored ? '#000' : '#666' }}>{a.avatar_initials}</div>
                   <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontWeight: 500, fontSize: 14 }}>{a.name} {a.is_sponsored && <span style={{ fontSize: 10, color: '#FFD700', marginLeft: 6 }}>⭐ PATROCINADO</span>}</div>
+                    <div style={{ fontWeight: 500, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}{a.is_sponsored && <span style={{ fontSize: 10, color: '#FFD700', flexShrink: 0 }}>⭐ PATROCINADO</span>}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{a.email} · {a.coupon_code}</div>
                   </div>
                   <div style={{ textAlign: 'center' }}><div style={{ color: '#888', fontSize: 10 }}>Vendas</div><div style={{ fontWeight: 700, fontSize: 16 }}>{a.total_sales}</div></div>
@@ -1163,7 +1252,7 @@ export default function AdminDashboard() {
               return (<div key={a.id} style={{ padding: '14px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 18, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{a.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}</div>
                   <div style={{ fontSize: 12, color: '#888' }}>{a.email}</div>
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#10B981' }}>{formatMoney(a.available_balance)}</div>
@@ -1184,7 +1273,7 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 20, background: isPaid ? '#D1FAE5' : isRejected ? '#FEE2E2' : '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 }}>{af.avatar_initials}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{af.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{af.name}</span>{newAffiliateIds.has(af.id) && <NewBadge />}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{af.coupon_code} · {w.affiliate_email || af.email}</div>
                     <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{formatDateTime(w.created_at)}</div>
                   </div>
