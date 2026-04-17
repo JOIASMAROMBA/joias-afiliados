@@ -37,7 +37,7 @@ export async function POST(request) {
 
     const { data: affiliate, error } = await supabaseAdmin
       .from('affiliates')
-      .select('id, name, coupon_code, password_hash, is_admin, blocked')
+      .select('id, name, coupon_code, password_hash, is_admin, blocked, deleted_at')
       .ilike('coupon_code', coupon)
       .maybeSingle();
 
@@ -45,6 +45,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
     }
     if (!affiliate) {
+      await logAttempt({ ip, coupon, success: false });
+      return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
+    }
+    if (affiliate.deleted_at) {
       await logAttempt({ ip, coupon, success: false });
       return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
     }

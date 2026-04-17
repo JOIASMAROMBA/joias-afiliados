@@ -140,6 +140,8 @@ export default function AdminDashboard() {
   const [obligationMonth, setObligationMonth] = useState(new Date().getMonth());
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
   const [withdrawalsFilter, setWithdrawalsFilter] = useState('today');
+  const [cadastroHistory, setCadastroHistory] = useState(null);
+  const [cadastroHistoryLoading, setCadastroHistoryLoading] = useState(false);
   const [vendasManualSearch, setVendasManualSearch] = useState('');
   const [vendasManualQty, setVendasManualQty] = useState({}); // { [affiliate_id]: number }
   const [vendasManualConfirm, setVendasManualConfirm] = useState(null); // { affiliate, quantity }
@@ -1425,14 +1427,19 @@ export default function AdminDashboard() {
             if (cadastrosFilter === 'year') return t >= thisYear.getTime();
             return true;
           }
-          var filtered = (affiliatesFull || []).filter(function(a) { return passFilter(a.created_at); });
-          var totalAll = (affiliatesFull || []).length;
+          var activeAffiliates = (affiliatesFull || []).filter(function(a) { return !a.deleted_at; });
+          var deletedAffiliates = (affiliatesFull || []).filter(function(a) { return a.deleted_at; });
+          var sourceList = cadastrosFilter === 'deleted' ? deletedAffiliates : activeAffiliates;
+          var filtered = cadastrosFilter === 'deleted'
+            ? deletedAffiliates.slice().sort(function(a, b) { return new Date(b.deleted_at) - new Date(a.deleted_at); })
+            : sourceList.filter(function(a) { return passFilter(a.created_at); });
+          var totalAll = activeAffiliates.length;
           var statsCards = [
             { label: 'Total', value: totalAll, tint: '#1A1A1A' },
-            { label: 'Últimos 5 dias', value: (affiliatesFull || []).filter(function(a) { return a.created_at && now - new Date(a.created_at).getTime() <= 5 * 86400000; }).length, tint: '#10B981' },
-            { label: '30 dias', value: (affiliatesFull || []).filter(function(a) { return a.created_at && now - new Date(a.created_at).getTime() <= 30 * 86400000; }).length, tint: '#3B82F6' },
-            { label: 'Este mês', value: (affiliatesFull || []).filter(function(a) { return a.created_at && new Date(a.created_at).getTime() >= thisMonth.getTime(); }).length, tint: '#8B5CF6' },
-            { label: 'Este ano', value: (affiliatesFull || []).filter(function(a) { return a.created_at && new Date(a.created_at).getTime() >= thisYear.getTime(); }).length, tint: '#F59E0B' },
+            { label: 'Últimos 5 dias', value: activeAffiliates.filter(function(a) { return a.created_at && now - new Date(a.created_at).getTime() <= 5 * 86400000; }).length, tint: '#10B981' },
+            { label: '30 dias', value: activeAffiliates.filter(function(a) { return a.created_at && now - new Date(a.created_at).getTime() <= 30 * 86400000; }).length, tint: '#3B82F6' },
+            { label: 'Este mês', value: activeAffiliates.filter(function(a) { return a.created_at && new Date(a.created_at).getTime() >= thisMonth.getTime(); }).length, tint: '#8B5CF6' },
+            { label: 'Este ano', value: activeAffiliates.filter(function(a) { return a.created_at && new Date(a.created_at).getTime() >= thisYear.getTime(); }).length, tint: '#F59E0B' },
           ];
           var filterOptions = [
             { id: 'new5', label: '✨ Novos (5 dias)' },
@@ -1441,6 +1448,7 @@ export default function AdminDashboard() {
             { id: 'month', label: 'Este mês' },
             { id: 'year', label: 'Este ano' },
             { id: 'all', label: 'Todos' },
+            { id: 'deleted', label: '🗑️ Deletadas (' + deletedAffiliates.length + ')' },
           ];
           function fmtDate(iso) {
             if (!iso) return '—';
@@ -1946,7 +1954,18 @@ export default function AdminDashboard() {
               </div>
 
               <div style={{ padding: 20 }}>
-                {isOnline && (
+                {a.deleted_at && (
+                  <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 16 }}>🗑️</span>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#991B1B' }}>CONTA DELETADA</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#7F1D1D' }}>Em {fmtDate(a.deleted_at)}</div>
+                    {a.deletion_reason && (<div style={{ fontSize: 11, color: '#7F1D1D', marginTop: 3 }}>Motivo: {a.deletion_reason}</div>)}
+                    <div style={{ fontSize: 11, color: '#7F1D1D', marginTop: 6, fontStyle: 'italic' }}>Dados preservados. Login bloqueado. Pode ser restaurada a qualquer momento.</div>
+                  </div>
+                )}
+                {isOnline && !a.deleted_at && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px 4px 8px', background: '#ECFDF5', border: '1px solid #6EE7B7', borderRadius: 20, fontSize: 12, fontWeight: 800, color: '#065F46', marginBottom: 14 }}>
                     <span style={{ width: 8, height: 8, borderRadius: 4, background: '#10B981', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />
                     Online agora
@@ -1971,22 +1990,133 @@ export default function AdminDashboard() {
                   {extraFields.length === 0 && (<div style={{ background: '#FFF', padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum dado adicional cadastrado</div>)}
                 </div>
 
-                {!a.is_admin && (
+                {a.deleted_at && (
+                  <div style={{ marginTop: 18 }}>
+                    <button
+                      onClick={async function() {
+                        if (cadastroHistoryLoading) return;
+                        setCadastroHistoryLoading(true);
+                        setCadastroHistory(null);
+                        try {
+                          var r = await fetch('/api/admin/affiliates/history?affiliate_id=' + encodeURIComponent(a.id));
+                          var d = await r.json().catch(function() { return {}; });
+                          if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); }
+                          else { setCadastroHistory(d); }
+                        } catch(e) { alert('Erro: ' + e.message); }
+                        setCadastroHistoryLoading(false);
+                      }}
+                      style={{ width: '100%', padding: 11, background: '#1A1A1A', color: '#FFD700', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 12, cursor: 'pointer', letterSpacing: 0.8, textTransform: 'uppercase' }}
+                    >{cadastroHistoryLoading ? 'Carregando...' : (cadastroHistory && cadastroHistory.affiliate && cadastroHistory.affiliate.id === a.id ? '🔄 Recarregar Histórico (60 dias)' : '📜 Ver Histórico Completo (60 dias)')}</button>
+
+                    {cadastroHistory && cadastroHistory.affiliate && cadastroHistory.affiliate.id === a.id && (function() {
+                      var h = cadastroHistory;
+                      var bal = h.balance || {};
+                      var t = h.totals_60d || {};
+                      return (
+                        <div style={{ marginTop: 14, padding: 14, background: '#FAFAFA', border: '1px solid #E5E5E5', borderRadius: 10 }}>
+                          <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 800, letterSpacing: 0.5, marginBottom: 10 }}>Saldos preservados</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+                            <div style={{ padding: 10, background: '#ECFDF5', border: '1px solid #6EE7B7', borderRadius: 8 }}>
+                              <div style={{ fontSize: 9, color: '#065F46', fontWeight: 700, textTransform: 'uppercase' }}>Disponível</div>
+                              <div style={{ fontSize: 16, fontWeight: 900, color: '#065F46' }}>R$ {Number(bal.available_balance || 0).toFixed(2).replace('.', ',')}</div>
+                            </div>
+                            <div style={{ padding: 10, background: '#F3F4F6', border: '1px solid #D1D5DB', borderRadius: 8 }}>
+                              <div style={{ fontSize: 9, color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>A liberar</div>
+                              <div style={{ fontSize: 16, fontWeight: 900, color: '#555' }}>R$ {Number(bal.blocked_balance || 0).toFixed(2).replace('.', ',')}</div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 800, letterSpacing: 0.5, marginBottom: 8 }}>Últimos 60 dias</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12, fontSize: 11 }}>
+                            <div style={{ padding: 8, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, textAlign: 'center' }}>
+                              <div style={{ color: '#888', fontSize: 9 }}>VENDAS</div>
+                              <div style={{ fontWeight: 800, fontSize: 14 }}>{t.sales_count || 0}</div>
+                            </div>
+                            <div style={{ padding: 8, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, textAlign: 'center' }}>
+                              <div style={{ color: '#888', fontSize: 9 }}>COMISSAO</div>
+                              <div style={{ fontWeight: 800, fontSize: 14 }}>R${Number(t.sales_commission || 0).toFixed(2).replace('.', ',')}</div>
+                            </div>
+                            <div style={{ padding: 8, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, textAlign: 'center' }}>
+                              <div style={{ color: '#888', fontSize: 9 }}>POSTS</div>
+                              <div style={{ fontWeight: 800, fontSize: 14 }}>{t.posts_count || 0}</div>
+                            </div>
+                          </div>
+                          {(h.sales && h.sales.length > 0) && (
+                            <>
+                              <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Vendas ({h.sales.length})</div>
+                              <div style={{ maxHeight: 140, overflowY: 'auto', background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 10 }}>
+                                {h.sales.slice(0, 30).map(function(s) {
+                                  return (<div key={s.id} style={{ padding: '6px 10px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                    <span>{fmtDate(s.created_at)}</span>
+                                    <span style={{ fontWeight: 700, color: '#10B981' }}>+R${Number(s.commission_earned).toFixed(2).replace('.', ',')}</span>
+                                  </div>);
+                                })}
+                              </div>
+                            </>
+                          )}
+                          {(h.withdrawals && h.withdrawals.length > 0) && (
+                            <>
+                              <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Saques ({h.withdrawals.length})</div>
+                              <div style={{ maxHeight: 120, overflowY: 'auto', background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 6, marginBottom: 10 }}>
+                                {h.withdrawals.map(function(w) {
+                                  return (<div key={w.id} style={{ padding: '6px 10px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                    <span>{fmtDate(w.created_at)} <span style={{ color: '#888' }}>({w.status})</span></span>
+                                    <span style={{ fontWeight: 700 }}>R${Number(w.amount).toFixed(2).replace('.', ',')}</span>
+                                  </div>);
+                                })}
+                              </div>
+                            </>
+                          )}
+                          {(h.posts && h.posts.length > 0) && (
+                            <>
+                              <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Posts ({h.posts.length})</div>
+                              <div style={{ maxHeight: 100, overflowY: 'auto', background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 6 }}>
+                                {h.posts.slice(0, 20).map(function(p) {
+                                  return (<div key={p.id} style={{ padding: '6px 10px', borderBottom: '1px solid #F3F4F6', fontSize: 11 }}>{fmtDate(p.created_at)} · {p.platform || '—'}</div>);
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    <button
+                      onClick={async function() {
+                        if (!confirm('Restaurar ' + a.name + '? Ela volta a poder logar e os saldos voltam ao painel dela.')) return;
+                        try {
+                          var r = await fetch('/api/admin/affiliates/restore', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ affiliate_id: a.id }),
+                          });
+                          var d = await r.json().catch(function() { return {}; });
+                          if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+                          alert('Afiliada restaurada.');
+                          setSelectedCadastroId(null);
+                          setCadastroHistory(null);
+                          await loadAll();
+                        } catch(e) { alert('Erro: ' + e.message); }
+                      }}
+                      style={{ marginTop: 12, width: '100%', padding: 12, background: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer', letterSpacing: 0.5 }}
+                    >♻️ RESTAURAR CONTA</button>
+                  </div>
+                )}
+
+                {!a.is_admin && !a.deleted_at && (
                   <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px dashed #E5E5E5' }}>
                     <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>Zona de Perigo</div>
                     <button
                       onClick={async function() {
-                        var confirmText = 'EXCLUIR ' + (a.coupon_code || '');
-                        var resp = window.prompt('Esta acao e PERMANENTE. Vai apagar ' + a.name + ' e todos os dados dela (vendas, saques, postagens...). Para confirmar, digite:\n\n' + confirmText);
-                        if (resp !== confirmText) { if (resp !== null) alert('Texto nao confere. Exclusao cancelada.'); return; }
+                        var confirmText = 'DELETAR ' + (a.coupon_code || '');
+                        var resp = window.prompt('Vai marcar ' + a.name + ' como DELETADA. Os dados (saldo, vendas, saques) sao preservados e a conta pode ser restaurada depois. O login dela fica bloqueado. Para confirmar, digite:\n\n' + confirmText);
+                        if (resp !== confirmText) { if (resp !== null) alert('Texto nao confere. Operacao cancelada.'); return; }
                         try {
                           var r = await fetch('/api/admin/affiliates/delete', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ affiliate_id: a.id }),
                           });
                           var d = await r.json().catch(function() { return {}; });
-                          if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha ao excluir') + (d.detail ? ' - ' + d.detail : '')); return; }
-                          alert('Afiliada excluida com sucesso.');
+                          if (!r.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha ao deletar') + (d.detail ? ' - ' + d.detail : '')); return; }
+                          alert('Conta marcada como deletada. Dados preservados.');
                           setSelectedCadastroId(null);
                           await loadAll();
                         } catch (err) {
@@ -1994,7 +2124,7 @@ export default function AdminDashboard() {
                         }
                       }}
                       style={{ width: '100%', padding: 12, background: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer', letterSpacing: 0.5 }}
-                    >🗑️ EXCLUIR AFILIADA PERMANENTEMENTE</button>
+                    >🗑️ DELETAR AFILIADA</button>
                   </div>
                 )}
               </div>

@@ -12,33 +12,23 @@ export async function POST(request) {
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'invalid_json' }, { status: 400 }); }
 
   var affiliateId = body && body.affiliate_id;
-  var reason = (body && body.reason) ? String(body.reason).slice(0, 500) : null;
   if (!affiliateId) return NextResponse.json({ error: 'missing_affiliate_id' }, { status: 400 });
-
-  if (affiliateId === session.affiliate.id) {
-    return NextResponse.json({ error: 'cannot_delete_self' }, { status: 400 });
-  }
 
   var { data: target, error: fetchErr } = await supabaseAdmin
     .from('affiliates')
-    .select('id, name, is_admin, deleted_at')
+    .select('id, name, deleted_at')
     .eq('id', affiliateId)
     .maybeSingle();
   if (fetchErr) return NextResponse.json({ error: 'db_error', detail: fetchErr.message }, { status: 500 });
   if (!target) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  if (target.is_admin) return NextResponse.json({ error: 'cannot_delete_admin' }, { status: 403 });
-  if (target.deleted_at) return NextResponse.json({ error: 'already_deleted' }, { status: 400 });
+  if (!target.deleted_at) return NextResponse.json({ error: 'not_deleted' }, { status: 400 });
 
   var { error: updErr } = await supabaseAdmin
     .from('affiliates')
-    .update({ deleted_at: new Date().toISOString(), deleted_by: session.affiliate.id, deletion_reason: reason })
+    .update({ deleted_at: null, deleted_by: null, deletion_reason: null })
     .eq('id', affiliateId);
 
-  if (updErr) return NextResponse.json({ error: 'delete_failed', detail: updErr.message }, { status: 500 });
+  if (updErr) return NextResponse.json({ error: 'restore_failed', detail: updErr.message }, { status: 500 });
 
-  try {
-    await supabaseAdmin.from('push_subscriptions').delete().eq('affiliate_id', affiliateId);
-  } catch (e) {}
-
-  return NextResponse.json({ ok: true, deleted_id: affiliateId, name: target.name, soft_delete: true });
+  return NextResponse.json({ ok: true, restored_id: affiliateId, name: target.name });
 }
