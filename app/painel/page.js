@@ -103,9 +103,22 @@ export default function PainelPage() {
     setLoading(false);
   }
 
+  function formatCurrency(digits) {
+    if (!digits) return '';
+    const cents = parseInt(digits, 10);
+    const reais = (cents / 100).toFixed(2);
+    return 'R$ ' + reais.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  function handleAmountChange(e) {
+    const digits = e.target.value.replace(/\D/g, '');
+    setWithdrawAmount(digits);
+  }
+
   async function handleRequestWithdraw() {
-    if (!withdrawAmount || Number(withdrawAmount) < 10) { setWithdrawMessage('Valor minimo R$10'); return; }
-    if (Number(withdrawAmount) > Number(balance.available_balance)) { setWithdrawMessage('Saldo insuficiente'); return; }
+    const amountNum = withdrawAmount ? parseInt(withdrawAmount, 10) / 100 : 0;
+    if (!amountNum || amountNum < 10) { setWithdrawMessage('Valor minimo R$10'); return; }
+    if (amountNum > Number(balance.available_balance)) { setWithdrawMessage('Saldo insuficiente'); return; }
     if (!pixType) { setWithdrawMessage('Selecione o tipo de chave PIX'); return; }
     if (!pixKey.trim()) { setWithdrawMessage('Informe sua chave PIX'); return; }
     if (!withdrawEmail.trim() || !withdrawEmail.includes('@')) { setWithdrawMessage('Email invalido'); return; }
@@ -114,7 +127,7 @@ export default function PainelPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: Number(withdrawAmount),
+          amount: amountNum,
           pix_key: pixKey.trim(),
           pix_type: pixType,
           email: withdrawEmail.trim(),
@@ -685,7 +698,7 @@ export default function PainelPage() {
                   <div style={{ fontSize: 26, fontWeight: 900, color: '#00ff88' }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
                 <label style={{ display: 'block', marginBottom: 6, color: 'rgba(201,169,97,0.7)', fontSize: 12, fontWeight: 700 }}>QUANTO DESEJA SACAR?</label>
-                <input type="number" value={withdrawAmount} onChange={function(e) { setWithdrawAmount(e.target.value); }} placeholder="Digite o valor" style={{ width: '100%', padding: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, color: '#C9A961', fontSize: 16, marginBottom: 14, outline: 'none', fontWeight: 700 }} />
+                <input type="text" inputMode="numeric" value={formatCurrency(withdrawAmount)} onChange={handleAmountChange} placeholder="R$ 0,00" style={{ width: '100%', padding: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 12, color: '#C9A961', fontSize: 18, marginBottom: 14, outline: 'none', fontWeight: 700, letterSpacing: 0.5 }} />
                 <label style={{ display: 'block', marginBottom: 6, color: 'rgba(201,169,97,0.7)', fontSize: 12, fontWeight: 700 }}>QUAL SUA CHAVE PIX?</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
                   {['CPF','Email','Telefone','Aleatoria'].map(function(t) { return (<button key={t} onClick={function() { setPixType(t); }} style={{ padding: 10, borderRadius: 10, border: pixType === t ? '2px solid #C9A961' : '1px solid rgba(201,169,97,0.2)', background: pixType === t ? 'rgba(201,169,97,0.15)' : 'rgba(255,255,255,0.03)', color: pixType === t ? '#C9A961' : 'rgba(201,169,97,0.5)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t}</button>); })}
