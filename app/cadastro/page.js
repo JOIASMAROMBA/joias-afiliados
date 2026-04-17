@@ -12,6 +12,7 @@ export default function CadastroPage() {
   const [showTicket, setShowTicket] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [form, setForm] = useState({ name: '', age: '', city: '', email: '', platforms: [], instagram: '', facebook: '', tiktok: '', outro: '', coupon: '', password: '', passwordConfirm: '', agreedCommission: false });
+  const [showTerms, setShowTerms] = useState(false);
 
   const handleChange = (field, value) => {
     if (field === 'coupon') { value = value.toUpperCase().replace(/[^A-Z0-9]/g, ''); setCouponStatus(''); }
@@ -283,14 +284,14 @@ export default function CadastroPage() {
               </div>
             </div>
 
-            <div onClick={() => handleChange('agreedCommission', !form.agreedCommission)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px', marginBottom: 18, borderRadius: 10, background: form.agreedCommission ? 'rgba(201,169,97,0.06)' : 'rgba(255,255,255,0.02)', border: '1px solid ' + (form.agreedCommission ? 'rgba(201,169,97,0.3)' : 'rgba(255,255,255,0.08)'), cursor: 'pointer', transition: 'all 0.3s' }}>
+            <div onClick={() => handleChange('agreedCommission', !form.agreedCommission)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px', marginBottom: 10, borderRadius: 10, background: form.agreedCommission ? 'rgba(201,169,97,0.06)' : 'rgba(255,255,255,0.02)', border: '1px solid ' + (form.agreedCommission ? 'rgba(201,169,97,0.3)' : 'rgba(255,255,255,0.08)'), cursor: 'pointer', transition: 'all 0.3s' }}>
               <div style={{ width: 22, height: 22, borderRadius: 6, border: '2px solid ' + (form.agreedCommission ? '#C9A961' : 'rgba(255,255,255,0.2)'), background: form.agreedCommission ? '#C9A961' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.3s' }}>
                 {form.agreedCommission && <span style={{ color: '#1a1306', fontSize: 13, fontWeight: 900 }}>✓</span>}
               </div>
-              <div>
-                <div style={{ color: form.agreedCommission ? '#C9A961' : 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>Aceito a comissão de R$ 30 por peça</div>
-                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 2 }}>Pagamento via PIX até 24h após solicitação</div>
-              </div>
+              <div style={{ color: form.agreedCommission ? '#C9A961' : 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>ACEITO OS TERMOS DE USO</div>
+            </div>
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <button type="button" onClick={(e) => { e.stopPropagation(); setShowTerms(true); }} style={{ background: 'none', border: 'none', color: '#C9A961', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', cursor: 'pointer', padding: 4, textDecoration: 'underline', textUnderlineOffset: 3 }}>Termos de Uso</button>
             </div>
 
             {error && (<div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)', borderRadius: 8, color: '#ff6b6b', fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}><span>⚠</span>{error}</div>)}
@@ -303,6 +304,57 @@ export default function CadastroPage() {
           </div>
         </div>
       </div>
+
+      {showTerms && (
+        <div onClick={() => setShowTerms(false)} style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640, width: '100%', maxHeight: '88vh', background: 'rgba(15,15,15,0.95)', border: '1px solid rgba(201,169,97,0.25)', borderRadius: 16, padding: '24px 28px', overflowY: 'auto', boxShadow: '0 20px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(201,169,97,0.15)' }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#C9A961', letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Joias Maromba</div>
+                <div style={{ fontSize: 20, color: '#fff', fontWeight: 700, letterSpacing: -0.3 }}>Termos de Uso</div>
+              </div>
+              <button onClick={() => setShowTerms(false)} style={{ background: 'none', border: 'none', color: '#C9A961', fontSize: 24, cursor: 'pointer', padding: 0, lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 1.65 }}>
+              <TermsContent />
+            </div>
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(201,169,97,0.15)', display: 'flex', gap: 12 }}>
+              <button onClick={() => { handleChange('agreedCommission', true); setShowTerms(false); }} style={{ flex: 1, padding: 13, background: 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)', border: '1px solid rgba(201,169,97,0.6)', borderRadius: 10, color: '#1a1306', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Aceitar e fechar</button>
+              <button onClick={() => setShowTerms(false)} style={{ padding: '13px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function TermsContent() {
+  const sections = [
+    { title: '1. Identificação da Empresa', body: 'O presente programa de afiliados é operado por JV9 COMPANY LTDA, inscrita no CNPJ sob nº 46.368.706/0001-01, doravante denominada JOIAS MAROMBA.' },
+    { title: '2. Aceitação dos Termos', body: 'Ao se cadastrar, o afiliado declara que leu, compreendeu e concorda integralmente com este Termo.' },
+    { title: '3. Natureza da Relação', body: '3.1. O afiliado atua como parceiro independente, sem qualquer vínculo empregatício, societário ou obrigação de exclusividade.\n3.2. Não há exigência de metas mínimas, frequência de postagens ou resultados financeiros.\n3.3. Não existe garantia de ganhos.' },
+    { title: '4. Funcionamento do Programa', body: '4.1. O afiliado receberá um cupom exclusivo para divulgação.\n4.2. A comissão será de R$25,00 (vinte e cinco reais) por peça vendida, vinculada ao cupom do afiliado.\n4.3. Serão consideradas válidas apenas vendas pagas, aprovadas e não canceladas ou estornadas.\n4.4. A JOIAS MAROMBA poderá validar vendas, cancelar comissões indevidas e corrigir eventuais erros sistêmicos.' },
+    { title: '5. Bonificações e Metas', body: '5.1. O site poderá apresentar campanhas promocionais, metas e bonificações adicionais.\n5.2. Tais bonificações não são obrigatórias, não constituem garantia de pagamento e não configuram salário, remuneração fixa ou vínculo.\n5.3. Os prêmios e bônus somente serão concedidos caso o afiliado cumpra integralmente os critérios específicos descritos em cada campanha.\n5.4. O não atingimento das metas não gera qualquer obrigação por parte da JOIAS MAROMBA.' },
+    { title: '6. Pagamentos e Saques', body: '6.1. O afiliado poderá solicitar saque a qualquer momento.\n6.2. O pagamento será realizado via PIX em até 24 horas, dentro do horário comercial das 08:00 às 22:00.\n6.3. Solicitações fora desse horário serão processadas no próximo período.\n6.4. A JOIAS MAROMBA não se responsabiliza por dados bancários incorretos ou falhas de instituições financeiras.\n6.5. Valores de vendas canceladas, fraudulentas ou estornadas poderão ser descontados.' },
+    { title: '7. Obrigações do Afiliado', body: 'O afiliado compromete-se a:\n7.1. Não utilizar práticas ilegais ou enganosas\n7.2. Não realizar spam\n7.3. Não associar a marca a conteúdos impróprios\n7.4. Não se passar pela empresa\n7.5. Cumprir regras de publicidade conforme diretrizes do CONAR' },
+    { title: '8. Afiliados Patrocinados', body: '8.1. Afiliados patrocinados poderão ter metas e obrigações específicas definidas em contrato separado.' },
+    { title: '9. Limitação de Responsabilidade', body: '9.1. A JOIAS MAROMBA não garante resultados financeiros.\n9.2. O afiliado assume integralmente os riscos da atividade.' },
+    { title: '10. Bloqueio e Cancelamento', body: '10.1. A empresa poderá suspender contas e cancelar comissões a qualquer momento em caso de fraude, violação dos termos ou uso indevido da marca.' },
+    { title: '11. Tributação', body: '11.1. O afiliado é responsável por seus impostos.' },
+    { title: '12. LGPD', body: '12.1. Os dados serão tratados conforme legislação vigente.' },
+    { title: '13. Alterações', body: '13.1. Os termos podem ser alterados a qualquer momento.' },
+    { title: '14. Foro', body: '14.1. Foro de Curitiba/PR.' },
+    { title: '15. Disposições Finais', body: '15.1. Este termo representa o acordo integral entre as partes.' },
+  ];
+  return (
+    <>
+      {sections.map((s, i) => (
+        <div key={i} style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 13, color: '#C9A961', fontWeight: 700, marginBottom: 6, letterSpacing: 0.3 }}>{s.title}</div>
+          <div style={{ whiteSpace: 'pre-line', color: 'rgba(255,255,255,0.75)' }}>{s.body}</div>
+        </div>
+      ))}
+    </>
   );
 }
