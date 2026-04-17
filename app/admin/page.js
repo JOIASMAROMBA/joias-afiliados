@@ -72,22 +72,40 @@ export default function AdminDashboard() {
     try { var res = await supabase.from('posting_obligations').select('*').eq('affiliate_id', affiliateId).eq('active', true); setObligationsList(res.data || []); } catch(e) { setObligationsList([]); }
   }
 
+  async function apiCall(url, payload) {
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      let data = {};
+      try { data = await res.json(); } catch {}
+      if (!res.ok || !data.ok) {
+        if (data.error === 'unauthorized' || data.error === 'invalid_session' || res.status === 401) {
+          alert('Sessao expirada. Faca login novamente para continuar.');
+          localStorage.clear();
+          router.push('/login');
+          return false;
+        }
+        alert('Erro: ' + (data.error || ('status ' + res.status)) + (data.detail ? ' - ' + data.detail : ''));
+        return false;
+      }
+      return true;
+    } catch (err) {
+      alert('Erro de conexao: ' + err.message);
+      return false;
+    }
+  }
+
   async function toggleRecurringWeekday(weekday) {
     if (!obligationsAffiliateId) return;
-    await fetch('/api/admin/obligations/update', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'toggle-recurring', affiliate_id: obligationsAffiliateId, weekday }),
-    });
+    const ok = await apiCall('/api/admin/obligations/update', { action: 'toggle-recurring', affiliate_id: obligationsAffiliateId, weekday });
+    if (!ok) return;
     await loadObligations(obligationsAffiliateId);
     await loadAll();
   }
 
   async function toggleSpecificDate(dateStr) {
     if (!obligationsAffiliateId) return;
-    await fetch('/api/admin/obligations/update', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'toggle-specific', affiliate_id: obligationsAffiliateId, date: dateStr }),
-    });
+    const ok = await apiCall('/api/admin/obligations/update', { action: 'toggle-specific', affiliate_id: obligationsAffiliateId, date: dateStr });
+    if (!ok) return;
     await loadObligations(obligationsAffiliateId);
     await loadAll();
   }
@@ -95,10 +113,8 @@ export default function AdminDashboard() {
   async function clearAllObligations() {
     if (!obligationsAffiliateId) return;
     if (!confirm('Limpar TODAS as obrigações deste afiliado?')) return;
-    await fetch('/api/admin/obligations/update', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'clear', affiliate_id: obligationsAffiliateId }),
-    });
+    const ok = await apiCall('/api/admin/obligations/update', { action: 'clear', affiliate_id: obligationsAffiliateId });
+    if (!ok) return;
     await loadObligations(obligationsAffiliateId);
     await loadAll();
   }
