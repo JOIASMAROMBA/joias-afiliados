@@ -195,7 +195,7 @@ export default function LoginPage() {
                 display: 'inline-block',
               }}
             >
-              Saiba mais →
+              Saiba mais
             </button>
           </div>
 
