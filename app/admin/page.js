@@ -3,6 +3,37 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 
+const PLATFORM_DOMAINS = {
+  instagram: ['instagram.com', 'instagr.am'],
+  facebook: ['facebook.com', 'fb.com', 'fb.me', 'm.facebook.com'],
+  tiktok: ['tiktok.com', 'vm.tiktok.com'],
+  youtube: ['youtube.com', 'youtu.be', 'm.youtube.com'],
+  twitter: ['twitter.com', 'x.com'],
+  threads: ['threads.net'],
+  kwai: ['kwai.com'],
+  pinterest: ['pinterest.com', 'pin.it'],
+  whatsapp: ['whatsapp.com', 'wa.me'],
+  snapchat: ['snapchat.com'],
+  linkedin: ['linkedin.com', 'lnkd.in'],
+};
+const TRUSTED_DOMAINS = Object.values(PLATFORM_DOMAINS).flat();
+
+function analyzeLink(rawUrl, declaredPlatform) {
+  const result = { valid: false, host: '', isTrusted: false, matchesPlatform: false, expected: [] };
+  if (!rawUrl) return result;
+  let u;
+  try { u = new URL(rawUrl); } catch { return result; }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return result;
+  const host = u.hostname.toLowerCase().replace(/^www\./, '');
+  result.valid = true;
+  result.host = host;
+  result.isTrusted = TRUSTED_DOMAINS.some(function(d) { return host === d || host.endsWith('.' + d); });
+  const expected = PLATFORM_DOMAINS[(declaredPlatform || '').toLowerCase()] || [];
+  result.expected = expected;
+  result.matchesPlatform = expected.length > 0 && expected.some(function(d) { return host === d || host.endsWith('.' + d); });
+  return result;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -38,6 +69,7 @@ export default function AdminDashboard() {
   const [rewardForm, setRewardForm] = useState({ target_type: 'sales', target_value: '', reward_title: '', reward_description: '', reward_emoji: '🎁', reward_value_money: '' });
   const [obligationsAffiliateId, setObligationsAffiliateId] = useState(null);
   const [obligationsList, setObligationsList] = useState([]);
+  const [linkPreview, setLinkPreview] = useState(null);
   const [obligationMonth, setObligationMonth] = useState(new Date().getMonth());
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
 
@@ -917,7 +949,18 @@ export default function AdminDashboard() {
                   <div><div style={{ fontWeight: 500 }}>{p.affiliate_name}</div><div style={{ fontSize: 11, color: '#888' }}>{p.coupon_code}</div></div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span>{getPlatformIcon(p.platform)}</span><span style={{ fontSize: 12, textTransform: 'capitalize' }}>{p.platform}</span></div>
                   <div><div style={{ fontSize: 12, color: '#666' }}>{formatDateTime(p.created_at)}</div><div style={{ fontSize: 10, color: '#888' }}>{timeSince(p.created_at)}</div></div>
-                  <div style={{ fontSize: 12, fontFamily: 'monospace', wordBreak: 'break-all' }}>{p.post_identifier ? (p.post_identifier.startsWith('http') ? (<a href={p.post_identifier} target="_blank" rel="noopener" style={{ color: '#0070F3' }}>{p.post_identifier} ↗</a>) : p.post_identifier) : (<span style={{ color: '#CCC' }}>sem link</span>)}</div>
+                  <div style={{ fontSize: 12, wordBreak: 'break-all' }}>{(function() {
+                    if (!p.post_identifier) return <span style={{ color: '#CCC' }}>sem link</span>;
+                    if (!p.post_identifier.startsWith('http')) return <span style={{ fontFamily: 'monospace' }}>{p.post_identifier}</span>;
+                    var info = analyzeLink(p.post_identifier, p.platform);
+                    var suspicious = !info.valid || !info.isTrusted || (info.expected.length > 0 && !info.matchesPlatform);
+                    return (
+                      <button onClick={function() { setLinkPreview({ url: p.post_identifier, platform: p.platform, affiliate: p.affiliate_name }); }} style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: suspicious ? '#B45309' : '#0070F3', fontWeight: 700, textDecoration: 'underline', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {suspicious && <span title="Link suspeito">⚠️</span>}
+                        LINK
+                      </button>
+                    );
+                  })()}</div>
                 </div>);
               })}
               {recentPosts.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma postagem</div>)}
@@ -1156,6 +1199,67 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {linkPreview && (function() {
+        var info = analyzeLink(linkPreview.url, linkPreview.platform);
+        var trustedMatch = info.valid && info.isTrusted && (info.expected.length === 0 || info.matchesPlatform);
+        var platformMismatch = info.valid && info.expected.length > 0 && !info.matchesPlatform;
+        var untrusted = info.valid && !info.isTrusted;
+        var invalid = !info.valid;
+        return (
+          <div onClick={function() { setLinkPreview(null); }} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ background: '#FFF', borderRadius: 14, padding: 24, maxWidth: 480, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: '#1A1A1A' }}>Conferir link antes de abrir</div>
+                <button onClick={function() { setLinkPreview(null); }} style={{ background: 'transparent', border: 'none', fontSize: 22, cursor: 'pointer', color: '#999', padding: 4 }}>✕</button>
+              </div>
+
+              <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Enviado por <strong>{linkPreview.affiliate}</strong> · Rede declarada: <strong style={{ textTransform: 'capitalize' }}>{linkPreview.platform}</strong></div>
+
+              <div style={{ marginTop: 12, padding: 12, background: '#F8F9FA', border: '1px solid #E5E5E5', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', wordBreak: 'break-all', color: '#0070F3' }}>
+                {linkPreview.url}
+              </div>
+
+              {info.valid && (
+                <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>Domínio: <strong style={{ color: '#1A1A1A' }}>{info.host}</strong></div>
+              )}
+
+              {invalid && (
+                <div style={{ marginTop: 14, padding: 12, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, color: '#991B1B', fontSize: 13, fontWeight: 600 }}>
+                  🚨 Link inválido ou mal formado. NÃO abrir.
+                </div>
+              )}
+              {!invalid && untrusted && (
+                <div style={{ marginTop: 14, padding: 12, background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, color: '#92400E', fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ Link SUSPEITO</div>
+                  Este domínio não é de uma rede social reconhecida (Instagram, Facebook, TikTok, YouTube, X/Twitter, Threads, Pinterest, LinkedIn, Kwai, WhatsApp, Snapchat). Pode ser phishing ou vírus. Confirme com a afiliada antes de abrir.
+                </div>
+              )}
+              {!invalid && !untrusted && platformMismatch && (
+                <div style={{ marginTop: 14, padding: 12, background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, color: '#92400E', fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ Rede declarada não confere</div>
+                  A afiliada selecionou <strong style={{ textTransform: 'capitalize' }}>{linkPreview.platform}</strong> mas o link aponta para <strong>{info.host}</strong>. Verifique antes de abrir.
+                </div>
+              )}
+              {trustedMatch && (
+                <div style={{ marginTop: 14, padding: 12, background: '#ECFDF5', border: '1px solid #86EFAC', borderRadius: 8, color: '#065F46', fontSize: 13, fontWeight: 600 }}>
+                  ✓ Link de rede oficial ({info.host})
+                </div>
+              )}
+
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A', marginTop: 18, marginBottom: 12 }}>Deseja abrir este link?</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={function() { setLinkPreview(null); }} style={{ flex: 1, padding: '12px 16px', background: '#F3F4F6', border: '1px solid #D1D5DB', borderRadius: 8, color: '#374151', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                  Não
+                </button>
+                <button onClick={function() { window.open(linkPreview.url, '_blank', 'noopener,noreferrer'); setLinkPreview(null); }} disabled={invalid} style={{ flex: 1, padding: '12px 16px', background: invalid ? '#E5E7EB' : (untrusted || platformMismatch ? '#DC2626' : '#10B981'), border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 14, cursor: invalid ? 'not-allowed' : 'pointer', opacity: invalid ? 0.6 : 1 }}>
+                  {untrusted || platformMismatch ? 'Sim, abrir mesmo assim' : 'Sim, abrir'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
