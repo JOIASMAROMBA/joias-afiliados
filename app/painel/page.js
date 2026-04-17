@@ -544,14 +544,14 @@ export default function PainelPage() {
             )}
           </div>
 
-          <div className="full-width" onClick={openMaterialsModal} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, padding: 0, marginBottom: 16, overflow: 'hidden', display: 'flex', alignItems: 'stretch', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)', transition: 'all 0.3s' }}>
+          <div onClick={openMaterialsModal} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, padding: 0, marginBottom: 16, overflow: 'hidden', display: 'flex', alignItems: 'stretch', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)', transition: 'all 0.3s' }}>
             <div style={{ position: 'relative', width: 110, minHeight: 110, flexShrink: 0, overflow: 'hidden', background: '#000' }}>
               <img src="/pic.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(15,15,15,0.9) 100%)', pointerEvents: 'none' }} />
             </div>
             <div style={{ flex: 1, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 14, filter: 'drop-shadow(0 0 4px rgba(201,169,97,0.5))' }}>🖼️</span>
+                <span style={{ fontSize: 14, color: '#C9A961', filter: 'drop-shadow(0 0 6px rgba(201,169,97,0.6))', fontWeight: 900 }}>◆</span>
                 <span style={{ fontSize: 9, color: '#C9A961', letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase' }}>Exclusivo</span>
               </div>
               <div style={{ fontSize: 18, fontWeight: 800, color: '#C9A961', letterSpacing: 1, lineHeight: 1.1, textShadow: '0 0 20px rgba(201,169,97,0.3)' }}>MATERIAL PARA<br/>POSTAR</div>
@@ -560,7 +560,7 @@ export default function PainelPage() {
           </div>
 
           {allSales.length > 0 && (
-            <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 20 }}>
+            <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#C9A961' }}>💎 Ultima Venda</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
