@@ -139,6 +139,12 @@ export default function AdminDashboard() {
   const [notifySending, setNotifySending] = useState(false);
   const [obligationMonth, setObligationMonth] = useState(new Date().getMonth());
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
+  const [withdrawalsFilter, setWithdrawalsFilter] = useState('today');
+  const [showExtrato, setShowExtrato] = useState(false);
+  const [extratoDate, setExtratoDate] = useState(function() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  });
 
   useEffect(function() { init(); }, []);
   useEffect(function() { var i = setInterval(function() { loadAll(); }, 30000); return function() { clearInterval(i); }; }, []);
@@ -1309,8 +1315,56 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === 'withdrawals' && (
-          <div>
+        {activeTab === 'withdrawals' && (function() {
+          var nowTs = Date.now();
+          var startToday = new Date(); startToday.setHours(0,0,0,0);
+          var startMonth = new Date(); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
+          var startYear = new Date(new Date().getFullYear(), 0, 1);
+          function inPeriod(iso) {
+            if (!iso) return false;
+            var t = new Date(iso).getTime();
+            if (withdrawalsFilter === 'today') return t >= startToday.getTime();
+            if (withdrawalsFilter === '7d') return nowTs - t <= 7 * 86400000;
+            if (withdrawalsFilter === '15d') return nowTs - t <= 15 * 86400000;
+            if (withdrawalsFilter === '30d') return nowTs - t <= 30 * 86400000;
+            if (withdrawalsFilter === 'month') return t >= startMonth.getTime();
+            if (withdrawalsFilter === 'year') return t >= startYear.getTime();
+            return true;
+          }
+          var paidInPeriod = (withdrawals || []).filter(function(w) { return w.status === 'paid' && inPeriod(w.paid_at || w.created_at); });
+          var totalAmount = paidInPeriod.reduce(function(s, w) { return s + Number(w.amount || 0); }, 0);
+          var FILTERS = [
+            { id: 'today', label: 'HOJE' },
+            { id: '7d', label: '7 DIAS' },
+            { id: '15d', label: '15 DIAS' },
+            { id: '30d', label: '30 DIAS' },
+            { id: 'month', label: 'MÊS' },
+            { id: 'year', label: 'ANO' },
+            { id: 'all', label: 'TUDO' },
+          ];
+          return (<div>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>Total de saques</div>
+                <button onClick={function() { setShowExtrato(true); }} style={{ marginLeft: 'auto', padding: '7px 14px', background: '#1A1A1A', color: '#FFD700', border: 'none', borderRadius: 20, fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5 }}>📄 EXTRATO</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {FILTERS.map(function(f) {
+                  var active = withdrawalsFilter === f.id;
+                  return (<button key={f.id} onClick={function() { setWithdrawalsFilter(f.id); }} style={{ padding: '6px 12px', background: active ? '#1A1A1A' : '#FFFFFF', color: active ? '#FFD700' : '#1A1A1A', border: '1px solid ' + (active ? '#1A1A1A' : '#E5E5E5'), borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>{f.label}</button>);
+                })}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ padding: 12, background: '#FAFAFA', borderRadius: 8, border: '1px solid #E5E5E5' }}>
+                  <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Transferências</div>
+                  <div style={{ fontSize: 22, fontWeight: 800 }}>{paidInPeriod.length}</div>
+                </div>
+                <div style={{ padding: 12, background: '#FAFAFA', borderRadius: 8, border: '1px solid #E5E5E5' }}>
+                  <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Total pago</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#10B981' }}>{formatMoney(totalAmount)}</div>
+                </div>
+              </div>
+            </div>
             {withdrawals.map(function(w) {
               var af = w.affiliates || {};
               var isPaid = w.status === 'paid';
@@ -1349,8 +1403,8 @@ export default function AdminDashboard() {
               </div>);
             })}
             {withdrawals.length === 0 && (<div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma solicitacao</div>)}
-          </div>
-        )}
+          </div>);
+        })()}
 
         {activeTab === 'cadastros' && (function() {
           var now = Date.now();
@@ -1629,6 +1683,63 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {showExtrato && (function() {
+        var paidOnDay = (withdrawals || []).filter(function(w) {
+          if (w.status !== 'paid') return false;
+          var iso = w.paid_at || w.created_at;
+          if (!iso) return false;
+          var d = new Date(iso);
+          var local = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+          return local === extratoDate;
+        });
+        var total = paidOnDay.reduce(function(s, w) { return s + Number(w.amount || 0); }, 0);
+        return (
+          <div onClick={function() { setShowExtrato(false); }} style={{ position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 620, width: '100%', background: '#FFF', borderRadius: 12, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: 16, borderBottom: '1px solid #E5E5E5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>Extrato de saques</div>
+                <button onClick={function() { setShowExtrato(false); }} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>✕</button>
+              </div>
+              <div style={{ padding: 16, borderBottom: '1px solid #E5E5E5' }}>
+                <label style={{ display: 'block', fontSize: 11, color: '#666', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6, letterSpacing: 0.5 }}>Escolha o dia</label>
+                <input type="date" value={extratoDate} onChange={function(e) { setExtratoDate(e.target.value); }} style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 8, fontSize: 14 }} />
+                <div style={{ marginTop: 10, display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1, padding: 10, background: '#FAFAFA', borderRadius: 8, border: '1px solid #E5E5E5' }}>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 600 }}>Transferências</div>
+                    <div style={{ fontSize: 20, fontWeight: 800 }}>{paidOnDay.length}</div>
+                  </div>
+                  <div style={{ flex: 1, padding: 10, background: '#FAFAFA', borderRadius: 8, border: '1px solid #E5E5E5' }}>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', fontWeight: 600 }}>Total</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>{formatMoney(total)}</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+                {paidOnDay.length === 0 && (<div style={{ textAlign: 'center', color: '#888', padding: 30, fontSize: 13 }}>Nenhum saque pago neste dia</div>)}
+                {paidOnDay.map(function(w) {
+                  var af = w.affiliates || {};
+                  return (<div key={w.id} style={{ border: '1px solid #E5E5E5', borderRadius: 10, padding: 12, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 19, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#065F46', flexShrink: 0 }}>{af.avatar_initials}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{af.name || '—'}</div>
+                      <div style={{ fontSize: 11, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{af.coupon_code} · {formatDateTime(w.paid_at || w.created_at)}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#10B981' }}>{formatMoney(w.amount)}</div>
+                      {w.receipt_url ? (
+                        <button onClick={function() { setViewReceiptUrl(w.receipt_url); }} style={{ marginTop: 4, padding: '4px 10px', background: '#10B981', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>COMPROVANTE</button>
+                      ) : (
+                        <div style={{ marginTop: 4, fontSize: 10, color: '#888' }}>sem comprovante</div>
+                      )}
+                    </div>
+                  </div>);
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {viewReceiptUrl && (
         <div onClick={function() { setViewReceiptUrl(null); }} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
