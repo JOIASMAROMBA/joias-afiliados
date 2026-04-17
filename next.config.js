@@ -24,12 +24,23 @@ const securityHeaders = [
   },
 ];
 
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+
 const nextConfig = {
   async headers() {
     return [
       {
         source: '/:path*',
         headers: securityHeaders,
+      },
+    ];
+  },
+  async rewrites() {
+    if (!SUPABASE_URL) return [];
+    return [
+      {
+        source: '/_supabase/:path*',
+        destination: `${SUPABASE_URL}/:path*`,
       },
     ];
   },

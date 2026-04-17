@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
+import { supabase, supabaseRealtime } from '../../lib/supabase';
 
 export default function PainelPage() {
   const router = useRouter();
@@ -78,7 +78,7 @@ export default function PainelPage() {
 
   useEffect(function() {
     if (!affiliate) return;
-    var channel = supabase
+    var channel = supabaseRealtime
       .channel('painel-live-' + affiliate.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, function() { loadData(affiliate.id); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: 'affiliate_id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
@@ -86,7 +86,7 @@ export default function PainelPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posting_obligations', filter: 'affiliate_id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'affiliates', filter: 'id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
       .subscribe();
-    return function() { supabase.removeChannel(channel); };
+    return function() { supabaseRealtime.removeChannel(channel); };
   }, [affiliate && affiliate.id]);
 
   async function loadData(affiliateId) {
