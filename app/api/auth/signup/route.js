@@ -71,7 +71,7 @@ export async function POST(request) {
       avatar_initials: initials,
       tier: 'Divulgadora',
       is_sponsored: false,
-      commission_value: 30,
+      commission_value: 25,
       commission_type: 'fixed_per_sale',
       active: true,
       password_hash,

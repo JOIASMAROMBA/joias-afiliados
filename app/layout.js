@@ -2,7 +2,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'Painel de Afiliados | Joias',
-  description: 'Divulgue e ganhe R$30 por peça vendida',
+  description: 'Divulgue e ganhe R$25 por peça vendida',
 };
 
 export default function RootLayout({ children }) {
