@@ -719,8 +719,24 @@ export default function PainelPage() {
               </div>
               <div style={{ flex: 1, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, minWidth: 0 }}>
                 <div style={{ fontSize: 10, color: '#C9A961', letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase', textShadow: '0 0 20px rgba(201,169,97,0.3)', whiteSpace: 'nowrap' }}>Ultima Venda no seu Cupom</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 6, fontWeight: 600 }}>{allSales[0].buyer_name}{allSales[0].buyer_city && <span style={{ color: 'rgba(201,169,97,0.5)', marginLeft: 6, fontWeight: 400 }}>· {allSales[0].buyer_city}</span>}</div>
-                <div style={{ color: '#C9A961', fontSize: 22, fontWeight: 900, marginTop: 4, textShadow: '0 0 20px rgba(201,169,97,0.3)' }}>+R${allSales[0].commission_earned}</div>
+                {(function() {
+                  var s = allSales[0];
+                  var isManual = !!(s && (String(s.external_order_id || '').indexOf('manual-') === 0 || /inser[çc]ao manual/i.test(s.buyer_name || '')));
+                  var commissionStr = Number(s.commission_earned || 0).toFixed(2).replace('.', ',');
+                  var dt = s.created_at ? new Date(s.created_at) : null;
+                  var dtStr = dt ? dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' às ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                  return (
+                    <>
+                      {!isManual && s.buyer_name && (
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 6, fontWeight: 600 }}>{s.buyer_name}{s.buyer_city && <span style={{ color: 'rgba(201,169,97,0.5)', marginLeft: 6, fontWeight: 400 }}>· {s.buyer_city}</span>}</div>
+                      )}
+                      {dtStr && (
+                        <div style={{ fontSize: 11, color: 'rgba(201,169,97,0.6)', marginTop: isManual ? 6 : 2, fontWeight: 500 }}>🕒 {dtStr}</div>
+                      )}
+                      <div style={{ color: '#C9A961', fontSize: 15, fontWeight: 800, marginTop: 6, lineHeight: 1.25, textShadow: '0 0 20px rgba(201,169,97,0.3)' }}>VOCÊ GANHOU <span style={{ fontSize: 18, fontWeight: 900 }}>R${commissionStr}</span> POR ESSA VENDA</div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
