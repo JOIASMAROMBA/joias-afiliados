@@ -23,6 +23,14 @@ export default function AdminDashboard() {
   const [monthlyTops, setMonthlyTops] = useState([]);
   const [selectedAffiliateFilter, setSelectedAffiliateFilter] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
+  const [materialFolders, setMaterialFolders] = useState([]);
+  const [selectedMatFolder, setSelectedMatFolder] = useState(null);
+  const [materialFiles, setMaterialFiles] = useState([]);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderType, setNewFolderType] = useState('photo');
+  const [newFolderUrgent, setNewFolderUrgent] = useState(false);
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -35,6 +43,7 @@ export default function AdminDashboard() {
 
   useEffect(function() { init(); }, []);
   useEffect(function() { var i = setInterval(function() { loadAll(); }, 30000); return function() { clearInterval(i); }; }, []);
+  useEffect(function() { if (activeTab === 'materials') loadMaterialFolders(); }, [activeTab]);
 
   async function init() {
     var id = localStorage.getItem('affiliate_id');
@@ -196,6 +205,68 @@ export default function AdminDashboard() {
     await loadAll();
   }
 
+  async function loadMaterialFolders() {
+    try {
+      const res = await fetch('/api/materials/folders');
+      const data = await res.json();
+      if (data.ok) setMaterialFolders(data.folders || []);
+    } catch {}
+  }
+
+  async function loadMaterialFiles(folderId) {
+    try {
+      const res = await fetch('/api/materials/files?folder_id=' + encodeURIComponent(folderId));
+      const data = await res.json();
+      if (data.ok) setMaterialFiles(data.files || []);
+    } catch {}
+  }
+
+  async function createFolder() {
+    if (!newFolderName.trim()) { alert('Nome obrigatorio'); return; }
+    const ok = await apiCall('/api/admin/materials/folder', { action: 'create', name: newFolderName.trim(), type: newFolderType, is_urgent: newFolderUrgent });
+    if (!ok) return;
+    setShowNewFolderModal(false);
+    setNewFolderName(''); setNewFolderType('photo'); setNewFolderUrgent(false);
+    await loadMaterialFolders();
+  }
+
+  async function deleteFolder(id) {
+    if (!confirm('Deletar esta pasta e todos os arquivos dentro dela?')) return;
+    const ok = await apiCall('/api/admin/materials/folder', { action: 'delete', id });
+    if (!ok) return;
+    if (selectedMatFolder?.id === id) { setSelectedMatFolder(null); setMaterialFiles([]); }
+    await loadMaterialFolders();
+  }
+
+  async function toggleFolderUrgent(folder) {
+    const ok = await apiCall('/api/admin/materials/folder', { action: 'update', id: folder.id, is_urgent: !folder.is_urgent });
+    if (!ok) return;
+    await loadMaterialFolders();
+    if (selectedMatFolder?.id === folder.id) setSelectedMatFolder(Object.assign({}, folder, { is_urgent: !folder.is_urgent }));
+  }
+
+  async function uploadMaterialFile(file) {
+    if (!file || !selectedMatFolder) return;
+    setUploadingMaterial(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('folder_id', selectedMatFolder.id);
+      const res = await fetch('/api/admin/materials/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'upload falhou') + (data.detail ? ' - ' + data.detail : '')); }
+      else await loadMaterialFiles(selectedMatFolder.id);
+    } catch (e) { alert('Erro: ' + e.message); }
+    setUploadingMaterial(false);
+  }
+
+  async function deleteMaterialFile(id) {
+    if (!confirm('Deletar este arquivo?')) return;
+    const ok = await apiCall('/api/admin/materials/file', { action: 'delete', id });
+    if (!ok) return;
+    if (selectedMatFolder) await loadMaterialFiles(selectedMatFolder.id);
+  }
+
   // ==== Aplicar filtro de tipo (all/affiliate/sponsored) nos afiliados ====
   function applyTypeFilter(list) {
     if (typeFilter === 'all') return list;
@@ -338,6 +409,7 @@ export default function AdminDashboard() {
     { id: 'sales', label: 'Vendas', icon: '💰' },
     { id: 'rewards', label: 'Recompensas', icon: '🎁' },
     { id: 'obligations', label: 'Obrigações', icon: '📅', alert: sponsoredAlert.length > 0 },
+    { id: 'materials', label: 'Material', icon: '📷' },
     { id: 'payments', label: 'Pagamentos', icon: '💳' },
     { id: 'withdrawals', label: 'Saques', icon: '💸' }
   ];
@@ -815,6 +887,87 @@ export default function AdminDashboard() {
               </div>);
             })}
             {filteredSales.length === 0 && (<div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma venda</div>)}
+          </div>
+        )}
+
+        {activeTab === 'materials' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>📷 Material para Postar</div>
+                <div style={{ fontSize: 13, color: '#666' }}>{selectedMatFolder ? 'Pasta: ' + selectedMatFolder.name : 'Organize fotos e videos para as afiliadas baixarem'}</div>
+              </div>
+              {!selectedMatFolder && (<button onClick={function() { setShowNewFolderModal(true); }} style={{ padding: '10px 18px', background: '#1A1A1A', border: 'none', borderRadius: 8, color: '#FFD700', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Nova Pasta</button>)}
+              {selectedMatFolder && (<button onClick={function() { setSelectedMatFolder(null); setMaterialFiles([]); }} style={{ padding: '10px 18px', background: '#F3F4F6', border: '1px solid #E5E5E5', borderRadius: 8, color: '#666', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>← Voltar</button>)}
+            </div>
+
+            {!selectedMatFolder && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                {materialFolders.length === 0 && (<div style={{ gridColumn: '1 / -1', padding: 40, textAlign: 'center', background: '#fff', border: '1px dashed #E5E5E5', borderRadius: 12, color: '#888' }}>Nenhuma pasta ainda. Crie uma clicando em "Nova Pasta".</div>)}
+                {materialFolders.map(function(f) {
+                  return (
+                    <div key={f.id} style={{ position: 'relative', background: '#FFFFFF', border: '1px solid ' + (f.is_urgent ? '#FCA5A5' : '#E5E5E5'), borderRadius: 12, padding: 16, boxShadow: f.is_urgent ? '0 0 0 2px rgba(239,68,68,0.1)' : 'none' }}>
+                      {f.is_urgent && (<div style={{ position: 'absolute', top: 8, right: 8, padding: '2px 8px', background: '#FEE2E2', color: '#991B1B', fontSize: 10, fontWeight: 800, letterSpacing: 1, borderRadius: 999, animation: 'sirenPulse 1.5s ease-in-out infinite' }}>URGENTE</div>)}
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>{f.type === 'video' ? '🎬' : f.type === 'mixed' ? '📁' : '📷'}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{f.name}</div>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>{f.file_count} {f.file_count === 1 ? 'arquivo' : 'arquivos'} · {f.type === 'video' ? 'Videos' : f.type === 'mixed' ? 'Mix' : 'Fotos'}</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={function() { setSelectedMatFolder(f); loadMaterialFiles(f.id); }} style={{ flex: 1, padding: '8px 12px', background: '#1A1A1A', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Abrir</button>
+                        <button onClick={function() { toggleFolderUrgent(f); }} title={f.is_urgent ? 'Remover urgencia' : 'Marcar urgente'} style={{ padding: '8px 10px', background: f.is_urgent ? '#FEE2E2' : '#F3F4F6', border: '1px solid ' + (f.is_urgent ? '#FCA5A5' : '#E5E5E5'), borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>🚨</button>
+                        <button onClick={function() { deleteFolder(f.id); }} style={{ padding: '8px 10px', background: '#F3F4F6', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>🗑</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {selectedMatFolder && (
+              <>
+                <div style={{ background: '#FFFFFF', border: '1px dashed #C9A961', borderRadius: 12, padding: 24, marginBottom: 16, textAlign: 'center' }}>
+                  <label style={{ cursor: uploadingMaterial ? 'wait' : 'pointer' }}>
+                    <input type="file" accept="image/*,video/*" multiple onChange={function(e) { const files = Array.from(e.target.files || []); files.forEach(function(f) { uploadMaterialFile(f); }); e.target.value = ''; }} disabled={uploadingMaterial} style={{ display: 'none' }} />
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>📤</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A', marginBottom: 4 }}>{uploadingMaterial ? 'Enviando...' : 'Clique para enviar arquivos'}</div>
+                    <div style={{ fontSize: 11, color: '#888' }}>Foto (JPG/PNG/GIF/WebP) ou Video (MP4/WebM/MOV) — max 50 MB cada</div>
+                  </label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                  {materialFiles.length === 0 && (<div style={{ gridColumn: '1 / -1', padding: 40, textAlign: 'center', color: '#888' }}>Nenhum arquivo ainda</div>)}
+                  {materialFiles.map(function(file) {
+                    return (
+                      <div key={file.id} style={{ position: 'relative', aspectRatio: '1 / 1', background: '#F3F4F6', borderRadius: 10, overflow: 'hidden', border: '1px solid #E5E5E5' }}>
+                        {file.file_type === 'video' ? (<video src={file.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />) : (<img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />)}
+                        <button onClick={function() { deleteMaterialFile(file.id); }} style={{ position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: 14, cursor: 'pointer' }}>✕</button>
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'rgba(0,0,0,0.75)', fontSize: 10, color: '#fff', fontWeight: 600 }}>{file.file_type === 'video' ? '▶ VIDEO' : '📷 FOTO'}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {showNewFolderModal && (
+          <div onClick={function() { setShowNewFolderModal(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 420, width: '100%', background: '#FFFFFF', borderRadius: 12, padding: 24 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Nova Pasta</div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Nome</label>
+              <input type="text" value={newFolderName} onChange={function(e) { setNewFolderName(e.target.value); }} placeholder="Ex: Fotos de Stories" style={{ width: '100%', padding: 10, border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 14, marginBottom: 14, boxSizing: 'border-box' }} />
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Tipo</label>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                {[{v:'photo',l:'📷 Fotos'}, {v:'video',l:'🎬 Videos'}, {v:'mixed',l:'📁 Misto'}].map(function(t) { return (<button key={t.v} onClick={function() { setNewFolderType(t.v); }} style={{ flex: 1, padding: 10, background: newFolderType === t.v ? '#1A1A1A' : '#F3F4F6', color: newFolderType === t.v ? '#FFD700' : '#666', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>{t.l}</button>); })}
+              </div>
+              <div onClick={function() { setNewFolderUrgent(!newFolderUrgent); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, marginBottom: 16, background: newFolderUrgent ? '#FEE2E2' : '#F3F4F6', borderRadius: 6, cursor: 'pointer', border: '1px solid ' + (newFolderUrgent ? '#FCA5A5' : '#E5E5E5') }}>
+                <div style={{ width: 18, height: 18, borderRadius: 4, border: '2px solid ' + (newFolderUrgent ? '#DC2626' : '#999'), background: newFolderUrgent ? '#DC2626' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{newFolderUrgent && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900 }}>✓</span>}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: newFolderUrgent ? '#991B1B' : '#666' }}>🚨 Marcar como URGENTE (pulsa no painel)</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={createFolder} style={{ flex: 1, padding: 12, background: '#1A1A1A', color: '#FFD700', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Criar</button>
+                <button onClick={function() { setShowNewFolderModal(false); setNewFolderName(''); setNewFolderUrgent(false); }} style={{ padding: '12px 20px', background: '#F3F4F6', color: '#666', border: '1px solid #E5E5E5', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
+              </div>
+            </div>
           </div>
         )}
 

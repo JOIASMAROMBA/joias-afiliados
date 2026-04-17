@@ -29,6 +29,11 @@ export default function PainelPage() {
   const [postMessage, setPostMessage] = useState('');
   const [activeTab, setActiveTab] = useState('home');
   const [motivationalPhrase, setMotivationalPhrase] = useState('');
+  const [showMaterialsModal, setShowMaterialsModal] = useState(false);
+  const [materialFolders, setMaterialFolders] = useState([]);
+  const [selectedMaterialFolder, setSelectedMaterialFolder] = useState(null);
+  const [materialFiles, setMaterialFiles] = useState([]);
+  const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -264,6 +269,29 @@ export default function PainelPage() {
       setEditMessage('Erro de conexao: ' + err.message);
       setSavingProfile(false);
     }
+  }
+
+  async function openMaterialsModal() {
+    setShowMaterialsModal(true);
+    setSelectedMaterialFolder(null);
+    setLoadingMaterials(true);
+    try {
+      const res = await fetch('/api/materials/folders');
+      const data = await res.json();
+      if (data.ok) setMaterialFolders(data.folders || []);
+    } catch {}
+    setLoadingMaterials(false);
+  }
+
+  async function openMaterialFolder(folder) {
+    setSelectedMaterialFolder(folder);
+    setLoadingMaterials(true);
+    try {
+      const res = await fetch('/api/materials/files?folder_id=' + encodeURIComponent(folder.id));
+      const data = await res.json();
+      if (data.ok) setMaterialFiles(data.files || []);
+    } catch {}
+    setLoadingMaterials(false);
   }
 
   function viewReceipt(url) { setReceiptImage(url); setShowReceiptModal(true); }
@@ -516,6 +544,21 @@ export default function PainelPage() {
             )}
           </div>
 
+          <div className="full-width" onClick={openMaterialsModal} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, padding: 0, marginBottom: 16, overflow: 'hidden', display: 'flex', alignItems: 'stretch', boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)', transition: 'all 0.3s' }}>
+            <div style={{ position: 'relative', width: 110, minHeight: 110, flexShrink: 0, overflow: 'hidden', background: '#000' }}>
+              <img src="/pic.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(15,15,15,0.9) 100%)', pointerEvents: 'none' }} />
+            </div>
+            <div style={{ flex: 1, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 14, filter: 'drop-shadow(0 0 4px rgba(201,169,97,0.5))' }}>🖼️</span>
+                <span style={{ fontSize: 9, color: '#C9A961', letterSpacing: 2.5, fontWeight: 700, textTransform: 'uppercase' }}>Exclusivo</span>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#C9A961', letterSpacing: 1, lineHeight: 1.1, textShadow: '0 0 20px rgba(201,169,97,0.3)' }}>MATERIAL PARA<br/>POSTAR</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 4, letterSpacing: 0.5 }}>Fotos e vídeos para divulgar →</div>
+            </div>
+          </div>
+
           {allSales.length > 0 && (
             <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#C9A961' }}>💎 Ultima Venda</div>
@@ -742,6 +785,67 @@ export default function PainelPage() {
             </div>
             <img src={receiptImage} alt="Comprovante" style={{ width: '100%', borderRadius: 8 }} />
             <a href={receiptImage} download target="_blank" rel="noopener" style={{ display: 'block', marginTop: 12, padding: 12, background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', borderRadius: 10, color: '#000', fontWeight: 800, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}>⬇ Baixar</a>
+          </div>
+        </div>
+      )}
+
+      {showMaterialsModal && (
+        <div onClick={function() { setShowMaterialsModal(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10002, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 720, width: '100%', maxHeight: '92vh', background: 'rgba(15,15,15,0.95)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, padding: 24, overflowY: 'auto', boxShadow: '0 20px 80px rgba(0,0,0,0.7)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(201,169,97,0.15)' }}>
+              <div>
+                {selectedMaterialFolder ? (
+                  <>
+                    <button onClick={function() { setSelectedMaterialFolder(null); setMaterialFiles([]); }} style={{ background: 'none', border: 'none', color: '#C9A961', fontSize: 12, cursor: 'pointer', padding: 0, marginBottom: 6, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 600 }}>← Voltar</button>
+                    <div style={{ fontSize: 20, color: '#fff', fontWeight: 700, letterSpacing: -0.3 }}>{selectedMaterialFolder.name}</div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 11, color: '#C9A961', letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Material para postar</div>
+                    <div style={{ fontSize: 20, color: '#fff', fontWeight: 700, letterSpacing: -0.3 }}>Escolha uma pasta</div>
+                  </>
+                )}
+              </div>
+              <button onClick={function() { setShowMaterialsModal(false); }} style={{ background: 'none', border: 'none', color: '#C9A961', fontSize: 24, cursor: 'pointer', padding: 0, lineHeight: 1 }}>✕</button>
+            </div>
+
+            {loadingMaterials && (<div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.5)' }}>Carregando...</div>)}
+
+            {!loadingMaterials && !selectedMaterialFolder && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                {materialFolders.length === 0 && (<div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.4)' }}>Nenhuma pasta disponível ainda</div>)}
+                {materialFolders.map(function(f) {
+                  return (
+                    <button key={f.id} onClick={function() { openMaterialFolder(f); }} style={{ position: 'relative', background: f.is_urgent ? 'linear-gradient(135deg, rgba(255,80,80,0.1), rgba(255,80,80,0.02))' : 'rgba(255,255,255,0.03)', border: '1px solid ' + (f.is_urgent ? 'rgba(255,80,80,0.4)' : 'rgba(201,169,97,0.2)'), borderRadius: 12, padding: '18px 16px', color: '#fff', textAlign: 'left', cursor: 'pointer', transition: 'all 0.3s', animation: f.is_urgent ? 'obligationPulse 1.8s ease-in-out infinite' : 'none' }}>
+                      {f.is_urgent && (<div style={{ position: 'absolute', top: 8, right: 8, background: '#ff4444', color: '#fff', fontSize: 9, fontWeight: 800, letterSpacing: 1, padding: '2px 8px', borderRadius: 999 }}>URGENTE</div>)}
+                      <div style={{ fontSize: 28, marginBottom: 8 }}>{f.type === 'video' ? '🎬' : f.type === 'mixed' ? '📁' : '📷'}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{f.name}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(201,169,97,0.7)', letterSpacing: 0.5 }}>{f.file_count} {f.file_count === 1 ? 'arquivo' : 'arquivos'}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {!loadingMaterials && selectedMaterialFolder && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                {materialFiles.length === 0 && (<div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.4)' }}>Esta pasta ainda está vazia</div>)}
+                {materialFiles.map(function(file) {
+                  return (
+                    <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" download style={{ position: 'relative', aspectRatio: '1 / 1', background: '#0a0a0a', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 10, overflow: 'hidden', display: 'block', textDecoration: 'none' }}>
+                      {file.file_type === 'video' ? (
+                        <video src={file.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted playsInline />
+                      ) : (
+                        <img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      )}
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 8px', background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.85))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 10, color: '#C9A961', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{file.file_type === 'video' ? '▶ Vídeo' : '⇣ Baixar'}</span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
