@@ -11,11 +11,23 @@ export async function GET(request) {
 
     const { data, error } = await supabaseAdmin
       .from('material_files')
-      .select('id, url, file_name, file_type, created_at')
+      .select('id, url, file_name, file_type, folder_id, created_at')
       .eq('folder_id', folderId)
       .order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
-    return NextResponse.json({ ok: true, files: data || [] });
+
+    // Diagnostico temporario
+    const allFiles = await supabaseAdmin.from('material_files').select('id, folder_id').limit(20);
+    return NextResponse.json({
+      ok: true,
+      files: data || [],
+      _debug: {
+        folderIdQueried: folderId,
+        folderIdLength: folderId.length,
+        totalRowsInTable: (allFiles.data || []).length,
+        sampleFolderIds: (allFiles.data || []).slice(0, 3).map(f => f.folder_id),
+      },
+    });
   } catch (err) {
     return NextResponse.json({ error: 'unexpected', detail: String(err?.message || err) }, { status: 500 });
   }
