@@ -7,14 +7,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" style={{ background: '#000' }}>
       <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
+        <meta name="theme-color" content="#000000" />
+        <style dangerouslySetInnerHTML={{ __html: 'html,body{background:#000 !important;}' }} />
       </head>
-      <body>{children}</body>
+      <body style={{ background: '#000', margin: 0 }}>{children}</body>
     </html>
   );
 }

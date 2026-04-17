@@ -290,24 +290,21 @@ export default function LoginPage() {
 
             <button
               onClick={handleLogin}
-              disabled={loading || !coupon.trim() || password.length !== 6}
+              disabled={loading}
               style={{
                 width: '100%',
                 padding: '15px 24px',
-                background: (loading || !coupon.trim() || password.length !== 6)
-                  ? 'rgba(255,255,255,0.05)'
-                  : 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)',
-                border: '1px solid ' + ((loading || !coupon.trim() || password.length !== 6) ? 'rgba(255,255,255,0.08)' : 'rgba(201,169,97,0.6)'),
+                background: 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)',
+                border: '1px solid rgba(201,169,97,0.6)',
                 borderRadius: 10,
-                color: (loading || !coupon.trim() || password.length !== 6) ? 'rgba(255,255,255,0.3)' : '#1a1306',
+                color: '#1a1306',
                 fontWeight: 700,
                 fontSize: 15,
                 letterSpacing: 0.5,
-                cursor: (loading || !coupon.trim() || password.length !== 6) ? 'not-allowed' : 'pointer',
+                cursor: loading ? 'wait' : 'pointer',
                 transition: 'all 0.3s',
-                boxShadow: (loading || !coupon.trim() || password.length !== 6)
-                  ? 'none'
-                  : '0 8px 24px rgba(201,169,97,0.3), inset 0 1px 0 rgba(255,255,255,0.35)',
+                boxShadow: '0 8px 24px rgba(201,169,97,0.3), inset 0 1px 0 rgba(255,255,255,0.35)',
+                opacity: loading ? 0.7 : 1,
               }}
             >
               {loading ? 'Entrando...' : 'Entrar'}
