@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
+import { supabase, supabaseRealtime } from '../../lib/supabase';
 
 const PLATFORM_DOMAINS = {
   instagram: ['instagram.com', 'instagr.am'],
@@ -126,6 +126,11 @@ export default function AdminDashboard() {
   const [newAffiliateIds, setNewAffiliateIds] = useState(new Set());
   const [postsView, setPostsView] = useState('feed');
   const [rankingWindow, setRankingWindow] = useState('today');
+  const [affiliatesFull, setAffiliatesFull] = useState([]);
+  const [cadastrosFilter, setCadastrosFilter] = useState('new5');
+  const [selectedCadastroId, setSelectedCadastroId] = useState(null);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [onlineIds, setOnlineIds] = useState(new Set());
   const [obligationMonth, setObligationMonth] = useState(new Date().getMonth());
   const [obligationYear, setObligationYear] = useState(new Date().getFullYear());
 
@@ -141,6 +146,17 @@ export default function AdminDashboard() {
     syncViewport();
     window.addEventListener('resize', syncViewport);
     return function() { window.removeEventListener('resize', syncViewport); };
+  }, []);
+
+  useEffect(function() {
+    var ch = supabaseRealtime.channel('afiliadas-online');
+    ch.on('presence', { event: 'sync' }, function() {
+      var state = ch.presenceState();
+      var keys = Object.keys(state);
+      setOnlineCount(keys.length);
+      setOnlineIds(new Set(keys));
+    }).subscribe();
+    return function() { supabaseRealtime.removeChannel(ch); };
   }, []);
 
   function isMobileViewport() {
@@ -181,10 +197,12 @@ export default function AdminDashboard() {
     try { var topsRes = await supabase.from('monthly_top_affiliate').select('*'); setMonthlyTops(topsRes.data || []); } catch (e) {}
     try { var rwRes = await supabase.from('rewards').select('*').order('target_value', { ascending: true }); setRewards(rwRes.data || []); } catch (e) {}
     try {
-      var createdRes = await supabase.from('affiliates').select('id, created_at');
+      var fullRes = await supabase.from('affiliates').select('*').order('created_at', { ascending: false });
+      var rows = fullRes.data || [];
+      setAffiliatesFull(rows);
       var cutoff = Date.now() - 5 * 24 * 60 * 60 * 1000;
       var set = new Set();
-      (createdRes.data || []).forEach(function(a) {
+      rows.forEach(function(a) {
         var t = a.created_at ? new Date(a.created_at).getTime() : 0;
         if (t && t >= cutoff) set.add(a.id);
       });
@@ -540,7 +558,8 @@ export default function AdminDashboard() {
     { id: 'obligations', label: 'Obrigações', icon: '📅', alert: sponsoredAlert.length > 0 },
     { id: 'materials', label: 'Material', icon: '📷' },
     { id: 'payments', label: 'Pagamentos', icon: '💳' },
-    { id: 'withdrawals', label: 'Saques', icon: '💸' }
+    { id: 'withdrawals', label: 'Saques', icon: '💸' },
+    { id: 'cadastros', label: 'Cadastros', icon: '🗂️' }
   ];
 
   var dateRangeOptions = [{ v: '1', l: 'Hoje' }, { v: '3', l: '3 dias' }, { v: '7', l: '7 dias' }, { v: '30', l: '30 dias' }, { v: '90', l: '90 dias' }, { v: 'all', l: 'Tudo' }];
@@ -659,6 +678,10 @@ export default function AdminDashboard() {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
+        @keyframes onlineDotPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.55); }
+          50%      { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+        }
       `}</style>
 
       <div className={"admin-sidebar-backdrop" + (sidebarOpen ? " mobile-open" : "")} onClick={function() { setSidebarOpen(false); }} />
@@ -701,8 +724,12 @@ export default function AdminDashboard() {
             <span style={{ display: 'block', height: 2, background: '#1A1A1A', borderRadius: 2 }} />
             <span style={{ display: 'block', height: 2, background: '#1A1A1A', borderRadius: 2 }} />
           </button>
-          <div style={{ flex: 1, fontSize: 15, fontWeight: 700 }}>
-            {(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}
+          <div style={{ flex: 1, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}</span>
+            <span title={onlineCount + ' afiliadas online'} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px 2px 5px', background: '#ECFDF5', border: '1px solid #6EE7B7', borderRadius: 14, fontSize: 11, fontWeight: 800, color: '#065F46', flexShrink: 0 }}>
+              <span style={{ width: 7, height: 7, borderRadius: 4, background: '#10B981', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />
+              {onlineCount}
+            </span>
           </div>
           {kpis.pendingWithdrawals > 0 && (
             <span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{kpis.pendingWithdrawals}</span>
@@ -710,7 +737,13 @@ export default function AdminDashboard() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span>{(menuItems.find(function(m){return m.id === activeTab;}) || {}).label || 'Dashboard'}</span>
+              <span title={onlineCount + ' afiliadas online agora'} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px 4px 8px', background: '#ECFDF5', border: '1px solid #6EE7B7', borderRadius: 20, fontSize: 13, fontWeight: 800, color: '#065F46' }}>
+                <span style={{ width: 9, height: 9, borderRadius: 5, background: '#10B981', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />
+                {onlineCount} online
+              </span>
+            </div>
             <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
               {activeTab === 'overview' && 'Visão geral da performance'}
               {activeTab === 'posts' && 'Feed em tempo real de postagens'}
@@ -1306,6 +1339,95 @@ export default function AdminDashboard() {
             {withdrawals.length === 0 && (<div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 40, textAlign: 'center', color: '#888' }}>Nenhuma solicitacao</div>)}
           </div>
         )}
+
+        {activeTab === 'cadastros' && (function() {
+          var now = Date.now();
+          var thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0);
+          var thisYear = new Date(new Date().getFullYear(), 0, 1);
+          function passFilter(createdAtIso) {
+            if (!createdAtIso) return cadastrosFilter === 'all';
+            var t = new Date(createdAtIso).getTime();
+            if (cadastrosFilter === 'new5') return now - t <= 5 * 86400000;
+            if (cadastrosFilter === '7d') return now - t <= 7 * 86400000;
+            if (cadastrosFilter === '30d') return now - t <= 30 * 86400000;
+            if (cadastrosFilter === 'month') return t >= thisMonth.getTime();
+            if (cadastrosFilter === 'year') return t >= thisYear.getTime();
+            return true;
+          }
+          var filtered = (affiliatesFull || []).filter(function(a) { return passFilter(a.created_at); });
+          var totalAll = (affiliatesFull || []).length;
+          var statsCards = [
+            { label: 'Total', value: totalAll, tint: '#1A1A1A' },
+            { label: 'Últimos 5 dias', value: (affiliatesFull || []).filter(function(a) { return a.created_at && now - new Date(a.created_at).getTime() <= 5 * 86400000; }).length, tint: '#10B981' },
+            { label: '30 dias', value: (affiliatesFull || []).filter(function(a) { return a.created_at && now - new Date(a.created_at).getTime() <= 30 * 86400000; }).length, tint: '#3B82F6' },
+            { label: 'Este mês', value: (affiliatesFull || []).filter(function(a) { return a.created_at && new Date(a.created_at).getTime() >= thisMonth.getTime(); }).length, tint: '#8B5CF6' },
+            { label: 'Este ano', value: (affiliatesFull || []).filter(function(a) { return a.created_at && new Date(a.created_at).getTime() >= thisYear.getTime(); }).length, tint: '#F59E0B' },
+          ];
+          var filterOptions = [
+            { id: 'new5', label: '✨ Novos (5 dias)' },
+            { id: '7d', label: '7 dias' },
+            { id: '30d', label: '30 dias' },
+            { id: 'month', label: 'Este mês' },
+            { id: 'year', label: 'Este ano' },
+            { id: 'all', label: 'Todos' },
+          ];
+          function fmtDate(iso) {
+            if (!iso) return '—';
+            var d = new Date(iso);
+            return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          }
+          return (
+            <div>
+              <div className="admin-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+                {statsCards.map(function(s) {
+                  return (
+                    <div key={s.label} style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 16 }}>
+                      <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>{s.label}</div>
+                      <div style={{ fontSize: 28, fontWeight: 900, color: s.tint, marginTop: 4, lineHeight: 1 }}>{s.value}</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                {filterOptions.map(function(f) {
+                  var active = cadastrosFilter === f.id;
+                  return (<button key={f.id} onClick={function() { setCadastrosFilter(f.id); }} style={{ padding: '8px 14px', background: active ? '#1A1A1A' : '#FFF', border: '1px solid ' + (active ? '#1A1A1A' : '#E5E5E5'), borderRadius: 20, color: active ? '#FFD700' : '#555', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{f.label}</button>);
+                })}
+              </div>
+
+              <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: '12px 16px', marginBottom: 10, fontSize: 13, color: '#666' }}>
+                <strong style={{ color: '#1A1A1A' }}>{filtered.length}</strong> {filtered.length === 1 ? 'cadastro' : 'cadastros'} no filtro selecionado
+              </div>
+
+              <div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden' }}>
+                {filtered.length === 0 && (<div style={{ padding: 48, textAlign: 'center', color: '#888' }}>Nenhum cadastro nesse período</div>)}
+                {filtered.map(function(a, i) {
+                  var isOnline = onlineIds.has(a.id);
+                  return (
+                    <button key={a.id} onClick={function() { setSelectedCadastroId(a.id); }} style={{ width: '100%', padding: '14px 16px', borderBottom: i < filtered.length - 1 ? '1px solid #F0F0F0' : 'none', display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) auto', gap: 12, alignItems: 'center', background: 'transparent', border: 'none', borderBottomColor: i < filtered.length - 1 ? '#F0F0F0' : 'transparent', borderBottomWidth: 1, borderBottomStyle: 'solid', cursor: 'pointer', textAlign: 'left' }}>
+                      <div style={{ position: 'relative', width: 40, height: 40, borderRadius: 20, background: a.avatar_url ? 'transparent' : '#F3F4F6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#666', flexShrink: 0 }}>
+                        {a.avatar_url ? <img src={a.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                        {isOnline && <span style={{ position: 'absolute', bottom: 0, right: 0, width: 11, height: 11, borderRadius: 6, background: '#10B981', border: '2px solid #FFF', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>
+                          {newAffiliateIds.has(a.id) && <NewBadge />}
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#C9A961', marginTop: 1, letterSpacing: 0.5 }}>{a.coupon_code}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 11, color: '#888' }}>{fmtDate(a.created_at)}</div>
+                        <div style={{ fontSize: 11, color: '#BBB', marginTop: 2 }}>›</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </main>
 
       {showRewardModal && (
@@ -1351,6 +1473,77 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {selectedCadastroId && (function() {
+        var a = (affiliatesFull || []).find(function(x) { return x.id === selectedCadastroId; });
+        if (!a) return null;
+        var isOnline = onlineIds.has(a.id);
+        var isNew = newAffiliateIds.has(a.id);
+        function fmtDate(iso) {
+          if (!iso) return '—';
+          var d = new Date(iso);
+          return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        var whatsappDigits = (a.phone || a.whatsapp || '').replace(/\D/g, '');
+        var whatsappUrl = whatsappDigits.length >= 10 ? 'https://wa.me/' + (whatsappDigits.length === 11 || whatsappDigits.length === 10 ? '55' + whatsappDigits : whatsappDigits) : null;
+        var SKIP_FIELDS = { id: 1, password_hash: 1, avatar_initials: 1, avatar_url: 1, name: 1, coupon_code: 1, created_at: 1 };
+        var FIELD_LABELS = { email: 'Email', phone: 'Telefone', whatsapp: 'WhatsApp', pix_key: 'Chave PIX', pix_type: 'Tipo PIX', commission_value: 'Comissão', is_admin: 'Admin', is_sponsored: 'Patrocinado', blocked: 'Bloqueada', weekly_goal: 'Meta semanal', weekly_posts_goal: 'Meta posts/semana', city: 'Cidade', state: 'Estado', birthday: 'Aniversário', notes: 'Observações', updated_at: 'Atualizado em' };
+        var extraFields = Object.keys(a).filter(function(k) { return !SKIP_FIELDS[k] && a[k] !== null && a[k] !== '' && a[k] !== undefined; });
+        function displayValue(k, v) {
+          if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
+          if (k === 'commission_value') return 'R$ ' + Number(v).toFixed(2);
+          if (k === 'updated_at' || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v))) return fmtDate(v);
+          return String(v);
+        }
+        return (
+          <div onClick={function() { setSelectedCadastroId(null); }} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ background: '#FFF', borderRadius: 14, maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <div style={{ padding: 22, background: 'linear-gradient(135deg, #1A1A1A, #333)', color: '#FFF', borderRadius: '14px 14px 0 0', display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ position: 'relative', width: 64, height: 64, borderRadius: 32, background: a.avatar_url ? 'transparent' : 'linear-gradient(135deg, #FFD700, #B8860B)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#1A1A1A', flexShrink: 0 }}>
+                  {a.avatar_url ? <img src={a.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                  {isOnline && <span style={{ position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, borderRadius: 8, background: '#10B981', border: '3px solid #1A1A1A', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>
+                    {isNew && <NewBadge />}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#FFD700', marginTop: 2, letterSpacing: 1 }}>{a.coupon_code}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>Cadastrada em {fmtDate(a.created_at)}</div>
+                </div>
+                <button onClick={function() { setSelectedCadastroId(null); }} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: 22, cursor: 'pointer', padding: 4 }}>✕</button>
+              </div>
+
+              <div style={{ padding: 20 }}>
+                {isOnline && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px 4px 8px', background: '#ECFDF5', border: '1px solid #6EE7B7', borderRadius: 20, fontSize: 12, fontWeight: 800, color: '#065F46', marginBottom: 14 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 4, background: '#10B981', animation: 'onlineDotPulse 1.6s ease-in-out infinite' }} />
+                    Online agora
+                  </div>
+                )}
+
+                {whatsappUrl && (
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, background: '#25D366', borderRadius: 10, color: '#FFF', fontWeight: 800, fontSize: 14, textDecoration: 'none', marginBottom: 14 }}>
+                    💬 Abrir conversa no WhatsApp
+                  </a>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1, background: '#E5E5E5', border: '1px solid #E5E5E5', borderRadius: 10, overflow: 'hidden' }}>
+                  {extraFields.map(function(k) {
+                    return (
+                      <div key={k} style={{ background: '#FFF', padding: '10px 14px', display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'center' }}>
+                        <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.3 }}>{FIELD_LABELS[k] || k}</div>
+                        <div style={{ fontSize: 13, color: '#1A1A1A', wordBreak: 'break-word' }}>{displayValue(k, a[k])}</div>
+                      </div>
+                    );
+                  })}
+                  {extraFields.length === 0 && (<div style={{ background: '#FFF', padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum dado adicional cadastrado</div>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {linkPreview && (function() {
         var info = analyzeLink(linkPreview.url, linkPreview.platform);

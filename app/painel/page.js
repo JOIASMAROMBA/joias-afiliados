@@ -86,7 +86,16 @@ export default function PainelPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posting_obligations', filter: 'affiliate_id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'affiliates', filter: 'id=eq.' + affiliate.id }, function() { loadData(affiliate.id); })
       .subscribe();
-    return function() { supabaseRealtime.removeChannel(channel); };
+    var presenceCh = supabaseRealtime.channel('afiliadas-online', { config: { presence: { key: affiliate.id } } });
+    presenceCh.subscribe(function(status) {
+      if (status === 'SUBSCRIBED') {
+        presenceCh.track({ id: affiliate.id, name: affiliate.name, coupon: affiliate.coupon_code, at: Date.now() });
+      }
+    });
+    return function() {
+      supabaseRealtime.removeChannel(channel);
+      supabaseRealtime.removeChannel(presenceCh);
+    };
   }, [affiliate && affiliate.id]);
 
   async function loadData(affiliateId) {
