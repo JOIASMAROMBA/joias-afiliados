@@ -388,6 +388,12 @@ export default function PainelPage() {
           25% { transform: perspective(200px) rotateZ(-18deg) rotateY(360deg) scale(1.25); }
           50%, 100% { transform: perspective(200px) rotateZ(-18deg) rotateY(720deg) scale(1); }
         }
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type=number] { -moz-appearance: textfield; }
       `}</style>
 
       <div className="painel-header" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
@@ -675,7 +681,7 @@ export default function PainelPage() {
                   <button onClick={closeWithdrawModal} style={{ background: 'none', border: 'none', color: '#C9A961', fontSize: 20, cursor: 'pointer' }}>✕</button>
                 </div>
                 <div style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 12, padding: 14, marginBottom: 16, textAlign: 'center' }}>
-                  <div style={{ color: 'rgba(0,255,136,0.6)', fontSize: 11 }}>SALDO DISPONIVEL</div>
+                  <div style={{ color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>SALDO DISPONIVEL</div>
                   <div style={{ fontSize: 26, fontWeight: 900, color: '#00ff88' }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
                 <label style={{ display: 'block', marginBottom: 6, color: 'rgba(201,169,97,0.7)', fontSize: 12, fontWeight: 700 }}>QUANTO DESEJA SACAR?</label>
