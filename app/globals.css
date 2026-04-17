@@ -25,6 +25,12 @@ input:focus, button:focus, select:focus {
   outline: none;
 }
 
+@media (max-width: 900px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 button {
   transition: all 0.2s ease;
 }
