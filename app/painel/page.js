@@ -619,8 +619,10 @@ export default function PainelPage() {
         .painel-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
         .painel-rewards-wrap { max-width: 100%; }
         .fixed-monthly-value { font-size: 27px; }
+        .fixed-monthly-sub { font-size: 7.6px; }
         @media (min-width: 900px) {
           .fixed-monthly-value { font-size: 32px; }
+          .fixed-monthly-sub { font-size: 8px; }
           .painel-root { max-width: 1100px; padding: 32px 40px; }
           .painel-home-grid {
             display: grid;
@@ -786,7 +788,13 @@ export default function PainelPage() {
                       animation: 'goldShimmer 2s linear infinite',
                     }}>R${Number(fixedMonthly.amount || 0).toFixed(2).replace('.', ',')}</span>
                   </div>
-                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Liberado todo dia {fixedMonthly.payday}</div>
+                  <div className="fixed-monthly-sub" style={{
+                    marginTop: 2, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', lineHeight: 1,
+                    background: 'linear-gradient(90deg, #8B6914 0%, #C9A961 30%, #FFF4B8 48%, #FFFFFF 50%, #FFF4B8 52%, #C9A961 70%, #8B6914 100%)',
+                    backgroundSize: '300% auto',
+                    WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    animation: 'goldShimmer 2s linear infinite',
+                  }}>Liberado todo dia {fixedMonthly.payday}</div>
                 </div>
               </>
             )}
