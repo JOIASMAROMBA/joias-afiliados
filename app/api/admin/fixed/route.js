@@ -31,17 +31,34 @@ async function tryNotify(affiliateId, amount) {
   } catch (e) {}
 }
 
+function computeNextPaymentDate(rule) {
+  var payday = Number(rule.payday);
+  var nextY, nextM;
+  if (rule.last_paid_at) {
+    var last = new Date(rule.last_paid_at);
+    nextY = last.getFullYear();
+    nextM = last.getMonth() + 1;
+    if (nextM > 11) { nextM = 0; nextY++; }
+  } else {
+    var base = new Date(rule.created_at || Date.now());
+    var baseDay = base.getDate();
+    nextY = base.getFullYear();
+    nextM = base.getMonth();
+    if (baseDay > payday) {
+      nextM = nextM + 1;
+      if (nextM > 11) { nextM = 0; nextY++; }
+    }
+  }
+  var daysInMonth = new Date(nextY, nextM + 1, 0).getDate();
+  var targetDay = Math.min(payday, daysInMonth);
+  return new Date(nextY, nextM, targetDay, 0, 0, 0, 0);
+}
+
 function isDue(rule, now) {
-  if (!rule.active || !rule.recurring) return false;
-  var today = new Date(now);
-  var day = today.getDate();
-  var payday = Math.min(rule.payday, new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate());
-  if (day < payday) return false;
-  if (!rule.last_paid_at) return true;
-  var last = new Date(rule.last_paid_at);
-  if (last.getFullYear() < today.getFullYear()) return true;
-  if (last.getFullYear() === today.getFullYear() && last.getMonth() < today.getMonth()) return true;
-  return false;
+  if (!rule.active) return false;
+  if (rule.last_paid_at && !rule.recurring) return false;
+  var next = computeNextPaymentDate(rule);
+  return now >= next.getTime();
 }
 
 export async function POST(request) {
@@ -71,15 +88,13 @@ export async function POST(request) {
       recurring: recurring,
       active: true,
       notes: notes,
-      last_paid_at: new Date().toISOString(),
+      last_paid_at: null,
       created_by: session.affiliate.id,
     }).select().single();
     if (ruleIns.error) return NextResponse.json({ error: 'db_error', detail: ruleIns.error.message }, { status: 500 });
 
-    var payRes = await insertPayment(affiliateId, amount, ruleIns.data.id);
-    if (payRes.error) return NextResponse.json({ error: 'payment_failed', detail: payRes.error.message }, { status: 500 });
-
-    await tryNotify(affiliateId, amount);
+    // Se hoje ja e o payday (ou passou nesse mesmo mes apos criacao), process-due vai pagar no proximo load.
+    // Se admin quer pagar agora, use o botao PAGAR na regra.
 
     return NextResponse.json({ ok: true, rule: ruleIns.data });
   }
