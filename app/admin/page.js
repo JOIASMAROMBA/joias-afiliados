@@ -143,6 +143,13 @@ export default function AdminDashboard() {
   const [cadastroHistory, setCadastroHistory] = useState(null);
   const [cadastroHistoryLoading, setCadastroHistoryLoading] = useState(false);
   const [vendasManualSearch, setVendasManualSearch] = useState('');
+  const [fixedRules, setFixedRules] = useState([]);
+  const [fixedSearch, setFixedSearch] = useState('');
+  const [fixedModalAffiliate, setFixedModalAffiliate] = useState(null);
+  const [fixedAmount, setFixedAmount] = useState('');
+  const [fixedPayday, setFixedPayday] = useState('5');
+  const [fixedRecurring, setFixedRecurring] = useState(true);
+  const [fixedBusy, setFixedBusy] = useState(false);
   const [vendasManualQty, setVendasManualQty] = useState({}); // { [affiliate_id]: number }
   const [vendasManualConfirm, setVendasManualConfirm] = useState(null); // { affiliate, quantity }
   const [vendasManualBusy, setVendasManualBusy] = useState(false);
@@ -225,6 +232,12 @@ export default function AdminDashboard() {
         if (t && t >= cutoff) set.add(a.id);
       });
       setNewAffiliateIds(set);
+    } catch (e) {}
+    try {
+      await fetch('/api/admin/fixed?action=process-due').catch(function() {});
+      var fxRes = await fetch('/api/admin/fixed');
+      var fxData = await fxRes.json().catch(function() { return {}; });
+      if (fxData && fxData.ok) setFixedRules(fxData.rules || []);
     } catch (e) {}
   }
 
@@ -580,6 +593,7 @@ export default function AdminDashboard() {
     { id: 'withdrawals', label: 'Saques', icon: '💸' },
     { id: 'cadastros', label: 'Cadastros', icon: '🗂️' },
     { id: 'vendas-manual', label: 'Vendas Manual', icon: '➕' },
+    { id: 'fixed-monthly', label: 'Fixo Mensal', icon: '💠' },
     { id: 'notify', label: 'Notificar', icon: '📣' }
   ];
 
@@ -1622,6 +1636,172 @@ export default function AdminDashboard() {
           </div>);
         })()}
 
+        {activeTab === 'fixed-monthly' && (function() {
+          var q = fixedSearch.trim().toLowerCase();
+          var pool = (affiliatesFull || []).filter(function(a) { return !a.is_admin && !a.deleted_at; });
+          var searchResults = q ? pool.filter(function(a) {
+            return (a.coupon_code || '').toLowerCase().includes(q) || (a.name || '').toLowerCase().includes(q);
+          }).slice(0, 20) : [];
+          var activeRules = (fixedRules || []).filter(function(r) { return r.active; });
+          var inactiveRules = (fixedRules || []).filter(function(r) { return !r.active; });
+
+          function openModal(a) {
+            setFixedModalAffiliate(a);
+            setFixedAmount('');
+            setFixedPayday('5');
+            setFixedRecurring(true);
+          }
+
+          async function submitRule() {
+            if (!fixedModalAffiliate) return;
+            var amt = Number(fixedAmount.replace(',', '.'));
+            if (!amt || amt <= 0) { alert('Informe um valor valido'); return; }
+            var payday = Math.floor(Number(fixedPayday));
+            if (!payday || payday < 1 || payday > 31) { alert('Dia invalido (1-31)'); return; }
+            setFixedBusy(true);
+            try {
+              var res = await fetch('/api/admin/fixed?action=create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ affiliate_id: fixedModalAffiliate.id, amount: amt, payday: payday, recurring: fixedRecurring }),
+              });
+              var data = await res.json().catch(function() { return {}; });
+              if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'falha')); setFixedBusy(false); return; }
+              setFixedModalAffiliate(null);
+              await loadAll();
+            } catch (e) { alert('Erro: ' + e.message); }
+            setFixedBusy(false);
+          }
+
+          async function deleteRule(r) {
+            if (!confirm('Excluir regra de ' + (r.affiliates && r.affiliates.name) + '? Pagamentos ja feitos NAO serao revertidos.')) return;
+            try {
+              var res = await fetch('/api/admin/fixed?action=delete', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rule_id: r.id }),
+              });
+              var d = await res.json().catch(function() { return {}; });
+              if (!res.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+              await loadAll();
+            } catch (e) { alert('Erro: ' + e.message); }
+          }
+
+          async function toggleRule(r) {
+            try {
+              var res = await fetch('/api/admin/fixed?action=toggle', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rule_id: r.id }),
+              });
+              var d = await res.json().catch(function() { return {}; });
+              if (!res.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+              await loadAll();
+            } catch (e) { alert('Erro: ' + e.message); }
+          }
+
+          async function payNow(r) {
+            if (!confirm('Creditar R$' + Number(r.amount).toFixed(2).replace('.', ',') + ' agora para ' + (r.affiliates && r.affiliates.name) + '?')) return;
+            try {
+              var res = await fetch('/api/admin/fixed?action=pay-now', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rule_id: r.id }),
+              });
+              var d = await res.json().catch(function() { return {}; });
+              if (!res.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+              alert('Pagamento creditado.');
+              await loadAll();
+            } catch (e) { alert('Erro: ' + e.message); }
+          }
+
+          function fmtMoney(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+          function fmtDate(iso) { if (!iso) return '—'; var d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+
+          function RuleCard(props) {
+            var r = props.rule;
+            var a = r.affiliates || {};
+            return (
+              <div style={{ background: r.active ? '#FFFFFF' : '#FAFAFA', border: '1px solid ' + (r.active ? '#FFD700' : '#E5E5E5'), borderRadius: 10, padding: 14, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 19, background: a.avatar_url ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#1a1306', flexShrink: 0 }}>
+                  {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                </div>
+                <div style={{ flex: '1 1 160px', minWidth: 140 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name || '—'}</div>
+                  <div style={{ fontSize: 11, color: '#888', fontFamily: 'monospace', marginTop: 2 }}>{a.coupon_code}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, flex: '1 1 auto', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>Valor</div>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: '#C9A961' }}>{fmtMoney(r.amount)}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>Dia</div>
+                    <div style={{ fontSize: 15, fontWeight: 900 }}>{r.payday}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>Tipo</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: r.recurring ? '#10B981' : '#888' }}>{r.recurring ? 'RECORRENTE' : 'Única'}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button onClick={function() { payNow(r); }} disabled={!r.active} style={{ padding: '6px 10px', background: r.active ? '#10B981' : '#E5E5E5', color: r.active ? '#FFF' : '#999', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: r.active ? 'pointer' : 'not-allowed', letterSpacing: 0.5 }}>PAGAR</button>
+                  <button onClick={function() { toggleRule(r); }} style={{ padding: '6px 10px', background: '#FFFFFF', color: r.active ? '#991B1B' : '#065F46', border: '1px solid ' + (r.active ? '#FCA5A5' : '#6EE7B7'), borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{r.active ? 'Pausar' : 'Ativar'}</button>
+                  <button onClick={function() { deleteRule(r); }} style={{ padding: '6px 10px', background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕</button>
+                </div>
+                <div style={{ flexBasis: '100%', fontSize: 10, color: '#888' }}>Último pagamento: {fmtDate(r.last_paid_at)}</div>
+              </div>
+            );
+          }
+
+          return (<div>
+            <div style={{ background: 'linear-gradient(135deg, #1A1306 0%, #0a0604 100%)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 12, padding: 16, marginBottom: 14, color: '#FFF' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <span style={{ fontSize: 20 }}>💠</span>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#C9A961', letterSpacing: 1 }}>FIXO MENSAL</div>
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>Pagamento mensal fixo para afiliadas patrocinadas. O valor entra no saldo disponível na hora (não fica bloqueado 8 dias). Se recorrente, processa automaticamente todo mês no dia escolhido.</div>
+            </div>
+
+            <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>Adicionar fixo mensal - buscar afiliada</div>
+              <input
+                type="text"
+                value={fixedSearch}
+                onChange={function(e) { setFixedSearch(e.target.value); }}
+                placeholder="Digite o cupom ou nome..."
+                style={{ width: '100%', padding: 12, border: '1px solid #E5E5E5', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+              />
+              {q && (
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {searchResults.length === 0 && (<div style={{ padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum resultado</div>)}
+                  {searchResults.map(function(a) {
+                    return (
+                      <div key={a.id} style={{ background: '#FAFAFA', border: '1px solid #E5E5E5', borderRadius: 8, padding: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 17, background: a.avatar_url ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#1a1306', flexShrink: 0 }}>
+                          {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+                          <div style={{ fontSize: 11, color: '#888', fontFamily: 'monospace' }}>{a.coupon_code}</div>
+                        </div>
+                        <button onClick={function() { openModal(a); }} style={{ padding: '7px 14px', background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', color: '#1a1306', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5 }}>+ ADICIONAR</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div style={{ fontSize: 11, color: '#888', fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>Regras Ativas ({activeRules.length})</div>
+            {activeRules.length === 0 && (<div style={{ background: '#FFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 30, textAlign: 'center', color: '#888', fontSize: 13, marginBottom: 16 }}>Nenhuma regra ativa</div>)}
+            {activeRules.map(function(r) { return <RuleCard key={r.id} rule={r} />; })}
+
+            {inactiveRules.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, color: '#888', fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, marginTop: 20 }}>Pausadas ({inactiveRules.length})</div>
+                {inactiveRules.map(function(r) { return <RuleCard key={r.id} rule={r} />; })}
+              </>
+            )}
+          </div>);
+        })()}
+
         {activeTab === 'notify' && (function() {
           var q = notifySearch.trim().toLowerCase();
           var list = (affiliatesFull || []).filter(function(a) {
@@ -1810,6 +1990,55 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {fixedModalAffiliate && (function() {
+        var a = fixedModalAffiliate;
+        async function submit() {
+          var amt = Number(String(fixedAmount).replace(',', '.'));
+          if (!amt || amt <= 0) { alert('Informe um valor valido'); return; }
+          var payday = Math.floor(Number(fixedPayday));
+          if (!payday || payday < 1 || payday > 31) { alert('Dia invalido (1-31)'); return; }
+          setFixedBusy(true);
+          try {
+            var res = await fetch('/api/admin/fixed?action=create', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ affiliate_id: a.id, amount: amt, payday: payday, recurring: fixedRecurring }),
+            });
+            var data = await res.json().catch(function() { return {}; });
+            if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'falha')); setFixedBusy(false); return; }
+            setFixedModalAffiliate(null);
+            await loadAll();
+          } catch (e) { alert('Erro: ' + e.message); }
+          setFixedBusy(false);
+        }
+        return (
+          <div onClick={function() { if (!fixedBusy) setFixedModalAffiliate(null); }} style={{ position: 'fixed', inset: 0, zIndex: 9800, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 440, width: '100%', background: 'linear-gradient(180deg, #1a1306, #0a0604)', border: '2px solid #C9A961', borderRadius: 14, padding: 22, color: '#FFF', boxShadow: '0 20px 80px rgba(201,169,97,0.35)' }}>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 34 }}>💠</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#C9A961', marginTop: 4, letterSpacing: 1 }}>FIXO MENSAL</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>{a.name} · <span style={{ fontFamily: 'monospace' }}>{a.coupon_code}</span></div>
+              </div>
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(201,169,97,0.8)', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Valor mensal (R$)</label>
+              <input type="text" inputMode="decimal" value={fixedAmount} onChange={function(e) { setFixedAmount(e.target.value.replace(/[^\d,.]/g, '').slice(0, 12)); }} placeholder="500,00" style={{ width: '100%', padding: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, color: '#fff', fontSize: 18, fontWeight: 800, outline: 'none', marginBottom: 14, boxSizing: 'border-box' }} />
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(201,169,97,0.8)', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Dia do pagamento (1–31)</label>
+              <input type="number" min={1} max={31} value={fixedPayday} onChange={function(e) { setFixedPayday(e.target.value.replace(/\D/g, '').slice(0, 2)); }} style={{ width: '100%', padding: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, color: '#fff', fontSize: 16, fontWeight: 700, outline: 'none', marginBottom: 14, boxSizing: 'border-box' }} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: 'rgba(201,169,97,0.05)', border: '1px solid rgba(201,169,97,0.25)', borderRadius: 10, cursor: 'pointer', marginBottom: 14 }}>
+                <input type="checkbox" checked={fixedRecurring} onChange={function(e) { setFixedRecurring(e.target.checked); }} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#C9A961' }}>Recorrente (todo mês)</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>{fixedRecurring ? 'Paga automaticamente todo mês no dia escolhido' : 'Apenas esta parcela (pagamento único)'}</div>
+                </div>
+              </label>
+              <div style={{ padding: 12, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, marginBottom: 16, fontSize: 11, color: 'rgba(167,243,208,0.9)', lineHeight: 1.5 }}>💡 A primeira parcela é creditada imediatamente no saldo DISPONÍVEL (sem bloqueio de 8 dias). A afiliada é notificada.</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={function() { if (!fixedBusy) setFixedModalAffiliate(null); }} disabled={fixedBusy} style={{ flex: 1, padding: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 700, cursor: fixedBusy ? 'not-allowed' : 'pointer' }}>Cancelar</button>
+                <button onClick={submit} disabled={fixedBusy} style={{ flex: 2, padding: 12, background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', border: 'none', borderRadius: 10, color: '#1a1306', fontSize: 14, fontWeight: 900, cursor: fixedBusy ? 'wait' : 'pointer', letterSpacing: 0.5, opacity: fixedBusy ? 0.7 : 1 }}>{fixedBusy ? 'CRIANDO...' : '💠 CRIAR E PAGAR'}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {vendasManualConfirm && (function() {
         var a = vendasManualConfirm.affiliate;

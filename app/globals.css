@@ -49,6 +49,19 @@ button:active:not(:disabled) {
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes megaPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255,215,0,0.4); } 50% { transform: scale(1.08); box-shadow: 0 0 40px rgba(255,215,0,0.7); } }
 
+@keyframes goldShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes goldSparkle {
+  0%, 100% { opacity: 0.6; transform: scale(0.8) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+}
+@keyframes goldPulse {
+  0%, 100% { box-shadow: 0 0 24px rgba(255,215,0,0.35), 0 0 48px rgba(201,169,97,0.15), inset 0 0 20px rgba(255,215,0,0.1); }
+  50% { box-shadow: 0 0 40px rgba(255,215,0,0.55), 0 0 80px rgba(201,169,97,0.3), inset 0 0 30px rgba(255,215,0,0.18); }
+}
+
 @keyframes confettiFall {
   0% { transform: translate(0, -100vh) rotate(0deg); opacity: 1; }
   100% { transform: translate(var(--dx, 20vw), 110vh) rotate(720deg); opacity: 0.9; }

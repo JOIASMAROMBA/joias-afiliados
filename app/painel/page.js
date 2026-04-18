@@ -9,6 +9,7 @@ export default function PainelPage() {
   const [affiliate, setAffiliate] = useState(null);
   const [balance, setBalance] = useState({ available_balance: 0, blocked_balance: 0, pending_withdrawals: 0 });
   const [showReleaseDatesModal, setShowReleaseDatesModal] = useState(false);
+  const [fixedMonthly, setFixedMonthly] = useState(null);
   const [allSales, setAllSales] = useState([]);
   const [salesFilter, setSalesFilter] = useState('30');
   const [weekPosts, setWeekPosts] = useState([]);
@@ -202,6 +203,10 @@ export default function PainelPage() {
     try { var obData = await supabase.from('posting_obligations').select('*').eq('affiliate_id', affiliateId).eq('active', true); setObligations(obData.data || []); } catch(e) {}
     try { var wd = await supabase.from('withdrawals').select('*').eq('affiliate_id', affiliateId).order('created_at', { ascending: false }); setMyWithdrawals(wd.data || []); } catch(e) {}
     try { var rw = await supabase.from('rewards').select('*').eq('active', true).order('target_value', { ascending: true }); setRewards(rw.data || []); } catch(e) {}
+    try {
+      var fxRes = await supabase.from('monthly_fixed_payments').select('*').eq('affiliate_id', affiliateId).eq('active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      setFixedMonthly(fxRes.data || null);
+    } catch(e) { setFixedMonthly(null); }
     if (!check.data.accepted_terms_at) setShowTerms(true);
     if (check.data.approval_status === 'approved' && !check.data.approval_seen_at) setShowApprovedModal(true);
     try {
@@ -755,6 +760,37 @@ export default function PainelPage() {
               </div>
             </div>
           </div>
+
+          {fixedMonthly && fixedMonthly.active && (
+            <div style={{ position: 'relative', background: 'linear-gradient(135deg, #1a1306 0%, #2a1f08 40%, #1a1306 100%)', border: '2px solid #FFD700', borderRadius: 16, padding: 18, marginBottom: 16, overflow: 'hidden', animation: 'goldPulse 2.4s ease-in-out infinite' }}>
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,215,0,0.18) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'goldShimmer 3.5s linear infinite', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                {[{t:12,l:18},{t:22,l:78},{t:48,l:8},{t:62,l:92},{t:34,l:52},{t:78,l:30},{t:18,l:60},{t:70,l:72}].map(function(p, i) { return (<span key={i} style={{ position: 'absolute', top: p.t + '%', left: p.l + '%', fontSize: 10, color: '#FFD700', animation: 'goldSparkle ' + (2 + (i % 3) * 0.6) + 's ease-in-out ' + (i * 0.25) + 's infinite', textShadow: '0 0 6px rgba(255,215,0,0.9)' }}>✦</span>); })}
+              </div>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 14 }}>💠</span>
+                  <span style={{ fontSize: 10, color: '#FFD700', letterSpacing: 3, fontWeight: 900, textTransform: 'uppercase', textShadow: '0 0 8px rgba(255,215,0,0.6)' }}>Privilégio Exclusivo</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,215,0,0.85)', letterSpacing: 1 }}>FIXO MENSAL</div>
+                  <div style={{
+                    fontSize: 28,
+                    fontWeight: 900,
+                    letterSpacing: -0.5,
+                    background: 'linear-gradient(90deg, #FFD700 0%, #FFF4B8 25%, #FFD700 50%, #C9A961 75%, #FFD700 100%)',
+                    backgroundSize: '200% auto',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    animation: 'goldShimmer 3s linear infinite',
+                    textShadow: '0 0 30px rgba(255,215,0,0.5)',
+                  }}>R${Number(fixedMonthly.amount || 0).toFixed(2).replace('.', ',')}</div>
+                </div>
+                <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)', marginTop: 4, letterSpacing: 0.8, fontWeight: 600, textTransform: 'uppercase' }}>Liberado todo dia {fixedMonthly.payday}</div>
+              </div>
+            </div>
+          )}
 
           <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
