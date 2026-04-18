@@ -98,7 +98,12 @@ export default function CadastroPage() {
       try { data = await res.json(); } catch { data = {}; }
       if (!res.ok || !data.ok) {
         const map = { coupon_taken: 'Esse cupom ja foi usado.', email_taken: 'Esse e-mail ja esta cadastrado.', invalid_name: 'Nome invalido.', invalid_email: 'E-mail invalido.', invalid_coupon: 'Cupom invalido.', invalid_password: 'Senha deve ter 6 digitos.', invalid_whatsapp: 'WhatsApp invalido.', rate_limited: 'Muitas tentativas. Aguarde.' };
-        setError(map[data.error] || 'Erro ao cadastrar.');
+        var msg = map[data.error];
+        if (!msg) {
+          msg = 'Erro: ' + (data.error || 'desconhecido');
+          if (data.detail) msg += ' — ' + String(data.detail).slice(0, 200);
+        }
+        setError(msg);
         setLoading(false);
         return;
       }
