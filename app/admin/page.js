@@ -143,6 +143,10 @@ export default function AdminDashboard() {
   const [cadastroHistory, setCadastroHistory] = useState(null);
   const [cadastroHistoryLoading, setCadastroHistoryLoading] = useState(false);
   const [vendasManualSearch, setVendasManualSearch] = useState('');
+  const [rewardsView, setRewardsView] = useState('list'); // 'list' | 'winners'
+  const [rewardWinners, setRewardWinners] = useState([]);
+  const [rewardWinnersLoading, setRewardWinnersLoading] = useState(false);
+  const [rewardContactOpen, setRewardContactOpen] = useState({}); // { winnerId: true }
   const [fixedRules, setFixedRules] = useState([]);
   const [fixedSearch, setFixedSearch] = useState('');
   const [fixedModalAffiliate, setFixedModalAffiliate] = useState(null);
@@ -238,6 +242,11 @@ export default function AdminDashboard() {
       var fxRes = await fetch('/api/admin/fixed');
       var fxData = await fxRes.json().catch(function() { return {}; });
       if (fxData && fxData.ok) setFixedRules(fxData.rules || []);
+    } catch (e) {}
+    try {
+      var wnRes = await fetch('/api/admin/rewards/winners');
+      var wnData = await wnRes.json().catch(function() { return {}; });
+      if (wnData && wnData.ok) setRewardWinners(wnData.winners || []);
     } catch (e) {}
   }
 
@@ -737,6 +746,7 @@ export default function AdminDashboard() {
             var badgeCount = 0;
             if (item.id === 'withdrawals') badgeCount = kpis.pendingWithdrawals;
             else if (item.id === 'cadastros') badgeCount = kpis.pendingApproval;
+            else if (item.id === 'rewards') badgeCount = (rewardWinners || []).filter(function(w) { return !w.notified_at; }).length;
             var showBadge = badgeCount > 0;
             return (
               <button key={item.id} onClick={function() { handleMenuClick(item.id); }} style={{ width: '100%', padding: '10px 12px', marginBottom: 2, background: isActive ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 8, color: isActive ? '#FFD700' : '#555', fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', position: 'relative' }}>
@@ -1059,6 +1069,124 @@ export default function AdminDashboard() {
 
         {activeTab === 'rewards' && (
           <div>
+            <div style={{ display: 'flex', gap: 4, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 4, marginBottom: 16 }}>
+              {[{ id: 'list', label: '🎁 Metas e Prêmios' }, { id: 'winners', label: '🏆 Ganhadores', badge: (rewardWinners || []).filter(function(w) { return !w.notified_at; }).length }].map(function(v) {
+                var active = rewardsView === v.id;
+                return (<button key={v.id} onClick={function() { setRewardsView(v.id); }} style={{ flex: 1, padding: '10px 12px', background: active ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 7, color: active ? '#FFD700' : '#555', fontSize: 13, fontWeight: 700, cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>{v.label}{v.badge > 0 && (<span style={{ background: '#EF4444', color: '#FFF', borderRadius: 10, padding: '1px 7px', fontSize: 10, fontWeight: 700, animation: 'badgeBlink 1s ease-in-out infinite' }}>{v.badge}</span>)}</button>);
+              })}
+            </div>
+
+            {rewardsView === 'winners' && (function() {
+              var pending = (rewardWinners || []).filter(function(w) { return !w.notified_at; });
+              var notified = (rewardWinners || []).filter(function(w) { return w.notified_at; });
+
+              async function notify(w) {
+                if (!confirm('Enviar email de parabens para ' + (w.affiliates && w.affiliates.name) + '?')) return;
+                try {
+                  var res = await fetch('/api/admin/rewards/winners', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ winner_id: w.id }),
+                  });
+                  var d = await res.json().catch(function() { return {}; });
+                  if (!res.ok || !d.ok) { alert('Erro: ' + (d.error || 'falha')); return; }
+                  if (d.email_sent) alert('Email enviado com sucesso!');
+                  else alert('Marcado como notificado, mas email falhou: ' + (d.email_error || 'desconhecido'));
+                  await loadAll();
+                } catch (e) { alert('Erro: ' + e.message); }
+              }
+
+              function toggleContact(wid) {
+                setRewardContactOpen(function(prev) { var p = Object.assign({}, prev); p[wid] = !p[wid]; return p; });
+              }
+
+              function fmtDate(iso) {
+                if (!iso) return '—';
+                var d = new Date(iso);
+                return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+              }
+
+              function WinnerCard(props) {
+                var w = props.winner;
+                var a = w.affiliates || {};
+                var r = w.rewards || {};
+                var targetLabel = r.target_type === 'sales' ? Number(r.target_value) + ' vendas' : formatMoney(r.target_value);
+                var whatsappDigits = (a.whatsapp || a.phone || '').replace(/\D/g, '');
+                var whatsappUrl = whatsappDigits.length >= 10 ? 'https://wa.me/' + (whatsappDigits.length === 11 || whatsappDigits.length === 10 ? '55' + whatsappDigits : whatsappDigits) : null;
+                var contactOpen = !!rewardContactOpen[w.id];
+                return (
+                  <div style={{ background: '#FFFFFF', border: '1px solid ' + (props.pending ? '#FFD700' : '#E5E5E5'), borderRadius: 12, padding: 16, boxShadow: props.pending ? '0 0 0 2px rgba(255,215,0,0.15)' : 'none', animation: props.pending ? 'badgeBlink 2s ease-in-out infinite' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 22, background: a.avatar_url ? 'transparent' : 'linear-gradient(135deg, #FFD700, #B8860B)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#1A1A1A', flexShrink: 0 }}>
+                        {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+                        <div style={{ fontSize: 11, color: '#888', fontFamily: 'monospace', letterSpacing: 0.5 }}>{a.coupon_code}</div>
+                      </div>
+                      <div style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>{r.reward_emoji || '🎁'}</div>
+                    </div>
+                    <div style={{ background: '#FFFBEB', border: '1px solid #FFD700', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: '#92400E', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Meta atingida</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#1A1A1A', marginBottom: 2 }}>{r.reward_title}</div>
+                      <div style={{ fontSize: 12, color: '#555' }}>{targetLabel}{Number(r.reward_value_money) > 0 ? ' · Bonus ' + formatMoney(r.reward_value_money) : ''}</div>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#888', marginBottom: 10 }}>Atingiu em {fmtDate(w.achieved_at)}{w.notified_at ? ' · Notificada em ' + fmtDate(w.notified_at) : ''}</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {!w.notified_at && (
+                        <button onClick={function() { notify(w); }} style={{ flex: 1, padding: 10, background: 'linear-gradient(135deg, #FFD700, #C9A961)', color: '#1A1A1A', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: 'pointer', letterSpacing: 0.5 }}>📧 NOTIFICAR</button>
+                      )}
+                      {w.notified_at && (
+                        <button onClick={function() { notify(w); }} style={{ flex: 1, padding: 10, background: '#F3F4F6', color: '#555', border: '1px solid #E5E5E5', borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>📧 Reenviar</button>
+                      )}
+                      <button onClick={function() { toggleContact(w.id); }} style={{ flex: 1, padding: 10, background: contactOpen ? '#1A1A1A' : '#FFFFFF', color: contactOpen ? '#FFD700' : '#1A1A1A', border: '1px solid ' + (contactOpen ? '#1A1A1A' : '#E5E5E5'), borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>📞 Entrar em Contato</button>
+                    </div>
+                    {contactOpen && (
+                      <div style={{ marginTop: 10, padding: 12, background: '#FAFAFA', border: '1px solid #E5E5E5', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {whatsappUrl ? (
+                          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#25D366', borderRadius: 6, color: '#FFF', textDecoration: 'none', fontWeight: 700, fontSize: 13 }}>💬 WhatsApp: {whatsappDigits}</a>
+                        ) : (<div style={{ fontSize: 12, color: '#888' }}>WhatsApp nao cadastrado</div>)}
+                        {a.email ? (
+                          <a href={'mailto:' + a.email} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 6, color: '#1A1A1A', textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>📧 {a.email}</a>
+                        ) : (<div style={{ fontSize: 12, color: '#888' }}>Email nao cadastrado</div>)}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div>
+                  {pending.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 12, color: '#92400E', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ display: 'inline-block', width: 8, height: 8, background: '#EF4444', borderRadius: 4, animation: 'badgeBlink 1s ease-in-out infinite' }} />
+                        Aguardando Notificacao ({pending.length})
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12, marginBottom: 24 }}>
+                        {pending.map(function(w) { return <WinnerCard key={w.id} winner={w} pending />; })}
+                      </div>
+                    </>
+                  )}
+                  {notified.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 12, color: '#065F46', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Ja Notificadas ({notified.length})</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+                        {notified.map(function(w) { return <WinnerCard key={w.id} winner={w} />; })}
+                      </div>
+                    </>
+                  )}
+                  {pending.length === 0 && notified.length === 0 && (
+                    <div style={{ padding: 40, textAlign: 'center', background: '#FFF', border: '2px dashed #E5E5E5', borderRadius: 12, color: '#888' }}>
+                      <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
+                      <div style={{ fontSize: 15, fontWeight: 700 }}>Nenhum ganhador ainda</div>
+                      <div style={{ fontSize: 12, marginTop: 4 }}>Assim que alguem atingir uma meta, aparecera aqui automaticamente.</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {rewardsView === 'list' && (<>
             <div style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #333 100%)', border: '1px solid #FFD700', borderRadius: 12, padding: 24, marginBottom: 20, color: '#FFD700' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div><div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>🎁 Gerenciar Recompensas</div><div style={{ fontSize: 13, opacity: 0.8 }}>Crie metas e prêmios</div></div>
@@ -1088,6 +1216,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: 15, fontWeight: 600 }}>Nenhuma recompensa</div>
               </div>)}
             </div>
+            </>)}
           </div>
         )}
 
