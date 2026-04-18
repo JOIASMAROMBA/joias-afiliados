@@ -1741,7 +1741,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button onClick={function() { payNow(r); }} disabled={!r.active} style={{ padding: '6px 10px', background: r.active ? '#10B981' : '#E5E5E5', color: r.active ? '#FFF' : '#999', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: r.active ? 'pointer' : 'not-allowed', letterSpacing: 0.5 }}>PAGAR</button>
                   <button onClick={function() { toggleRule(r); }} style={{ padding: '6px 10px', background: '#FFFFFF', color: r.active ? '#991B1B' : '#065F46', border: '1px solid ' + (r.active ? '#FCA5A5' : '#6EE7B7'), borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{r.active ? 'Pausar' : 'Ativar'}</button>
                   <button onClick={function() { deleteRule(r); }} style={{ padding: '6px 10px', background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕</button>
                 </div>
