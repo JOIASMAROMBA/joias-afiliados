@@ -618,7 +618,7 @@ export default function PainelPage() {
         .painel-home-grid { display: block; }
         .painel-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
         .painel-rewards-wrap { max-width: 100%; }
-        .fixed-monthly-value { font-size: 27px; }
+        .fixed-monthly-value { font-size: 30px; }
         .fixed-monthly-sub { font-size: 7.6px; }
         .fixed-monthly-spark { font-size: 17px; top: -9px; }
         @media (min-width: 900px) {
