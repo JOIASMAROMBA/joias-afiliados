@@ -536,16 +536,35 @@ export default function PainelPage() {
 
   var platforms = [{ id: 'instagram', label: 'Instagram', icon: '📸' }, { id: 'tiktok', label: 'TikTok', icon: '🎵' }, { id: 'facebook', label: 'Facebook', icon: '👤' }, { id: 'outro', label: 'Outro', icon: '🌐' }];
 
+  var cycle = (function() {
+    if (!affiliate || !affiliate.created_at) return { start: Date.now(), daysRemaining: 30, daysIntoCycle: 0, cycleNumber: 1 };
+    var signupMs = new Date(affiliate.created_at).getTime();
+    var nowMs = Date.now();
+    var dayMs = 24 * 60 * 60 * 1000;
+    var daysSinceSignup = Math.floor((nowMs - signupMs) / dayMs);
+    var cyclesCompleted = Math.floor(daysSinceSignup / 30);
+    var start = signupMs + cyclesCompleted * 30 * dayMs;
+    var daysIntoCycle = daysSinceSignup % 30;
+    var daysRemaining = 30 - daysIntoCycle;
+    return { start: start, daysRemaining: daysRemaining, daysIntoCycle: daysIntoCycle, cycleNumber: cyclesCompleted + 1 };
+  })();
+
+  var cycleSales = (allSales || []).filter(function(s) {
+    return s.created_at && new Date(s.created_at).getTime() >= cycle.start;
+  });
+  var cycleTotalSales = cycleSales.length;
+  var cycleTotalRevenue = cycleSales.reduce(function(s, v) { return s + Number(v.product_value || 0); }, 0);
+
   function calculateRocketPosition() {
     if (rewards.length === 0) return 0;
     var nextIdx = rewards.findIndex(function(r) {
-      var current = r.target_type === 'sales' ? totalSales : totalRevenue;
+      var current = r.target_type === 'sales' ? cycleTotalSales : cycleTotalRevenue;
       return current < Number(r.target_value);
     });
     if (nextIdx === -1) return rewards.length;
     var prevVal = nextIdx > 0 ? Number(rewards[nextIdx - 1].target_value) : 0;
     var nextVal = Number(rewards[nextIdx].target_value);
-    var current = rewards[nextIdx].target_type === 'sales' ? totalSales : totalRevenue;
+    var current = rewards[nextIdx].target_type === 'sales' ? cycleTotalSales : cycleTotalRevenue;
     var progress = (current - prevVal) / (nextVal - prevVal);
     return nextIdx + Math.max(0, Math.min(1, progress));
   }
@@ -914,10 +933,28 @@ export default function PainelPage() {
 
       {activeTab === 'rewards' && (
         <div className="painel-rewards-wrap">
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 4 }}>🚀 Sua Jornada de Prêmios</div>
             <div style={{ fontSize: 13, color: 'rgba(201,169,97,0.6)' }}>Cada venda te impulsiona mais alto!</div>
           </div>
+
+          <div style={{ position: 'relative', background: 'linear-gradient(135deg, rgba(15,15,15,0.7), rgba(26,19,6,0.7))', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 14, padding: 14, marginBottom: 20, overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: ((30 - cycle.daysRemaining) / 30 * 100) + '%', background: 'linear-gradient(90deg, rgba(201,169,97,0.08), rgba(201,169,97,0.22))', pointerEvents: 'none', transition: 'width 0.6s ease' }} />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'rgba(201,169,97,0.65)', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1 }}>Ciclo Atual</div>
+                <div style={{ fontSize: 12, color: '#C9A961', fontWeight: 700, marginTop: 4 }}>Ciclo #{cycle.cycleNumber}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, justifyContent: 'flex-end' }}>
+                  <span style={{ fontSize: 30, fontWeight: 900, color: '#C9A961', lineHeight: 1, letterSpacing: -1, textShadow: '0 0 16px rgba(201,169,97,0.35)' }}>{cycle.daysRemaining}</span>
+                  <span style={{ fontSize: 12, color: 'rgba(201,169,97,0.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{cycle.daysRemaining === 1 ? 'dia' : 'dias'}</span>
+                </div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>restantes</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 10, color: 'rgba(201,169,97,0.45)', marginTop: -12, marginBottom: 18, lineHeight: 1.4, letterSpacing: 0.3 }}>O ciclo se reinicia a cada 30 dias a partir da sua data de cadastro.</div>
 
           {rewards.length === 0 && (
             <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px dashed rgba(201,169,97,0.3)', borderRadius: 16, padding: 40, textAlign: 'center' }}>
@@ -935,14 +972,14 @@ export default function PainelPage() {
                 var topCalc = (reversedPos / rewards.length) * 100;
                 return (
                   <div style={{ position: 'absolute', left: 0, width: 64, top: 'calc(' + topCalc + '% + 10px)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, zIndex: 3, transition: 'top 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', animation: 'floatRocket 2s ease-in-out infinite' }}>
-                    <div style={{ background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', color: '#000', padding: '4px 8px', borderRadius: 10, fontSize: 11, fontWeight: 900, boxShadow: '0 0 15px rgba(201,169,97,0.6)', whiteSpace: 'nowrap' }}>{totalSales}</div>
+                    <div style={{ background: 'linear-gradient(135deg, #E8CF8B, #C9A961, #8B6914)', color: '#000', padding: '4px 8px', borderRadius: 10, fontSize: 11, fontWeight: 900, boxShadow: '0 0 15px rgba(201,169,97,0.6)', whiteSpace: 'nowrap' }}>{cycleTotalSales}</div>
                     <div style={{ fontSize: 36, filter: 'drop-shadow(0 0 20px rgba(201,169,97,0.8))' }}>🚀</div>
                   </div>
                 );
               })()}
 
               {rewards.slice().reverse().map(function(r, idx) {
-                var current = r.target_type === 'sales' ? totalSales : totalRevenue;
+                var current = r.target_type === 'sales' ? cycleTotalSales : cycleTotalRevenue;
                 var target = Number(r.target_value);
                 var achieved = current >= target;
                 var progress = Math.min(100, (current / target) * 100);
