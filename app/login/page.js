@@ -46,6 +46,11 @@ export default function LoginPage() {
         setAdminEmailHint(data.admin_email_hint || '');
         setAdminCodeStep(true);
         setAdminCode('');
+        if (data.email_sent === false) {
+          setError('Servidor enviou o codigo, mas email FALHOU: ' + (data.email_error || 'motivo desconhecido'));
+        } else {
+          setError('');
+        }
         setLoading(false);
         return;
       }

@@ -101,11 +101,21 @@ export async function POST(request) {
       if (insertRes.error) {
         return NextResponse.json({ error: 'db_error', detail: insertRes.error.message }, { status: 500 });
       }
+      var emailError = null;
+      var emailOk = false;
       try {
         const msg = buildAdminCodeEmail({ code, ip, userAgent });
-        await sendEmail({ to: ADMIN_EMAIL, subject: msg.subject, html: msg.html });
-      } catch (e) {}
-      return NextResponse.json({ ok: true, requires_admin_code: true, admin_email_hint: ADMIN_EMAIL.replace(/(.{2}).*(@.*)/, '$1***$2') });
+        const sendRes = await sendEmail({ to: ADMIN_EMAIL, subject: msg.subject, html: msg.html });
+        emailOk = !!(sendRes && sendRes.ok);
+        if (!emailOk) emailError = (sendRes && sendRes.error) || 'unknown';
+      } catch (e) { emailError = e && e.message ? e.message : String(e); }
+      return NextResponse.json({
+        ok: true,
+        requires_admin_code: true,
+        admin_email_hint: ADMIN_EMAIL.replace(/(.{2}).*(@.*)/, '$1***$2'),
+        email_sent: emailOk,
+        email_error: emailError,
+      });
     }
 
     const token = signSession({
