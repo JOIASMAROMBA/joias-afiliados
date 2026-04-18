@@ -621,10 +621,12 @@ export default function PainelPage() {
         .fixed-monthly-value { font-size: 30px; }
         .fixed-monthly-sub { font-size: 7.6px; }
         .fixed-monthly-spark { font-size: 17px; top: -9px; }
+        .saldos-card-spacing { margin-top: 52px; }
         @media (min-width: 900px) {
           .fixed-monthly-value { font-size: 32px; }
           .fixed-monthly-sub { font-size: 8px; }
           .fixed-monthly-spark { font-size: 14px; top: -7px; }
+          .saldos-card-spacing { margin-top: 28px; }
           .painel-root { max-width: 1100px; padding: 32px 40px; }
           .painel-home-grid {
             display: grid;
@@ -767,7 +769,7 @@ export default function PainelPage() {
             </div>
           </div>
 
-          <div style={{ position: 'relative', background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: '14px 18px 16px', marginTop: 52, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
+          <div className="saldos-card-spacing" style={{ position: 'relative', background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: '14px 18px 16px', marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
             {fixedMonthly && fixedMonthly.active && (
               <>
                 <div style={{ position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)', width: 168, height: 4, background: '#000', zIndex: 1, pointerEvents: 'none' }} />
