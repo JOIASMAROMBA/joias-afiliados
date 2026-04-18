@@ -619,10 +619,8 @@ export default function PainelPage() {
         .painel-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
         .painel-rewards-wrap { max-width: 100%; }
         .fixed-monthly-value { font-size: 27px; }
-        .fixed-monthly-gold { margin-bottom: 22px; }
         @media (min-width: 900px) {
           .fixed-monthly-value { font-size: 32px; }
-          .fixed-monthly-gold { margin-bottom: 6px; }
           .painel-root { max-width: 1100px; padding: 32px 40px; }
           .painel-home-grid {
             display: grid;
@@ -765,31 +763,34 @@ export default function PainelPage() {
             </div>
           </div>
 
-          <div style={{ position: 'relative', background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: '12px 18px 16px', marginTop: 32, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
+          <div style={{ position: 'relative', background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: '14px 18px 16px', marginTop: 52, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
             {fixedMonthly && fixedMonthly.active && (
-              <div className="fixed-monthly-gold" style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                <div style={{
-                  fontSize: 10, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', lineHeight: 1,
-                  background: 'linear-gradient(90deg, #8B6914 0%, #C9A961 30%, #FFF4B8 48%, #FFFFFF 50%, #FFF4B8 52%, #C9A961 70%, #8B6914 100%)',
-                  backgroundSize: '300% auto',
-                  WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  animation: 'goldShimmer 2s linear infinite',
-                }}>Fixo Mensal</div>
-                <div style={{ position: 'relative', display: 'inline-block', marginTop: 2 }}>
-                  <span className="fixed-monthly-value" style={{
-                    fontWeight: 900, letterSpacing: -0.5, lineHeight: 1.05, display: 'inline-block',
-                    background: 'linear-gradient(90deg, #8B6914 0%, #C9A961 25%, #FFD700 42%, #FFF4B8 48%, #FFFFFF 50%, #FFF4B8 52%, #FFD700 58%, #C9A961 75%, #8B6914 100%)',
+              <>
+                <div style={{ position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)', width: 168, height: 4, background: '#000', zIndex: 1, pointerEvents: 'none' }} />
+                <span style={{ position: 'absolute', top: -7, left: 'calc(50% - 91px)', fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
+                <span style={{ position: 'absolute', top: -7, left: 'calc(50% + 77px)', fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out 0.5s infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
+                <div style={{ position: 'absolute', top: -34, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap', zIndex: 3 }}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', lineHeight: 1,
+                    background: 'linear-gradient(90deg, #8B6914 0%, #C9A961 30%, #FFF4B8 48%, #FFFFFF 50%, #FFF4B8 52%, #C9A961 70%, #8B6914 100%)',
                     backgroundSize: '300% auto',
                     WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
                     animation: 'goldShimmer 2s linear infinite',
-                  }}>R${Number(fixedMonthly.amount || 0).toFixed(2).replace('.', ',')}</span>
-                  <span style={{ position: 'absolute', left: -18, top: '50%', marginTop: -7, fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out infinite', lineHeight: 1, pointerEvents: 'none' }}>✦</span>
-                  <span style={{ position: 'absolute', right: -18, top: '50%', marginTop: -7, fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out 0.5s infinite', lineHeight: 1, pointerEvents: 'none' }}>✦</span>
+                  }}>Fixo Mensal</div>
+                  <div style={{ marginTop: 2 }}>
+                    <span className="fixed-monthly-value" style={{
+                      fontWeight: 900, letterSpacing: -0.5, lineHeight: 1.05, display: 'inline-block',
+                      background: 'linear-gradient(90deg, #8B6914 0%, #C9A961 25%, #FFD700 42%, #FFF4B8 48%, #FFFFFF 50%, #FFF4B8 52%, #FFD700 58%, #C9A961 75%, #8B6914 100%)',
+                      backgroundSize: '300% auto',
+                      WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                      animation: 'goldShimmer 2s linear infinite',
+                    }}>R${Number(fixedMonthly.amount || 0).toFixed(2).replace('.', ',')}</span>
+                  </div>
+                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Liberado todo dia {fixedMonthly.payday}</div>
                 </div>
-                <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Liberado todo dia {fixedMonthly.payday}</div>
-              </div>
+              </>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 10, marginTop: fixedMonthly && fixedMonthly.active ? 8 : 0 }}>
               <div>
                 <div style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo Disponível</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#00ff88', lineHeight: 1.1, letterSpacing: -0.5, marginTop: 2 }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
