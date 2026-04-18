@@ -1992,8 +1992,16 @@ export default function AdminDashboard() {
 
       {fixedModalAffiliate && (function() {
         var a = fixedModalAffiliate;
+        function formatBRL(digits) {
+          if (!digits) return '';
+          var cents = parseInt(digits, 10);
+          if (!Number.isFinite(cents)) return '';
+          var reais = (cents / 100).toFixed(2);
+          return 'R$ ' + reais.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
         async function submit() {
-          var amt = Number(String(fixedAmount).replace(',', '.'));
+          var digits = String(fixedAmount).replace(/\D/g, '');
+          var amt = digits ? parseInt(digits, 10) / 100 : 0;
           if (!amt || amt <= 0) { alert('Informe um valor valido'); return; }
           var payday = Math.floor(Number(fixedPayday));
           if (!payday || payday < 1 || payday > 31) { alert('Dia invalido (1-31)'); return; }
@@ -2018,8 +2026,8 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: 18, fontWeight: 900, color: '#C9A961', marginTop: 4, letterSpacing: 1 }}>FIXO MENSAL</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>{a.name} · <span style={{ fontFamily: 'monospace' }}>{a.coupon_code}</span></div>
               </div>
-              <label style={{ display: 'block', fontSize: 11, color: 'rgba(201,169,97,0.8)', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Valor mensal (R$)</label>
-              <input type="text" inputMode="decimal" value={fixedAmount} onChange={function(e) { setFixedAmount(e.target.value.replace(/[^\d,.]/g, '').slice(0, 12)); }} placeholder="500,00" style={{ width: '100%', padding: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, color: '#fff', fontSize: 18, fontWeight: 800, outline: 'none', marginBottom: 14, boxSizing: 'border-box' }} />
+              <label style={{ display: 'block', fontSize: 11, color: 'rgba(201,169,97,0.8)', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Valor mensal</label>
+              <input type="text" inputMode="numeric" value={formatBRL(fixedAmount)} onChange={function(e) { setFixedAmount(e.target.value.replace(/\D/g, '').slice(0, 10)); }} placeholder="R$ 0,00" style={{ width: '100%', padding: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, color: '#fff', fontSize: 18, fontWeight: 800, outline: 'none', marginBottom: 14, boxSizing: 'border-box' }} />
               <label style={{ display: 'block', fontSize: 11, color: 'rgba(201,169,97,0.8)', fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Dia do pagamento (1–31)</label>
               <input type="number" min={1} max={31} value={fixedPayday} onChange={function(e) { setFixedPayday(e.target.value.replace(/\D/g, '').slice(0, 2)); }} style={{ width: '100%', padding: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, color: '#fff', fontSize: 16, fontWeight: 700, outline: 'none', marginBottom: 14, boxSizing: 'border-box' }} />
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: 'rgba(201,169,97,0.05)', border: '1px solid rgba(201,169,97,0.25)', borderRadius: 10, cursor: 'pointer', marginBottom: 14 }}>
