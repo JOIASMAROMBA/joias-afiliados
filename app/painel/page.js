@@ -739,8 +739,8 @@ export default function PainelPage() {
 
       {activeTab === 'home' && (
         <div className="painel-home-grid">
-          <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 16, padding: '12px 14px', marginTop: -15, marginBottom: 29 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#C9A961' }}>📊 Suas Vendas</div>
               <div style={{ display: 'flex', gap: 4 }}>
                 {[{v:'1', l:'Hoje'}, {v:'7', l:'7 dias'}, {v:'30', l:'30 dias'}].map(function(f) {
@@ -761,50 +761,53 @@ export default function PainelPage() {
             </div>
           </div>
 
-          {fixedMonthly && fixedMonthly.active && (
-            <div style={{ position: 'relative', background: 'linear-gradient(135deg, #1a1306 0%, #2a1f08 40%, #1a1306 100%)', border: '2px solid #FFD700', borderRadius: 16, padding: 18, marginBottom: 16, overflow: 'hidden', animation: 'goldPulse 2.4s ease-in-out infinite' }}>
-              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,215,0,0.18) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'goldShimmer 3.5s linear infinite', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                {[{t:12,l:18},{t:22,l:78},{t:48,l:8},{t:62,l:92},{t:34,l:52},{t:78,l:30},{t:18,l:60},{t:70,l:72}].map(function(p, i) { return (<span key={i} style={{ position: 'absolute', top: p.t + '%', left: p.l + '%', fontSize: 10, color: '#FFD700', animation: 'goldSparkle ' + (2 + (i % 3) * 0.6) + 's ease-in-out ' + (i * 0.25) + 's infinite', textShadow: '0 0 6px rgba(255,215,0,0.9)' }}>✦</span>); })}
-              </div>
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 14 }}>💠</span>
-                  <span style={{ fontSize: 10, color: '#FFD700', letterSpacing: 3, fontWeight: 900, textTransform: 'uppercase', textShadow: '0 0 8px rgba(255,215,0,0.6)' }}>Privilégio Exclusivo</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,215,0,0.85)', letterSpacing: 1 }}>FIXO MENSAL</div>
+          <div style={{ position: 'relative', background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: '6px 18px 16px', marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
+            {fixedMonthly && fixedMonthly.active && (
+              <>
+                <div style={{ position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)', width: 168, height: 4, background: '#000', zIndex: 1, pointerEvents: 'none' }} />
+                <span style={{ position: 'absolute', top: -7, left: 'calc(50% - 91px)', fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
+                <span style={{ position: 'absolute', top: -7, left: 'calc(50% + 77px)', fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out 0.5s infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
+              </>
+            )}
+            {fixedMonthly && fixedMonthly.active && (function() {
+              function Spark(props) {
+                return (
+                  <span style={{ position: 'absolute', left: props.side === 'left' ? -14 : undefined, right: props.side === 'right' ? -14 : undefined, top: 10, fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out ' + (props.side === 'right' ? 0.5 : 0) + 's infinite', zIndex: 4, lineHeight: 1 }}>✦</span>
+                );
+              }
+              return (
+                <div style={{ position: 'absolute', top: -22, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap', zIndex: 3 }}>
                   <div style={{
-                    fontSize: 28,
-                    fontWeight: 900,
-                    letterSpacing: -0.5,
-                    background: 'linear-gradient(90deg, #FFD700 0%, #FFF4B8 25%, #FFD700 50%, #C9A961 75%, #FFD700 100%)',
-                    backgroundSize: '200% auto',
-                    WebkitBackgroundClip: 'text',
-                    backgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    animation: 'goldShimmer 3s linear infinite',
-                    textShadow: '0 0 30px rgba(255,215,0,0.5)',
-                  }}>R${Number(fixedMonthly.amount || 0).toFixed(2).replace('.', ',')}</div>
+                    fontSize: 10, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', lineHeight: 1,
+                    background: 'linear-gradient(90deg, #8B6914 0%, #C9A961 30%, #FFF4B8 48%, #FFFFFF 50%, #FFF4B8 52%, #C9A961 70%, #8B6914 100%)',
+                    backgroundSize: '300% auto',
+                    WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    animation: 'goldShimmer 2s linear infinite',
+                    marginTop: -4,
+                    marginBottom: 6,
+                  }}>Fixo Mensal</div>
+                  <div style={{ position: 'relative', display: 'inline-block', padding: '0 8px', marginTop: -8 }}>
+                    <span style={{
+                      fontSize: 34, fontWeight: 900, letterSpacing: -0.5, lineHeight: 1.05, display: 'inline-block',
+                      background: 'linear-gradient(90deg, #8B6914 0%, #C9A961 25%, #FFD700 42%, #FFF4B8 48%, #FFFFFF 50%, #FFF4B8 52%, #FFD700 58%, #C9A961 75%, #8B6914 100%)',
+                      backgroundSize: '300% auto',
+                      WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                      animation: 'goldShimmer 2s linear infinite',
+                    }}>R${Number(fixedMonthly.amount || 0).toFixed(2).replace('.', ',')}</span>
+                  </div>
+                  <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.6)', marginTop: 2, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Liberado todo dia {fixedMonthly.payday}</div>
                 </div>
-                <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)', marginTop: 4, letterSpacing: 0.8, fontWeight: 600, textTransform: 'uppercase' }}>Liberado todo dia {fixedMonthly.payday}</div>
+              );
+            })()}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 10, marginTop: fixedMonthly && fixedMonthly.active ? 2 : 0 }}>
+              <div>
+                <div style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo Disponível</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#00ff88', lineHeight: 1.1, letterSpacing: -0.5, marginTop: 2 }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
               </div>
-            </div>
-          )}
-
-          <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '2px solid #00ff88', borderRadius: 16, padding: 20, marginBottom: 16, boxShadow: '0 0 30px rgba(0,255,136,0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-              <div style={{ display: 'flex', gap: 20, flex: 1, flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ color: '#fff', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo Disponível</div>
-                  <div style={{ fontSize: 26, fontWeight: 900, color: '#00ff88', lineHeight: 1.1, letterSpacing: -0.5, marginTop: 2 }}>R${Number(balance.available_balance).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                </div>
-                <div onClick={function() { setShowReleaseDatesModal(true); }} style={{ cursor: 'pointer' }}>
-                  <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo a Liberar</div>
-                  <div style={{ fontSize: 26, fontWeight: 900, color: 'rgba(255,255,255,0.5)', lineHeight: 1.1, letterSpacing: -0.5, marginTop: 2 }}>R${Number(balance.blocked_balance || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                </div>
+              <div onClick={function() { setShowReleaseDatesModal(true); }} style={{ cursor: 'pointer', textAlign: 'right' }}>
+                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Saldo a Liberar</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: 'rgba(255,255,255,0.5)', lineHeight: 1.1, letterSpacing: -0.5, marginTop: 2 }}>R${Number(balance.blocked_balance || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
               </div>
-              <div style={{ fontSize: 36, lineHeight: 1 }}>💰</div>
             </div>
             <button onClick={function() { setShowWithdrawModal(true); }} disabled={Number(balance.available_balance) < 10} style={{ width: '100%', padding: 14, background: Number(balance.available_balance) >= 10 ? 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)' : '#1a1a1a', border: 'none', borderRadius: 14, color: Number(balance.available_balance) >= 10 ? '#000' : 'rgba(0,255,136,0.3)', fontWeight: 800, fontSize: 15, cursor: Number(balance.available_balance) >= 10 ? 'pointer' : 'not-allowed', boxShadow: Number(balance.available_balance) >= 10 ? '0 4px 20px rgba(0,255,136,0.4)' : 'none' }}>💸 Solicitar Saque</button>
             <div style={{ marginTop: 10, fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 1.4 }}>Cada venda fica bloqueada por 8 dias antes de liberar para saque.</div>
