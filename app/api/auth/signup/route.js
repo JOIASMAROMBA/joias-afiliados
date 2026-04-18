@@ -36,7 +36,7 @@ export async function POST(request) {
     if (!name || name.length < 2) return NextResponse.json({ error: 'invalid_name' }, { status: 400 });
     if (!validEmail(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
     if (!/^[A-Z0-9]{3,40}$/.test(coupon)) return NextResponse.json({ error: 'invalid_coupon' }, { status: 400 });
-    if (!/^\d{6}$/.test(password)) return NextResponse.json({ error: 'invalid_password' }, { status: 400 });
+    if (!/^\d{6,10}$/.test(password)) return NextResponse.json({ error: 'invalid_password' }, { status: 400 });
     if (whatsappDigits.length < 10 || whatsappDigits.length > 13) return NextResponse.json({ error: 'invalid_whatsapp' }, { status: 400 });
 
     const { data: existingCoupon } = await supabaseAdmin

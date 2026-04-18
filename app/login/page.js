@@ -9,6 +9,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [couponFocused, setCouponFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [adminCodeStep, setAdminCodeStep] = useState(false);
+  const [adminCode, setAdminCode] = useState('');
+  const [adminEmailHint, setAdminEmailHint] = useState('');
   const router = useRouter();
 
   async function handleLogin() {
@@ -31,10 +34,18 @@ export default function LoginPage() {
           missing_fields: 'Preencha cupom e senha.',
           rate_limited: 'Muitas tentativas. Aguarde ' + retryMin + ' min.',
           server_misconfigured: 'Servidor mal configurado. Avise o admin.',
+          email_not_configured: 'Email admin nao configurado. Contate suporte.',
           db_error: 'Erro no banco: ' + (data.detail || ''),
           unexpected: 'Erro inesperado: ' + (data.detail || ''),
         };
         setError(map[data.error] || ('Erro ' + res.status + ': ' + (data.error || 'desconhecido')));
+        setLoading(false);
+        return;
+      }
+      if (data.requires_admin_code) {
+        setAdminEmailHint(data.admin_email_hint || '');
+        setAdminCodeStep(true);
+        setAdminCode('');
         setLoading(false);
         return;
       }
@@ -49,9 +60,46 @@ export default function LoginPage() {
     }
   }
 
+  async function handleVerifyAdminCode() {
+    if (!/^\d{6}$/.test(adminCode)) { setError('Digite o codigo de 6 digitos.'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/admin-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coupon: coupon.trim(), code: adminCode.trim() }),
+      });
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok || !data.ok) {
+        const map = {
+          invalid_credentials: 'Sessao invalida, faca login novamente.',
+          invalid_code: 'Codigo invalido.',
+          no_active_code: 'Codigo nao encontrado, faca login novamente.',
+          code_expired: 'Codigo expirou, faca login novamente.',
+          wrong_code: 'Codigo incorreto.',
+          too_many_attempts: 'Muitas tentativas. Faca login novamente.',
+          rate_limited: 'Muitas tentativas. Aguarde alguns minutos.',
+        };
+        setError(map[data.error] || ('Erro: ' + (data.error || 'desconhecido')));
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('affiliate_id', data.affiliate.id);
+      localStorage.setItem('affiliate_name', data.affiliate.name);
+      localStorage.setItem('affiliate_coupon', data.affiliate.coupon_code);
+      router.push('/admin');
+    } catch (err) {
+      setError('Erro de conexao. Tente novamente.');
+      setLoading(false);
+    }
+  }
+
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && coupon.trim() && password.length === 6 && !loading) {
-      handleLogin();
+    if (e.key === 'Enter' && !loading) {
+      if (adminCodeStep) { if (/^\d{6}$/.test(adminCode)) handleVerifyAdminCode(); }
+      else if (coupon.trim() && password.length >= 6) handleLogin();
     }
   };
 
@@ -208,6 +256,43 @@ export default function LoginPage() {
             padding: 32,
             boxShadow: '0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
           }}>
+            {adminCodeStep && (
+              <div>
+                <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                  <div style={{ fontSize: 34 }}>🔐</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#C9A961', marginTop: 4, letterSpacing: 1 }}>Confirmação em 2 etapas</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>Acesso ao painel admin</div>
+                </div>
+                <div style={{ padding: 12, background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 10, marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: '#C9A961', fontWeight: 700, marginBottom: 4 }}>📧 Código enviado para</div>
+                  <div style={{ fontSize: 13, color: '#fff', fontFamily: 'monospace' }}>{adminEmailHint || 'seu email'}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>Digite o código de 6 dígitos. Expira em 10 min.</div>
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onKeyDown={handleKeyDown}
+                  placeholder="000000"
+                  autoFocus
+                  style={{ width: '100%', padding: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,169,97,0.4)', borderRadius: 10, color: '#C9A961', fontSize: 26, fontWeight: 900, outline: 'none', textAlign: 'center', letterSpacing: 10, marginBottom: 14, boxSizing: 'border-box' }}
+                />
+                {error && (<div style={{ marginBottom: 14, padding: '10px 14px', background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.2)', borderRadius: 8, color: '#ff6b6b', fontSize: 13 }}>⚠ {error}</div>)}
+                <button
+                  onClick={handleVerifyAdminCode}
+                  disabled={loading}
+                  style={{ width: '100%', padding: '15px 24px', background: 'linear-gradient(135deg, #E8CF8B 0%, #C9A961 50%, #8B6914 100%)', border: '1px solid rgba(201,169,97,0.6)', borderRadius: 10, color: '#1a1306', fontWeight: 700, fontSize: 15, letterSpacing: 0.5, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1, marginBottom: 10 }}
+                >{loading ? 'Confirmando...' : 'Confirmar e Entrar'}</button>
+                <button
+                  onClick={() => { setAdminCodeStep(false); setAdminCode(''); setError(''); }}
+                  style={{ width: '100%', padding: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer' }}
+                >← Voltar</button>
+              </div>
+            )}
+
+            {!adminCodeStep && (<>
             <div style={{ marginBottom: 18 }}>
               <label style={{
                 display: 'block',
@@ -267,12 +352,12 @@ export default function LoginPage() {
                 className="premium"
                 inputMode="numeric"
                 value={password}
-                onChange={(e) => setPassword(e.target.value.replace(/[^0-9]/g, '').substring(0, 6))}
+                onChange={(e) => setPassword(e.target.value.replace(/[^0-9]/g, '').substring(0, 10))}
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
                 onKeyDown={handleKeyDown}
                 placeholder="••••••"
-                maxLength={6}
+                maxLength={10}
                 autoComplete="current-password"
                 style={{
                   width: '100%',
@@ -392,6 +477,7 @@ export default function LoginPage() {
                 Esqueci minha senha
               </button>
             </div>
+            </>)}
           </div>
 
           <div style={{

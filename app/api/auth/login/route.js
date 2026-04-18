@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase-admin';
 import { hashPassword, verifyPassword, signSession, COOKIE_NAME, SESSION_MAX_AGE } from '../../../../lib/auth';
 import { getClientIp, checkRateLimit, logAttempt } from '../../../../lib/rate-limit';
+import { sendEmail, emailEnabled, buildAdminCodeEmail } from '../../../../lib/email';
+
+const ADMIN_CODE_TTL_MS = 10 * 60 * 1000;
+const ADMIN_EMAIL = (process.env.ADMIN_NOTIFY_EMAIL || 'renanforumn@gmail.com').trim();
+
+function generateCode() {
+  let c = '';
+  for (let i = 0; i < 6; i++) c += Math.floor(Math.random() * 10);
+  return c;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +82,30 @@ export async function POST(request) {
         const newHash = await hashPassword(password);
         await supabaseAdmin.from('affiliates').update({ password_hash: newHash }).eq('id', affiliate.id);
       } catch {}
+    }
+
+    if (affiliate.is_admin) {
+      if (!emailEnabled) {
+        return NextResponse.json({ error: 'email_not_configured', detail: 'Admin 2FA requer email ativo' }, { status: 500 });
+      }
+      const code = generateCode();
+      const expiresAt = new Date(Date.now() + ADMIN_CODE_TTL_MS).toISOString();
+      const userAgent = String(request.headers.get('user-agent') || '').slice(0, 300);
+      const insertRes = await supabaseAdmin.from('admin_login_codes').insert({
+        affiliate_id: affiliate.id,
+        code,
+        expires_at: expiresAt,
+        ip,
+        user_agent: userAgent,
+      }).select('id').single();
+      if (insertRes.error) {
+        return NextResponse.json({ error: 'db_error', detail: insertRes.error.message }, { status: 500 });
+      }
+      try {
+        const msg = buildAdminCodeEmail({ code, ip, userAgent });
+        await sendEmail({ to: ADMIN_EMAIL, subject: msg.subject, html: msg.html });
+      } catch (e) {}
+      return NextResponse.json({ ok: true, requires_admin_code: true, admin_email_hint: ADMIN_EMAIL.replace(/(.{2}).*(@.*)/, '$1***$2') });
     }
 
     const token = signSession({

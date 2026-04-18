@@ -30,8 +30,8 @@ export async function POST(request) {
 
   if (body.password && String(body.password).trim()) {
     const pwd = String(body.password).trim();
-    if (pwd.length !== 6 || !/^\d{6}$/.test(pwd)) {
-      return NextResponse.json({ error: 'password_must_be_6_digits' }, { status: 400 });
+    if (!/^\d{6,10}$/.test(pwd)) {
+      return NextResponse.json({ error: 'password_must_be_6_to_10_digits' }, { status: 400 });
     }
     updates.password_hash = await hashPassword(pwd);
   }
