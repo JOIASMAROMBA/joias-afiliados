@@ -1280,6 +1280,7 @@ export default function PainelPage() {
                 <ul style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Não faça promessas falsas sobre efeitos, durabilidade ou material.</li>
                   <li>Não invente descontos, promoções ou condições que não existem.</li>
+                  <li><strong style={{ color: '#FFD700' }}>É proibido informar ao cliente desconto superior a 3%</strong> — o valor oficial concedido pelo cupom é de 3% sobre a compra. Divulgar qualquer percentual maior configura propaganda enganosa e gera advertência imediata.</li>
                   <li>Use apenas o site oficial <strong>joiasmaromba.com.br</strong>. Links falsos/clones são proibidos.</li>
                   <li>Prefira os materiais oficiais do painel.</li>
                 </ul>
@@ -1405,6 +1406,7 @@ export default function PainelPage() {
                 <ul style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Não faça promessas falsas sobre efeitos, durabilidade ou material das joias.</li>
                   <li>Não invente descontos, promoções, brindes ou condições que não existem.</li>
+                  <li><strong style={{ color: '#FFD700' }}>É proibido informar ao cliente desconto superior a 3%</strong> — o valor oficial concedido pelo cupom é de 3% sobre a compra. Divulgar qualquer percentual maior configura propaganda enganosa e gera advertência imediata.</li>
                   <li>Divulgue apenas o site oficial: <strong>joiasmaromba.com.br</strong>. Links falsos, encurtadores suspeitos ou clones são terminantemente proibidos.</li>
                   <li>Use preferencialmente os materiais oficiais fornecidos no painel.</li>
                 </ul>

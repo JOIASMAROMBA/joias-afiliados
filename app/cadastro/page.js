@@ -374,6 +374,7 @@ export default function CadastroPage() {
                 <ul style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Sem promessas falsas sobre efeitos, durabilidade ou material</li>
                   <li>Sem descontos, promoções ou brindes inventados</li>
+                  <li><strong style={{ color: '#FFD700' }}>É proibido informar ao cliente desconto superior a 3%</strong> — o valor oficial concedido pelo cupom é de 3% sobre a compra. Divulgar qualquer percentual maior configura propaganda enganosa e gera advertência imediata</li>
                   <li>Apenas o site oficial joiasmaromba.com.br — links falsos/clones proibidos</li>
                 </ul>
               </div>
