@@ -620,9 +620,11 @@ export default function PainelPage() {
         .painel-rewards-wrap { max-width: 100%; }
         .fixed-monthly-value { font-size: 27px; }
         .fixed-monthly-sub { font-size: 7.6px; }
+        .fixed-monthly-spark { font-size: 17px; top: -9px; }
         @media (min-width: 900px) {
           .fixed-monthly-value { font-size: 32px; }
           .fixed-monthly-sub { font-size: 8px; }
+          .fixed-monthly-spark { font-size: 14px; top: -7px; }
           .painel-root { max-width: 1100px; padding: 32px 40px; }
           .painel-home-grid {
             display: grid;
@@ -769,8 +771,8 @@ export default function PainelPage() {
             {fixedMonthly && fixedMonthly.active && (
               <>
                 <div style={{ position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)', width: 168, height: 4, background: '#000', zIndex: 1, pointerEvents: 'none' }} />
-                <span style={{ position: 'absolute', top: -7, left: 'calc(50% - 91px)', fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
-                <span style={{ position: 'absolute', top: -7, left: 'calc(50% + 77px)', fontSize: 14, color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out 0.5s infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
+                <span className="fixed-monthly-spark" style={{ position: 'absolute', left: 'calc(50% - 91px)', color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
+                <span className="fixed-monthly-spark" style={{ position: 'absolute', left: 'calc(50% + 77px)', color: '#00ff88', textShadow: '0 0 6px #00ff88, 0 0 12px #00ff88, 0 0 18px rgba(0,255,136,0.6)', animation: 'goldSparkle 1s ease-in-out 0.5s infinite', zIndex: 4, lineHeight: 1, pointerEvents: 'none' }}>✦</span>
                 <div style={{ position: 'absolute', top: -34, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap', zIndex: 3 }}>
                   <div style={{
                     fontSize: 10, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', lineHeight: 1,
