@@ -182,9 +182,12 @@ export default function CadastroPage() {
               <div style={{ fontSize: 11, color: 'rgba(26,19,6,0.6)', textTransform: 'uppercase', letterSpacing: 3, fontWeight: 700, marginBottom: 6 }}>Novo Afiliado</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1306', marginBottom: 12, letterSpacing: -0.2 }}>{form.name.split(' ')[0]}</div>
               <div style={{ width: 40, height: 1, background: 'rgba(26,19,6,0.3)', margin: '0 auto 14px' }} />
-              <div style={{ fontSize: 11, color: 'rgba(26,19,6,0.6)', marginBottom: 4, letterSpacing: 0.5 }}>Cupom exclusivo de</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: '#1a1306', letterSpacing: 4, padding: '14px 0', borderTop: '1.5px dashed rgba(26,19,6,0.3)', borderBottom: '1.5px dashed rgba(26,19,6,0.3)', margin: '6px 0 12px' }}>{form.coupon}</div>
-              <div style={{ fontSize: 12, color: 'rgba(26,19,6,0.6)', marginTop: 12, marginBottom: 4 }}>Comissão por venda</div>
+              <div style={{ fontSize: 11, color: 'rgba(26,19,6,0.6)', marginBottom: 4, letterSpacing: 0.5 }}>Cupom exclusivo</div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: '#1a1306', letterSpacing: 4, padding: '14px 0', borderTop: '1.5px dashed rgba(26,19,6,0.3)', borderBottom: '1.5px dashed rgba(26,19,6,0.3)', margin: '6px 0 10px' }}>{form.coupon}</div>
+              <div style={{ display: 'inline-block', padding: '4px 12px', background: 'rgba(26,19,6,0.12)', borderRadius: 20, marginBottom: 12 }}>
+                <span style={{ fontSize: 11, color: '#FFF', fontWeight: 600, letterSpacing: 0.5 }}>Gera <strong style={{ color: '#FFF', fontWeight: 800 }}>3% de desconto</strong> para quem usar</span>
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(26,19,6,0.6)', marginTop: 6, marginBottom: 4 }}>Comissão por venda</div>
               <div style={{ fontSize: 26, fontWeight: 900, color: '#1a1306' }}>R$ 25,00</div>
             </div>
           </div>
