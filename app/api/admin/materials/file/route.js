@@ -18,17 +18,15 @@ export async function POST(request) {
       const id = String(body?.id || '').trim();
       if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
 
-      // Busca URL do arquivo pra limpar storage (via REST, bypassa bug do client)
+      // Busca URL do arquivo (fetch all sem filtro, bypassa bug .eq/.in)
       let fileUrl = null;
       try {
-        const getResp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id) + '&select=url', {
-          headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY },
-          cache: 'no-store',
-        });
-        const getJson = await getResp.json().catch(function() { return []; });
-        if (Array.isArray(getJson) && getJson[0] && getJson[0].url) fileUrl = getJson[0].url;
-      } catch (e) {}
+        const { data: allRows } = await supabaseAdmin.from('material_files').select('id, url');
+        const found = (allRows || []).find(function(r) { return r && r.id === id; });
+        if (found && found.url) fileUrl = found.url;
+      } catch {}
 
+      // Remove storage file (se existir)
       if (fileUrl) {
         try {
           const u = new URL(fileUrl);
@@ -37,52 +35,44 @@ export async function POST(request) {
         } catch {}
       }
 
-      // Chama RPC v2 que retorna {deleted, existed}
+      // DELETE via RPC v2
       let deleted = 0;
       let existed = null;
       let rpcErrMsg = null;
+      let rpcInnerErr = null;
       try {
         const r = await supabaseAdmin.rpc('admin_delete_material_file_v2', { p_id: id });
         if (r.error) { rpcErrMsg = r.error.message; }
         else if (r.data && typeof r.data === 'object') {
           deleted = Number(r.data.deleted) || 0;
           existed = Boolean(r.data.existed);
+          if (r.data.error) rpcInnerErr = r.data.error;
         }
       } catch (e) { rpcErrMsg = String(e && e.message || e); }
 
       if (deleted > 0) return NextResponse.json({ ok: true, deleted });
 
-      // Fallback: tenta DELETE via client caso RPC tenha falhado por outro motivo
+      // Fallback: client .delete().eq()
       if (deleted === 0) {
         try {
           const r = await supabaseAdmin.from('material_files').delete().eq('id', id).select();
           if (!r.error && Array.isArray(r.data) && r.data.length > 0) {
-            return NextResponse.json({ ok: true, deleted: r.data.length, method: 'client_fallback' });
+            return NextResponse.json({ ok: true, deleted: r.data.length, method: 'client' });
           }
         } catch {}
       }
 
-      // Diagnostico confiavel: busca TODOS os ids sem filtro e checa
-      let rowExistsUnfiltered = null;
-      try {
-        const resp = await fetch(SUPA_URL + '/rest/v1/material_files?select=id', {
-          headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY }, cache: 'no-store',
-        });
-        const rows = await resp.json().catch(function() { return []; });
-        rowExistsUnfiltered = Array.isArray(rows) && rows.some(function(r) { return r && r.id === id; });
-      } catch {}
+      // Idempotente: se linha nao existe, o objetivo (arquivo gone) ja esta cumprido
+      if (existed === false) {
+        return NextResponse.json({ ok: true, deleted: 0, note: 'ja_nao_existia_no_db' });
+      }
 
+      // Linha existe mas nenhum metodo deletou — problema real (RLS?)
       return NextResponse.json({
-        error: 'delete_failed',
-        detail: existed === true || rowExistsUnfiltered === true
-          ? 'linha EXISTE no DB mas DELETE retornou 0 (RLS bloqueando?)'
-          : existed === false && rowExistsUnfiltered === false
-            ? 'linha NAO EXISTE no DB com este id — admin esta com estado velho'
-            : 'incerto — rpc_existed=' + existed + ', unfiltered_exists=' + rowExistsUnfiltered,
-        id_sent: id,
-        rpc_existed: existed,
-        unfiltered_exists: rowExistsUnfiltered,
+        error: 'delete_blocked',
+        detail: 'Linha existe no DB mas todos os metodos de DELETE retornaram 0 linhas. Provavelmente RLS bloqueando — verifique policies em material_files',
         rpc_error: rpcErrMsg,
+        rpc_inner_error: rpcInnerErr,
         has_service_role: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
       }, { status: 500 });
     }
