@@ -398,7 +398,7 @@ export default function AdminDashboard() {
 
   async function loadMaterialFiles(folderId) {
     try {
-      const res = await fetch('/api/materials/files?folder_id=' + encodeURIComponent(folderId));
+      const res = await fetch('/api/materials/files?folder_id=' + encodeURIComponent(folderId) + '&t=' + Date.now(), { cache: 'no-store' });
       const data = await res.json();
       if (data.ok) setMaterialFiles(data.files || []);
     } catch {}
