@@ -120,6 +120,9 @@ export default function AdminDashboard() {
   useEffect(function() {
     try { var v = localStorage.getItem('admin_last_order_number'); if (v) setLastManualOrderNumber(v); } catch (e) {}
   }, []);
+  const [rankingMonth, setRankingMonth] = useState(new Date().getMonth() + 1);
+  const [rankingYear, setRankingYear] = useState(new Date().getFullYear());
+  const [rankingLimit, setRankingLimit] = useState(10);
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -883,6 +886,83 @@ export default function AdminDashboard() {
 
               <MonthlyTowersChart monthlySales={filteredMonthlySales} monthlyTops={monthlyTops} monthNames={monthNames} formatMoney={formatMoney} selectedAffiliate={selectedAffiliateFilter ? affiliates.find(function(a) { return a.id === selectedAffiliateFilter; }) : null} />
             </div>
+
+            {(function() {
+              var mStart = new Date(rankingYear, rankingMonth - 1, 1).getTime();
+              var mEnd = new Date(rankingYear, rankingMonth, 1).getTime();
+              var countByAf = {};
+              (allSales || []).forEach(function(s) {
+                if (!s.affiliate_id || !s.created_at) return;
+                var t = new Date(s.created_at).getTime();
+                if (t >= mStart && t < mEnd) {
+                  countByAf[s.affiliate_id] = (countByAf[s.affiliate_id] || 0) + 1;
+                }
+              });
+              var pool = (affiliates || []).filter(function(a) { return !a.is_admin && !a.blocked; });
+              var ranking = pool
+                .map(function(a) { return { af: a, count: countByAf[a.id] || 0 }; })
+                .filter(function(r) { return r.count > 0; })
+                .sort(function(a, b) { return b.count - a.count; });
+              var maxCount = ranking.length > 0 ? ranking[0].count : 1;
+              var visible = ranking.slice(0, rankingLimit);
+              var currentYr = new Date().getFullYear();
+              var yearOpts = [currentYr - 1, currentYr, currentYr + 1];
+              return (
+                <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 24, marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>Ranking de cupons no mês</div>
+                      <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Quantidade de vendas por afiliado no período selecionado</div>
+                    </div>
+                  </div>
+                  {visible.length === 0 && (
+                    <div style={{ padding: 30, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhuma venda neste mês</div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {visible.map(function(r, i) {
+                      var a = r.af;
+                      var color = affiliateColors[i % affiliateColors.length];
+                      var pct = maxCount > 0 ? (r.count / maxCount) * 100 : 0;
+                      return (
+                        <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{ width: 70, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 20, background: a.avatar_url ? 'transparent' : 'linear-gradient(135deg, #E8CF8B, #C9A961)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#1a1306', border: '2px solid ' + color }}>
+                              {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                            </div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: '#1A1A1A', fontFamily: 'monospace', letterSpacing: 0.3, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.coupon_code}</div>
+                          </div>
+                          <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ flex: 1, height: 28, background: '#F3F4F6', borderRadius: 6, overflow: 'hidden' }}>
+                              <div style={{ width: Math.max(pct, 2) + '%', height: '100%', background: 'linear-gradient(90deg, ' + color + 'cc, ' + color + ')', borderRadius: 6, transition: 'width 0.4s ease' }}></div>
+                            </div>
+                            <div style={{ minWidth: 60, fontSize: 14, fontWeight: 800, color: '#1A1A1A', fontVariantNumeric: 'tabular-nums' }}>{r.count} {r.count === 1 ? 'venda' : 'vendas'}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {ranking.length > rankingLimit && (
+                    <div style={{ textAlign: 'center', marginTop: 14 }}>
+                      <button onClick={function() { setRankingLimit(rankingLimit + 10); }} style={{ padding: '8px 18px', background: '#1A1A1A', color: '#FFD700', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>Ver mais ({ranking.length - rankingLimit} restantes)</button>
+                    </div>
+                  )}
+                  {rankingLimit > 10 && ranking.length <= rankingLimit && ranking.length > 10 && (
+                    <div style={{ textAlign: 'center', marginTop: 14 }}>
+                      <button onClick={function() { setRankingLimit(10); }} style={{ padding: '8px 18px', background: '#F3F4F6', color: '#666', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Recolher</button>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 20, paddingTop: 16, borderTop: '1px solid #F0F0F0', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Período:</span>
+                    <select value={rankingMonth} onChange={function(e) { setRankingMonth(Number(e.target.value)); setRankingLimit(10); }} style={{ padding: '6px 10px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#fff' }}>
+                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m) { return <option key={m} value={m}>{monthNames[m-1]}</option>; })}
+                    </select>
+                    <select value={rankingYear} onChange={function(e) { setRankingYear(Number(e.target.value)); setRankingLimit(10); }} style={{ padding: '6px 10px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#fff' }}>
+                      {yearOpts.map(function(y) { return <option key={y} value={y}>{y}</option>; })}
+                    </select>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 16 }}>
               <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
