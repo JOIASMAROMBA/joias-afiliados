@@ -14,15 +14,16 @@ export async function POST(request) {
     if (action === 'delete') {
       const id = String(body?.id || '').trim();
       if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
-      const { data: file } = await supabaseAdmin.from('material_files').select('url').eq('id', id).maybeSingle();
-      if (file?.url) {
+      const { data: files } = await supabaseAdmin.from('material_files').select('id, url').in('id', [id]);
+      const file = (files || []).find(function(f) { return f.id === id; });
+      if (file && file.url) {
         try {
           const u = new URL(file.url);
           const path = u.pathname.split('/materials/')[1];
           if (path) await supabaseAdmin.storage.from('materials').remove([path]);
         } catch {}
       }
-      const { error } = await supabaseAdmin.from('material_files').delete().eq('id', id);
+      const { error } = await supabaseAdmin.from('material_files').delete().in('id', [id]);
       if (error) return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
       return NextResponse.json({ ok: true });
     }
