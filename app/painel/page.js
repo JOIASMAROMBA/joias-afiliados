@@ -461,7 +461,7 @@ export default function PainelPage() {
     setSelectedMaterialFolder(null);
     setLoadingMaterials(true);
     try {
-      const res = await fetch('/api/materials/folders');
+      const res = await fetch('/api/materials/folders?t=' + Date.now(), { cache: 'no-store' });
       const data = await res.json();
       if (data.ok) setMaterialFolders(data.folders || []);
     } catch {}

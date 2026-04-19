@@ -16,14 +16,21 @@ export async function GET() {
     const folderIds = (data || []).map(f => f.id);
     let counts = {};
     if (folderIds.length > 0) {
-      const countRes = await supabaseAdmin
+      // busca todos os folder_id sem filtro (.in tem bug no client que retorna vazio)
+      const { data: allFiles } = await supabaseAdmin
         .from('material_files')
-        .select('folder_id', { count: 'exact' })
-        .in('folder_id', folderIds);
-      (countRes.data || []).forEach(r => { counts[r.folder_id] = (counts[r.folder_id] || 0) + 1; });
+        .select('folder_id');
+      const idSet = new Set(folderIds);
+      (allFiles || []).forEach(r => {
+        if (r && r.folder_id && idSet.has(r.folder_id)) {
+          counts[r.folder_id] = (counts[r.folder_id] || 0) + 1;
+        }
+      });
     }
     const folders = (data || []).map(f => ({ ...f, file_count: counts[f.id] || 0 }));
-    return NextResponse.json({ ok: true, folders });
+    const res = NextResponse.json({ ok: true, folders });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   } catch (err) {
     return NextResponse.json({ error: 'unexpected', detail: String(err?.message || err) }, { status: 500 });
   }

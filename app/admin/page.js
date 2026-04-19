@@ -395,7 +395,7 @@ export default function AdminDashboard() {
 
   async function loadMaterialFolders() {
     try {
-      const res = await fetch('/api/materials/folders');
+      const res = await fetch('/api/materials/folders?t=' + Date.now(), { cache: 'no-store' });
       const data = await res.json();
       if (data.ok) setMaterialFolders(data.folders || []);
     } catch {}
@@ -436,15 +436,17 @@ export default function AdminDashboard() {
   async function uploadMaterialFile(file) {
     if (!file || !selectedMatFolder) return;
     setUploadingMaterial(true);
+    const fid = selectedMatFolder.id;
     try {
       const form = new FormData();
       form.append('file', file);
-      form.append('folder_id', selectedMatFolder.id);
+      form.append('folder_id', fid);
       const res = await fetch('/api/admin/materials/upload', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'upload falhou') + (data.detail ? ' - ' + data.detail : '')); }
       else {
         if (data.file) setMaterialFiles(function(prev) { return [data.file].concat(prev || []); });
+        setMaterialFolders(function(prev) { return (prev || []).map(function(f) { return f.id === fid ? Object.assign({}, f, { file_count: (f.file_count || 0) + 1 }) : f; }); });
         if (!adminFilesOpen) setAdminFilesOpen(true);
         await loadMaterialFolders();
       }
@@ -454,10 +456,13 @@ export default function AdminDashboard() {
 
   async function deleteMaterialFile(id) {
     if (!confirm('Deletar este arquivo?')) return;
+    const fid = selectedMatFolder ? selectedMatFolder.id : null;
     setMaterialFiles(function(prev) { return (prev || []).filter(function(f) { return f.id !== id; }); });
+    if (fid) setMaterialFolders(function(prev) { return (prev || []).map(function(f) { return f.id === fid ? Object.assign({}, f, { file_count: Math.max(0, (f.file_count || 0) - 1) }) : f; }); });
     const ok = await apiCall('/api/admin/materials/file', { action: 'delete', id });
     if (!ok) {
       if (selectedMatFolder) await loadMaterialFiles(selectedMatFolder.id);
+      await loadMaterialFolders();
       return;
     }
     await loadMaterialFolders();
