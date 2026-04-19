@@ -23,9 +23,9 @@ export async function POST(request) {
           if (path) await supabaseAdmin.storage.from('materials').remove([path]);
         } catch {}
       }
-      const { error } = await supabaseAdmin.from('material_files').delete().in('id', [id]);
-      if (error) return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
-      return NextResponse.json({ ok: true });
+      const delRes = await supabaseAdmin.from('material_files').delete().match({ id: id }).select();
+      if (delRes.error) return NextResponse.json({ error: 'db_error', detail: delRes.error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, deleted: (delRes.data || []).length });
     }
 
     return NextResponse.json({ error: 'invalid_action' }, { status: 400 });
