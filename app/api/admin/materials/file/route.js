@@ -37,59 +37,53 @@ export async function POST(request) {
         } catch {}
       }
 
-      // Tenta multiplos caminhos; retorna o primeiro que deletar de verdade
+      // Chama RPC v2 que retorna {deleted, existed}
       let deleted = 0;
-      let method = 'none';
-      const tried = {};
-
-      // 1) RPC com security definer
+      let existed = null;
+      let rpcErrMsg = null;
       try {
-        const r = await supabaseAdmin.rpc('admin_delete_material_file', { p_id: id });
-        tried.rpc = { data: r.data, error: r.error ? r.error.message : null };
-        if (!r.error && Number(r.data) > 0) { deleted = Number(r.data); method = 'rpc'; }
-      } catch (e) { tried.rpc = { error: String(e && e.message || e) }; }
+        const r = await supabaseAdmin.rpc('admin_delete_material_file_v2', { p_id: id });
+        if (r.error) { rpcErrMsg = r.error.message; }
+        else if (r.data && typeof r.data === 'object') {
+          deleted = Number(r.data.deleted) || 0;
+          existed = Boolean(r.data.existed);
+        }
+      } catch (e) { rpcErrMsg = String(e && e.message || e); }
 
-      // 2) Client .delete().eq() com select
+      if (deleted > 0) return NextResponse.json({ ok: true, deleted });
+
+      // Fallback: tenta DELETE via client caso RPC tenha falhado por outro motivo
       if (deleted === 0) {
         try {
           const r = await supabaseAdmin.from('material_files').delete().eq('id', id).select();
-          tried.client = { count: Array.isArray(r.data) ? r.data.length : 0, error: r.error ? r.error.message : null };
-          if (!r.error && Array.isArray(r.data) && r.data.length > 0) { deleted = r.data.length; method = 'client'; }
-        } catch (e) { tried.client = { error: String(e && e.message || e) }; }
+          if (!r.error && Array.isArray(r.data) && r.data.length > 0) {
+            return NextResponse.json({ ok: true, deleted: r.data.length, method: 'client_fallback' });
+          }
+        } catch {}
       }
 
-      // 3) REST DELETE direto
-      if (deleted === 0) {
-        try {
-          const resp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id), {
-            method: 'DELETE',
-            headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, Prefer: 'return=representation', 'Content-Type': 'application/json' },
-          });
-          const rows = await resp.json().catch(function() { return []; });
-          tried.rest = { status: resp.status, count: Array.isArray(rows) ? rows.length : 0 };
-          if (resp.ok && Array.isArray(rows) && rows.length > 0) { deleted = rows.length; method = 'rest'; }
-        } catch (e) { tried.rest = { error: String(e && e.message || e) }; }
-      }
-
-      if (deleted > 0) return NextResponse.json({ ok: true, deleted, method });
-
-      // Todas falharam — checa se a linha existe no DB
-      let rowExists = null;
+      // Diagnostico confiavel: busca TODOS os ids sem filtro e checa
+      let rowExistsUnfiltered = null;
       try {
-        const resp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id) + '&select=id', {
+        const resp = await fetch(SUPA_URL + '/rest/v1/material_files?select=id', {
           headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY }, cache: 'no-store',
         });
         const rows = await resp.json().catch(function() { return []; });
-        rowExists = Array.isArray(rows) && rows.length > 0;
+        rowExistsUnfiltered = Array.isArray(rows) && rows.some(function(r) { return r && r.id === id; });
       } catch {}
 
       return NextResponse.json({
         error: 'delete_failed',
-        detail: rowExists === true ? 'linha existe mas nenhum metodo conseguiu deletar (RLS?)' : rowExists === false ? 'linha nao existe no DB (id incorreto?)' : 'nao foi possivel verificar',
+        detail: existed === true || rowExistsUnfiltered === true
+          ? 'linha EXISTE no DB mas DELETE retornou 0 (RLS bloqueando?)'
+          : existed === false && rowExistsUnfiltered === false
+            ? 'linha NAO EXISTE no DB com este id — admin esta com estado velho'
+            : 'incerto — rpc_existed=' + existed + ', unfiltered_exists=' + rowExistsUnfiltered,
         id_sent: id,
-        row_exists: rowExists,
+        rpc_existed: existed,
+        unfiltered_exists: rowExistsUnfiltered,
+        rpc_error: rpcErrMsg,
         has_service_role: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-        tried,
       }, { status: 500 });
     }
 
