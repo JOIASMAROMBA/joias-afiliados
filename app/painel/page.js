@@ -39,6 +39,8 @@ export default function PainelPage() {
   const [selectedMaterialFolder, setSelectedMaterialFolder] = useState(null);
   const [materialFiles, setMaterialFiles] = useState([]);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
+  const [viewingFile, setViewingFile] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -1331,17 +1333,22 @@ export default function PainelPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                 {materialFiles.length === 0 && (<div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.4)' }}>Esta pasta ainda está vazia</div>)}
                 {materialFiles.map(function(file) {
+                  var hasExtras = (file.link && String(file.link).trim()) || (file.note && String(file.note).trim());
                   return (
-                    <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" download style={{ position: 'relative', aspectRatio: '1 / 1', background: '#0a0a0a', border: '1px solid rgba(201,169,97,0.15)', borderRadius: 10, overflow: 'hidden', display: 'block', textDecoration: 'none' }}>
+                    <div key={file.id} onClick={function() { setViewingFile(file); setCopiedLink(false); }} style={{ position: 'relative', aspectRatio: '1 / 1', background: '#0a0a0a', border: '1px solid ' + (hasExtras ? 'rgba(201,169,97,0.45)' : 'rgba(201,169,97,0.15)'), borderRadius: 10, overflow: 'hidden', cursor: 'pointer' }}>
                       {file.file_type === 'video' ? (
                         <video src={file.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted playsInline />
                       ) : (
                         <img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       )}
+                      {hasExtras && (<div style={{ position: 'absolute', top: 6, right: 6, display: 'flex', gap: 4 }}>
+                        {file.link && String(file.link).trim() && (<span title="Tem link" style={{ width: 22, height: 22, borderRadius: 11, background: 'linear-gradient(135deg, #FFD700, #C9A961)', color: '#1a1306', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>🔗</span>)}
+                        {file.note && String(file.note).trim() && (<span title="Tem observação" style={{ width: 22, height: 22, borderRadius: 11, background: 'linear-gradient(135deg, #FFD700, #C9A961)', color: '#1a1306', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>💬</span>)}
+                      </div>)}
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 8px', background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.85))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 10, color: '#C9A961', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{file.file_type === 'video' ? '▶ Vídeo' : '⇣ Baixar'}</span>
+                        <span style={{ fontSize: 10, color: '#C9A961', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{file.file_type === 'video' ? '▶ Vídeo' : 'Ver'}</span>
                       </div>
-                    </a>
+                    </div>
                   );
                 })}
               </div>
@@ -1361,6 +1368,43 @@ export default function PainelPage() {
           CONTATO
         </button>
       </div>
+
+      {viewingFile && (
+        <div onClick={function() { setViewingFile(null); setCopiedLink(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10700, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 560, width: '100%', maxHeight: '92vh', overflowY: 'auto', background: 'linear-gradient(180deg, #0a0a0a 0%, #050505 100%)', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 30px 80px rgba(0,0,0,0.8)' }}>
+            <div style={{ position: 'relative', background: '#000', maxHeight: '55vh', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {viewingFile.file_type === 'video' ? (
+                <video src={viewingFile.url} controls playsInline style={{ maxWidth: '100%', maxHeight: '55vh', display: 'block' }} />
+              ) : (
+                <img src={viewingFile.url} alt="" style={{ maxWidth: '100%', maxHeight: '55vh', display: 'block', objectFit: 'contain' }} />
+              )}
+              <button onClick={function() { setViewingFile(null); setCopiedLink(false); }} style={{ position: 'absolute', top: 10, right: 10, width: 34, height: 34, borderRadius: 17, background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(201,169,97,0.4)', color: '#C9A961', fontSize: 18, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+
+            <div style={{ padding: 20 }}>
+              {viewingFile.note && String(viewingFile.note).trim() && (
+                <div style={{ padding: '14px 16px', background: 'rgba(201,169,97,0.08)', border: '1px solid rgba(201,169,97,0.3)', borderLeft: '3px solid #C9A961', borderRadius: 8, marginBottom: 14 }}>
+                  <div style={{ fontSize: 9, color: '#C9A961', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>Observação</div>
+                  <div style={{ fontSize: 14, color: '#FFF', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{viewingFile.note}</div>
+                </div>
+              )}
+
+              {viewingFile.link && String(viewingFile.link).trim() && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 9, color: '#C9A961', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>Link</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                    <div style={{ flex: 1, padding: '10px 12px', background: '#000', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 8, color: '#FFD700', fontSize: 12, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>{viewingFile.link}</div>
+                    <button onClick={function() { try { navigator.clipboard.writeText(String(viewingFile.link)); setCopiedLink(true); setTimeout(function() { setCopiedLink(false); }, 1800); } catch (e) {} }} style={{ padding: '0 16px', background: copiedLink ? 'linear-gradient(135deg, #10B981, #059669)' : 'linear-gradient(135deg, #FFD700, #C9A961)', color: '#1a1306', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5, textTransform: 'uppercase', minWidth: 90 }}>{copiedLink ? '✓ Copiado' : 'Copiar'}</button>
+                  </div>
+                  <a href={viewingFile.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 8, fontSize: 11, color: '#C9A961', textDecoration: 'none', fontWeight: 700, letterSpacing: 0.5 }}>↗ Abrir em nova aba</a>
+                </div>
+              )}
+
+              <a href={viewingFile.url} target="_blank" rel="noopener noreferrer" download style={{ display: 'block', padding: '14px', background: 'linear-gradient(135deg, #FFD700, #C9A961)', color: '#1a1306', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 900, cursor: 'pointer', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', textDecoration: 'none', boxShadow: '0 6px 20px rgba(201,169,97,0.3)' }}>⇣ Baixar {viewingFile.file_type === 'video' ? 'Vídeo' : 'Foto'}</a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showConductView && (
         <div onClick={function() { setShowConductView(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10800, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>

@@ -125,6 +125,10 @@ export default function AdminDashboard() {
   const [rankingLimit, setRankingLimit] = useState(10);
   const [top10Month, setTop10Month] = useState(new Date().getMonth() + 1);
   const [top10Year, setTop10Year] = useState(new Date().getFullYear());
+  const [editingMatFile, setEditingMatFile] = useState(null);
+  const [editMatLink, setEditMatLink] = useState('');
+  const [editMatNote, setEditMatNote] = useState('');
+  const [savingMatEdit, setSavingMatEdit] = useState(false);
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -471,6 +475,30 @@ export default function AdminDashboard() {
       return;
     }
     await loadMaterialFolders();
+  }
+
+  function openEditMatFile(file) {
+    setEditingMatFile(file);
+    setEditMatLink(file.link || '');
+    setEditMatNote(file.note || '');
+  }
+
+  async function saveMatFileEdit() {
+    if (!editingMatFile) return;
+    setSavingMatEdit(true);
+    try {
+      const res = await fetch('/api/admin/materials/file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', id: editingMatFile.id, link: editMatLink.trim(), note: editMatNote.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'falhou') + (data.detail ? ' - ' + data.detail : '')); setSavingMatEdit(false); return; }
+      setMaterialFiles(function(prev) { return (prev || []).map(function(f) { return f.id === editingMatFile.id ? Object.assign({}, f, { link: editMatLink.trim() || null, note: editMatNote.trim() || null }) : f; }); });
+      setEditingMatFile(null);
+      setEditMatLink(''); setEditMatNote('');
+    } catch (e) { alert('Erro: ' + e.message); }
+    setSavingMatEdit(false);
   }
 
   async function cleanupOrphans() {
@@ -1578,10 +1606,16 @@ export default function AdminDashboard() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                       {materialFiles.length === 0 && (<div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum arquivo ainda</div>)}
                       {materialFiles.map(function(file) {
+                        var hasExtras = (file.link && file.link.trim()) || (file.note && file.note.trim());
                         return (
                           <div key={file.id} style={{ position: 'relative', aspectRatio: '1 / 1', background: '#FFF', borderRadius: 10, overflow: 'hidden', border: '1px solid #E5E5E5' }}>
                             {file.file_type === 'video' ? (<video src={file.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />) : (<img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />)}
+                            <button onClick={function() { openEditMatFile(file); }} title="Editar link/observação" style={{ position: 'absolute', top: 6, left: 6, width: 28, height: 28, borderRadius: '50%', background: hasExtras ? 'rgba(201,169,97,0.95)' : 'rgba(26,26,26,0.85)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>✎</button>
                             <button onClick={function() { deleteMaterialFile(file.id); }} title="Apagar" style={{ position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: '50%', background: 'rgba(220,38,38,0.95)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>✕</button>
+                            {hasExtras && (<div style={{ position: 'absolute', top: 40, left: 6, display: 'flex', gap: 4 }}>
+                              {file.link && file.link.trim() && (<span title="tem link" style={{ padding: '2px 6px', background: 'rgba(201,169,97,0.95)', color: '#1a1306', fontSize: 9, fontWeight: 800, borderRadius: 4, letterSpacing: 0.3 }}>🔗</span>)}
+                              {file.note && file.note.trim() && (<span title="tem observação" style={{ padding: '2px 6px', background: 'rgba(201,169,97,0.95)', color: '#1a1306', fontSize: 9, fontWeight: 800, borderRadius: 4, letterSpacing: 0.3 }}>💬</span>)}
+                            </div>)}
                             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'rgba(0,0,0,0.75)', fontSize: 10, color: '#fff', fontWeight: 600 }}>{file.file_type === 'video' ? '▶ VIDEO' : '📷 FOTO'}</div>
                           </div>
                         );
@@ -1611,6 +1645,34 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={createFolder} style={{ flex: 1, padding: 12, background: '#1A1A1A', color: '#FFD700', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Criar</button>
                 <button onClick={function() { setShowNewFolderModal(false); setNewFolderName(''); setNewFolderUrgent(false); }} style={{ padding: '12px 20px', background: '#F3F4F6', color: '#666', border: '1px solid #E5E5E5', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editingMatFile && (
+          <div onClick={function() { if (!savingMatEdit) { setEditingMatFile(null); setEditMatLink(''); setEditMatNote(''); } }} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 480, width: '100%', background: '#0a0a0a', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 14, padding: 22, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', background: '#000', flexShrink: 0, border: '1px solid rgba(201,169,97,0.25)' }}>
+                  {editingMatFile.file_type === 'video' ? (<video src={editingMatFile.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />) : (<img src={editingMatFile.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,215,0,0.7)', fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>Editar arquivo</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#FFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{editingMatFile.file_name || (editingMatFile.file_type === 'video' ? 'Video' : 'Foto')}</div>
+                </div>
+              </div>
+
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: 'rgba(255,215,0,0.8)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1.2 }}>Link (opcional)</label>
+              <input type="url" value={editMatLink} onChange={function(e) { setEditMatLink(e.target.value); }} placeholder="https://..." style={{ width: '100%', padding: '11px 12px', background: '#000', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 8, color: '#FFD700', fontSize: 13, outline: 'none', marginBottom: 14, boxSizing: 'border-box', fontFamily: 'monospace' }} />
+
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 800, color: 'rgba(255,215,0,0.8)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1.2 }}>Observação (opcional)</label>
+              <textarea value={editMatNote} onChange={function(e) { setEditMatNote(e.target.value.slice(0, 1000)); }} placeholder="Instruções, legenda sugerida, contexto..." rows={4} style={{ width: '100%', padding: '11px 12px', background: '#000', border: '1px solid rgba(201,169,97,0.3)', borderRadius: 8, color: '#FFF', fontSize: 13, outline: 'none', marginBottom: 6, boxSizing: 'border-box', resize: 'vertical', minHeight: 80, fontFamily: 'inherit' }} />
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'right', marginBottom: 18 }}>{editMatNote.length}/1000</div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={saveMatFileEdit} disabled={savingMatEdit} style={{ flex: 1, padding: 13, background: savingMatEdit ? '#333' : 'linear-gradient(135deg, #FFD700, #C9A961)', color: '#1a1306', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: savingMatEdit ? 'wait' : 'pointer', letterSpacing: 0.8, textTransform: 'uppercase' }}>{savingMatEdit ? 'Salvando...' : 'Salvar'}</button>
+                <button onClick={function() { setEditingMatFile(null); setEditMatLink(''); setEditMatNote(''); }} disabled={savingMatEdit} style={{ padding: '13px 22px', background: 'transparent', color: '#999', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
               </div>
             </div>
           </div>

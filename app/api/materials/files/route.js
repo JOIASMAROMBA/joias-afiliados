@@ -13,7 +13,7 @@ export async function GET(request) {
     // Filtro e ordenacao feitos em JS — so retorna linhas que REALMENTE existem no DB.
     const { data, error } = await supabaseAdmin
       .from('material_files')
-      .select('id, url, file_name, file_type, created_at, folder_id');
+      .select('id, url, file_name, file_type, created_at, folder_id, link, note');
     if (error) return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 });
 
     const filtered = (data || [])
@@ -23,7 +23,7 @@ export async function GET(request) {
         var db = b.created_at ? new Date(b.created_at).getTime() : 0;
         return db - da;
       });
-    const res = NextResponse.json({ ok: true, files: filtered.map(function(f) { return { id: f.id, url: f.url, file_name: f.file_name, file_type: f.file_type, created_at: f.created_at }; }) });
+    const res = NextResponse.json({ ok: true, files: filtered.map(function(f) { return { id: f.id, url: f.url, file_name: f.file_name, file_type: f.file_type, created_at: f.created_at, link: f.link || null, note: f.note || null }; }) });
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
   } catch (err) {

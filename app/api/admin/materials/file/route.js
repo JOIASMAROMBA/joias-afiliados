@@ -77,6 +77,43 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
+    if (action === 'update') {
+      const id = String(body?.id || '').trim();
+      if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
+      const link = body?.link != null ? String(body.link).trim().slice(0, 500) : '';
+      const note = body?.note != null ? String(body.note).trim().slice(0, 1000) : '';
+
+      // PATCH via REST direto (bypassa bug do client, mesma estrategia do delete)
+      const patchResp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id), {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPA_KEY,
+          Authorization: 'Bearer ' + SUPA_KEY,
+          Prefer: 'return=representation',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ link: link || null, note: note || null }),
+      });
+
+      if (!patchResp.ok) {
+        const txt = await patchResp.text().catch(function() { return ''; });
+        return NextResponse.json({ error: 'update_failed', detail: txt.slice(0, 300) }, { status: 500 });
+      }
+
+      const rows = await patchResp.json().catch(function() { return []; });
+      if (Array.isArray(rows) && rows.length > 0) {
+        return NextResponse.json({ ok: true, file: rows[0] });
+      }
+
+      // Fallback: client update
+      const r = await supabaseAdmin.from('material_files').update({ link: link || null, note: note || null }).eq('id', id).select();
+      if (!r.error && Array.isArray(r.data) && r.data.length > 0) {
+        return NextResponse.json({ ok: true, file: r.data[0], method: 'client' });
+      }
+
+      return NextResponse.json({ error: 'update_failed', detail: 'nenhum metodo atualizou a linha' }, { status: 500 });
+    }
+
     if (action === 'cleanup_orphans') {
       const folderId = String(body?.folder_id || '').trim();
       if (!folderId) return NextResponse.json({ error: 'missing_folder_id' }, { status: 400 });
