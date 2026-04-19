@@ -849,7 +849,7 @@ export default function PainelPage() {
                 var bg, border, opacity = 1, label = '', labelColor = '';
                 if (d.posted) { bg = 'linear-gradient(135deg, #00ff88, #00cc6a)'; border = '2px solid #00ff88'; label = '✓'; labelColor = '#00ff88'; }
                 else if (d.missed) { bg = 'rgba(255,80,80,0.15)'; border = '2px solid #ff4444'; label = '✗'; labelColor = '#ff4444'; }
-                else if (d.isObligatory && d.isFuture) { bg = 'linear-gradient(135deg, rgba(201,169,97,0.25), rgba(255,140,0,0.1))'; border = '2px solid #C9A961'; label = 'obrigatory'; labelColor = '#C9A961'; }
+                else if (d.isObligatory) { bg = 'linear-gradient(135deg, rgba(201,169,97,0.25), rgba(255,140,0,0.1))'; border = '2px solid #C9A961'; label = 'obrigatory'; labelColor = '#C9A961'; }
                 else if (d.isToday) { bg = 'rgba(201,169,97,0.1)'; border = '2px solid rgba(201,169,97,0.5)'; label = ''; }
                 else if (d.isFuture) { bg = 'rgba(255,255,255,0.02)'; border = '1px dashed rgba(201,169,97,0.15)'; opacity = 0.4; }
                 else { bg = 'rgba(255,255,255,0.04)'; border = '1px solid rgba(201,169,97,0.1)'; opacity = 0.55; }
