@@ -14,18 +14,50 @@ export async function POST(request) {
     if (action === 'delete') {
       const id = String(body?.id || '').trim();
       if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
-      const { data: files } = await supabaseAdmin.from('material_files').select('id, url').in('id', [id]);
-      const file = (files || []).find(function(f) { return f.id === id; });
-      if (file && file.url) {
+
+      // 1. Buscar o arquivo
+      const { data: rows } = await supabaseAdmin.from('material_files').select('id, url').in('id', [id]);
+      const file = (rows || []).find(function(f) { return f.id === id; });
+      if (!file) return NextResponse.json({ error: 'not_found', attempted_id: id }, { status: 404 });
+
+      // 2. Remove do storage
+      if (file.url) {
         try {
           const u = new URL(file.url);
           const path = u.pathname.split('/materials/')[1];
           if (path) await supabaseAdmin.storage.from('materials').remove([path]);
         } catch {}
       }
-      const delRes = await supabaseAdmin.from('material_files').delete().match({ id: id }).select();
-      if (delRes.error) return NextResponse.json({ error: 'db_error', detail: delRes.error.message }, { status: 500 });
-      return NextResponse.json({ ok: true, deleted: (delRes.data || []).length });
+
+      // 3. Tenta delete por varios metodos (match, filter, eq) e retorna qual funcionou
+      let deleted = 0;
+      let attempts = [];
+
+      const r1 = await supabaseAdmin.from('material_files').delete().match({ id: id }).select();
+      attempts.push({ method: 'match', error: r1.error && r1.error.message, count: (r1.data || []).length });
+      deleted += (r1.data || []).length;
+
+      if (deleted === 0) {
+        const r2 = await supabaseAdmin.from('material_files').delete().filter('id', 'eq', id).select();
+        attempts.push({ method: 'filter', error: r2.error && r2.error.message, count: (r2.data || []).length });
+        deleted += (r2.data || []).length;
+      }
+
+      if (deleted === 0) {
+        const r3 = await supabaseAdmin.from('material_files').delete().in('id', [id]).select();
+        attempts.push({ method: 'in', error: r3.error && r3.error.message, count: (r3.data || []).length });
+        deleted += (r3.data || []).length;
+      }
+
+      // 4. Verificar se ainda existe
+      const { data: stillThere } = await supabaseAdmin.from('material_files').select('id').in('id', [id]);
+      const stillExists = (stillThere || []).some(function(f) { return f.id === id; });
+
+      if (stillExists) {
+        return NextResponse.json({ error: 'delete_failed', detail: 'Row still exists after delete attempts', attempts: attempts }, { status: 500 });
+      }
+
+      return NextResponse.json({ ok: true, deleted: deleted, attempts: attempts });
     }
 
     return NextResponse.json({ error: 'invalid_action' }, { status: 400 });

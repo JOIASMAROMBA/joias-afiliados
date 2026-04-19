@@ -440,7 +440,8 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'upload falhou') + (data.detail ? ' - ' + data.detail : '')); }
       else {
-        await loadMaterialFiles(selectedMatFolder.id);
+        if (data.file) setMaterialFiles(function(prev) { return [data.file].concat(prev || []); });
+        if (!adminFilesOpen) setAdminFilesOpen(true);
         await loadMaterialFolders();
       }
     } catch (e) { alert('Erro: ' + e.message); }
@@ -449,9 +450,12 @@ export default function AdminDashboard() {
 
   async function deleteMaterialFile(id) {
     if (!confirm('Deletar este arquivo?')) return;
+    setMaterialFiles(function(prev) { return (prev || []).filter(function(f) { return f.id !== id; }); });
     const ok = await apiCall('/api/admin/materials/file', { action: 'delete', id });
-    if (!ok) return;
-    if (selectedMatFolder) await loadMaterialFiles(selectedMatFolder.id);
+    if (!ok) {
+      if (selectedMatFolder) await loadMaterialFiles(selectedMatFolder.id);
+      return;
+    }
     await loadMaterialFolders();
   }
 
