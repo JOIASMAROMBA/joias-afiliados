@@ -874,14 +874,26 @@ export default function PainelPage() {
 
             <button onClick={function() { setShowPostModal(true); }} style={{ width: '100%', padding: 12, background: 'linear-gradient(135deg, #C9A961 0%, #8B6914 100%)', border: 'none', borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 20px rgba(201,169,97,0.3)' }}>✨ Registrar Postagem de Hoje</button>
 
-            {obligations.length > 0 && (
-              <div style={{ marginTop: 12, padding: 10, textAlign: 'center' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: pendingMissed > 0 ? '#ff6b6b' : '#00ff88' }}>
-                  {pendingMissed === 0 ? '🎉 Parabéns! Você não falhou nenhum dia ainda!' : '⚠️ Você deixou de postar ' + pendingMissed + ' ' + (pendingMissed === 1 ? 'vez' : 'vezes') + '. Compense postando outro dia!'}
-                  {compensated > 0 && pendingMissed > 0 && (<div style={{ fontSize: 10, marginTop: 4, color: '#00ff88' }}>(Você ja compensou {compensated})</div>)}
+            {obligations.length > 0 && (function() {
+              var missedList = weekDays.filter(function(d) { return d.missed; }).map(function(d) { return d.date.getDate(); });
+              function joinDays(nums) {
+                if (nums.length === 0) return '';
+                if (nums.length === 1) return 'dia ' + nums[0];
+                var last = nums[nums.length - 1];
+                var rest = nums.slice(0, -1).join(', ');
+                return 'dia ' + rest + ' e ' + last;
+              }
+              var hasMissed = missedList.length > 0;
+              return (
+                <div style={{ marginTop: 12, padding: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: hasMissed ? '#ff6b6b' : '#00ff88' }}>
+                    {!hasMissed && '🎉 Parabéns! Você não falhou nenhum dia ainda!'}
+                    {hasMissed && '😔 Poxa, você deixou de postar ' + joinDays(missedList) + '.'}
+                    {compensated > 0 && hasMissed && (<div style={{ fontSize: 10, marginTop: 4, color: '#00ff88' }}>(Você já compensou {compensated})</div>)}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           <div onClick={openMaterialsModal} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(15,15,15,0.85), rgba(26,19,6,0.85))', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 16, padding: 0, marginBottom: 16, overflow: 'hidden', display: 'flex', alignItems: 'stretch', minHeight: 150, boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)', animation: 'materialHeartbeat 1.6s ease-in-out infinite', transformOrigin: 'center' }}>
