@@ -868,25 +868,6 @@ export default function AdminDashboard() {
               {[{ label: 'Faturamento', value: formatMoney(kpis.revenue) },{ label: 'Vendas', value: formatNumber(kpis.totalSales) },{ label: 'Comissoes', value: formatMoney(kpis.commissions) },{ label: 'Lucro liquido', value: formatMoney(kpis.netRevenue) },{ label: 'Afiliados ativos', value: kpis.activeAffiliates + ' / ' + kpis.totalAffiliates },{ label: 'Ticket medio', value: formatMoney(kpis.avgTicket) }].map(function(k, i) { return (<div key={i} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 16 }}><div style={{ fontSize: 11, color: '#888', fontWeight: 500, textTransform: 'uppercase', marginBottom: 6 }}>{k.label}</div><div style={{ fontSize: 22, fontWeight: 700 }}>{k.value}</div></div>); })}
             </div>
 
-            <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 24, marginBottom: 24 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Evolucao de vendas {new Date().getFullYear()}</div>
-              <div style={{ fontSize: 12, color: '#888', marginBottom: 20 }}>Clique em um afiliado para ver as vendas dele.</div>
-
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 8 }}>
-                <button onClick={function() { setSelectedAffiliateFilter(null); }} style={{ minWidth: 100, padding: '8px 14px', background: selectedAffiliateFilter === null ? '#1A1A1A' : '#F3F4F6', color: selectedAffiliateFilter === null ? '#FFD700' : '#666', border: 'none', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}><span style={{ fontSize: 16 }}>🏆</span>Top 1</button>
-                {top10.map(function(a, i) {
-                  var color = affiliateColors[i % affiliateColors.length];
-                  var isSel = selectedAffiliateFilter === a.id;
-                  return (<button key={a.id} onClick={function() { setSelectedAffiliateFilter(a.id); }} style={{ minWidth: 110, padding: '6px 12px', background: isSel ? color : 'white', border: '2px solid ' + color, borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', color: isSel ? '#fff' : '#1A1A1A' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.3)' : color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{a.avatar_initials}</div>
-                    {a.coupon_code}
-                  </button>);
-                })}
-              </div>
-
-              <MonthlyTowersChart monthlySales={filteredMonthlySales} monthlyTops={monthlyTops} monthNames={monthNames} formatMoney={formatMoney} selectedAffiliate={selectedAffiliateFilter ? affiliates.find(function(a) { return a.id === selectedAffiliateFilter; }) : null} />
-            </div>
-
             {(function() {
               var mStart = new Date(rankingYear, rankingMonth - 1, 1).getTime();
               var mEnd = new Date(rankingYear, rankingMonth, 1).getTime();
@@ -963,6 +944,25 @@ export default function AdminDashboard() {
                 </div>
               );
             })()}
+
+            <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 24, marginBottom: 24 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Evolucao de vendas {new Date().getFullYear()}</div>
+              <div style={{ fontSize: 12, color: '#888', marginBottom: 20 }}>Clique em um afiliado para ver as vendas dele.</div>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 8 }}>
+                <button onClick={function() { setSelectedAffiliateFilter(null); }} style={{ minWidth: 100, padding: '8px 14px', background: selectedAffiliateFilter === null ? '#1A1A1A' : '#F3F4F6', color: selectedAffiliateFilter === null ? '#FFD700' : '#666', border: 'none', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}><span style={{ fontSize: 16 }}>🏆</span>Top 1</button>
+                {top10.map(function(a, i) {
+                  var color = affiliateColors[i % affiliateColors.length];
+                  var isSel = selectedAffiliateFilter === a.id;
+                  return (<button key={a.id} onClick={function() { setSelectedAffiliateFilter(a.id); }} style={{ minWidth: 110, padding: '6px 12px', background: isSel ? color : 'white', border: '2px solid ' + color, borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', color: isSel ? '#fff' : '#1A1A1A' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.3)' : color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{a.avatar_initials}</div>
+                    {a.coupon_code}
+                  </button>);
+                })}
+              </div>
+
+              <MonthlyTowersChart monthlySales={filteredMonthlySales} monthlyTops={monthlyTops} monthNames={monthNames} formatMoney={formatMoney} selectedAffiliate={selectedAffiliateFilter ? affiliates.find(function(a) { return a.id === selectedAffiliateFilter; }) : null} />
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 16 }}>
               <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
