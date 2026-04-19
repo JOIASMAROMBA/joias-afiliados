@@ -860,7 +860,7 @@ export default function PainelPage() {
                     <div style={{ fontSize: 16, fontWeight: 900, color: d.posted ? '#000' : d.missed ? '#ff4444' : d.isToday ? '#C9A961' : '#fff' }}>{d.date.getDate()}</div>
                     {label === 'obrigatory' && (
                       <>
-                        <div style={{ fontSize: 7, color: '#C9A961', fontWeight: 800, marginTop: 1 }}>DIA DE</div>
+                        <div style={{ fontSize: 7, color: '#C9A961', fontWeight: 800, marginTop: 8 }}>DIA DE</div>
                         <div style={{ fontSize: 7, color: '#C9A961', fontWeight: 800, marginTop: 1 }}>POSTAR</div>
                       </>
                     )}
