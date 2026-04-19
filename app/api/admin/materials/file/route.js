@@ -4,6 +4,9 @@ import { requireAdmin } from '../../../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+const SUPA_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+const SUPA_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+
 export async function POST(request) {
   try {
     const auth = await requireAdmin(request);
@@ -15,43 +18,46 @@ export async function POST(request) {
       const id = String(body?.id || '').trim();
       if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
 
-      // 1. Buscar TUDO sem filtro (workaround bug do PostgREST) e filtrar em JS
-      const { data: allRows } = await supabaseAdmin.from('material_files').select('id, url');
-      const file = (allRows || []).find(function(f) { return f.id === id; });
-      if (!file) return NextResponse.json({ error: 'not_found', attempted_id: id }, { status: 404 });
+      // Busca o URL do arquivo via REST direto (bypassa bug do client)
+      let fileUrl = null;
+      try {
+        const getResp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id) + '&select=url', {
+          headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY },
+          cache: 'no-store',
+        });
+        const getJson = await getResp.json().catch(function() { return []; });
+        if (Array.isArray(getJson) && getJson[0] && getJson[0].url) fileUrl = getJson[0].url;
+      } catch (e) {}
 
-      // 2. Remove do storage
-      if (file.url) {
+      // Remove do storage
+      if (fileUrl) {
         try {
-          const u = new URL(file.url);
+          const u = new URL(fileUrl);
           const path = u.pathname.split('/materials/')[1];
           if (path) await supabaseAdmin.storage.from('materials').remove([path]);
         } catch {}
       }
 
-      // 3. Delete por qualquer metodo que funcionar
-      let attempts = [];
-      let deleted = 0;
+      // DELETE via REST direto (bypassa bug do client)
+      const delResp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id), {
+        method: 'DELETE',
+        headers: {
+          apikey: SUPA_KEY,
+          Authorization: 'Bearer ' + SUPA_KEY,
+          Prefer: 'return=representation',
+          'Content-Type': 'application/json',
+        },
+      });
 
-      const r1 = await supabaseAdmin.from('material_files').delete().match({ id: id }).select();
-      attempts.push({ method: 'match', error: r1.error && r1.error.message, count: (r1.data || []).length });
-      deleted += (r1.data || []).length;
-
-      if (deleted === 0) {
-        const r2 = await supabaseAdmin.from('material_files').delete().in('id', [id]).select();
-        attempts.push({ method: 'in', error: r2.error && r2.error.message, count: (r2.data || []).length });
-        deleted += (r2.data || []).length;
+      if (!delResp.ok) {
+        const txt = await delResp.text().catch(function() { return ''; });
+        return NextResponse.json({ error: 'delete_failed', status: delResp.status, detail: txt.slice(0, 300) }, { status: 500 });
       }
 
-      // 4. Verifica se ainda existe com busca sem filtro
-      const { data: stillRows } = await supabaseAdmin.from('material_files').select('id');
-      const stillExists = (stillRows || []).some(function(f) { return f.id === id; });
+      const delJson = await delResp.json().catch(function() { return []; });
+      const deleted = Array.isArray(delJson) ? delJson.length : 0;
 
-      if (stillExists) {
-        return NextResponse.json({ error: 'delete_failed', detail: 'Row still exists after delete attempts', attempts: attempts }, { status: 500 });
-      }
-
-      return NextResponse.json({ ok: true, deleted: deleted, attempts: attempts });
+      return NextResponse.json({ ok: true, deleted: deleted });
     }
 
     return NextResponse.json({ error: 'invalid_action' }, { status: 400 });
