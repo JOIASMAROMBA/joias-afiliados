@@ -53,6 +53,7 @@ export default function PainelPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [showConductView, setShowConductView] = useState(false);
+  const [showTermsView, setShowTermsView] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [pushStatus, setPushStatus] = useState('idle'); // idle | unsupported | denied | disabled | enabled | busy
   const [pushBannerDismissed, setPushBannerDismissed] = useState(false);
@@ -1335,6 +1336,9 @@ export default function PainelPage() {
         <button onClick={function() { setShowConductView(true); }} style={{ background: 'none', border: 'none', padding: 6, color: '#C9A961', fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', cursor: 'pointer', display: 'block', margin: '0 auto 12px auto' }}>
           TERMOS DE CONDUTA
         </button>
+        <button onClick={function() { setShowTermsView(true); }} style={{ background: 'none', border: 'none', padding: 6, color: '#C9A961', fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', cursor: 'pointer', display: 'block', margin: '0 auto 12px auto' }}>
+          TERMOS DE USO
+        </button>
         <button onClick={function() { setShowContact(true); }} style={{ background: 'none', border: 'none', padding: 6, color: '#C9A961', fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', cursor: 'pointer', display: 'block', margin: '0 auto' }}>
           CONTATO
         </button>
@@ -1380,6 +1384,51 @@ export default function PainelPage() {
                   <li><strong>Banimento definitivo</strong> na 2ª</li>
                 </ul>
               </div>
+            </div>
+            <div style={{ marginTop: 18, padding: 14, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 10, textAlign: 'center' }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>✅</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', letterSpacing: 2, textTransform: 'uppercase' }}>Você já assinou</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTermsView && (
+        <div onClick={function() { setShowTermsView(false); }} style={{ position: 'fixed', inset: 0, zIndex: 10800, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ maxWidth: 620, width: '100%', maxHeight: '90vh', overflowY: 'auto', background: 'linear-gradient(180deg, #1a1306 0%, #0f0a03 100%)', border: '2px solid #C9A961', borderRadius: 16, padding: 24, color: '#FFF' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#C9A961', letterSpacing: 1 }}>📜 TERMOS DE USO</div>
+              <button onClick={function() { setShowTermsView(false); }} style={{ background: 'transparent', border: 'none', color: '#C9A961', fontSize: 22, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(255,255,255,0.82)' }}>
+              {[
+                { t: '1. Identificação da Empresa', b: 'O presente programa de afiliados é operado por JV9 COMPANY LTDA, inscrita no CNPJ sob nº 46.368.706/0001-01, doravante denominada JOIAS MAROMBA.' },
+                { t: '2. Aceitação dos Termos', b: 'Ao se cadastrar, o afiliado declara que leu, compreendeu e concorda integralmente com este Termo.' },
+                { t: '3. Natureza da Relação', b: '3.1. O afiliado atua como parceiro independente, sem qualquer vínculo empregatício, societário ou obrigação de exclusividade.\n3.2. Não há exigência de metas mínimas ou frequência de divulgação.\n3.3. Não existe garantia de ganhos.' },
+                { t: '4. Funcionamento do Programa', b: '4.1. O afiliado receberá um cupom exclusivo para divulgação.\n4.2. O cupom concederá ao cliente final um desconto de 3% sobre o valor da compra, quando aplicado no pagamento.\n4.3. A comissão do afiliado será de R$ 25,00 por peça vendida, vinculada ao uso do cupom.\n4.4. Serão consideradas válidas apenas vendas pagas, aprovadas e não canceladas ou estornadas.\n4.5. A JOIAS MAROMBA poderá validar vendas, cancelar comissões indevidas e corrigir erros sistêmicos.\n4.6. A empresa se reserva o direito de alterar o percentual de desconto, suspender cupons ou encerrar campanhas a qualquer momento.' },
+                { t: '5. Bonificações e Metas', b: '5.1. O site poderá apresentar campanhas promocionais, metas e bonificações adicionais.\n5.2. Tais bonificações não são obrigatórias, não constituem garantia de pagamento e não configuram vínculo ou remuneração fixa.\n5.3. Bônus só serão concedidos mediante cumprimento integral das regras da campanha.' },
+                { t: '6. Pagamentos e Saques', b: '6.1. O afiliado poderá solicitar saque a qualquer momento.\n6.2. Pagamento via PIX em até 24 horas, horário comercial 08:00–22:00.\n6.3. Solicitações fora desse horário são processadas no próximo período.\n6.4. A JOIAS MAROMBA não se responsabiliza por dados bancários incorretos.\n6.5. Valores de cancelamentos/fraudes poderão ser descontados.' },
+                { t: '7. Obrigações do Afiliado', b: '7.1. Não utilizar práticas ilegais ou enganosas.\n7.2. Não realizar spam.\n7.3. Não associar a marca a conteúdos impróprios.\n7.4. Não se passar pela empresa.\n7.5. Cumprir regras de publicidade conforme CONAR.' },
+                { t: '8. Afiliados Patrocinados', b: '8.1. Afiliados patrocinados poderão ter regras específicas em contrato separado.' },
+                { t: '9. Limitação de Responsabilidade', b: '9.1. A JOIAS MAROMBA não garante resultados financeiros.\n9.2. O afiliado assume integralmente os riscos da atividade.' },
+                { t: '10. Bloqueio e Cancelamento', b: '10.1. A empresa poderá suspender contas e cancelar comissões em caso de fraude, violação dos termos ou uso indevido da marca.' },
+                { t: '11. Tributação', b: '11.1. O afiliado é responsável por seus tributos.' },
+                { t: '12. LGPD', b: '12.1. Os dados serão tratados conforme legislação vigente.' },
+                { t: '13. Alterações', b: '13.1. Os termos podem ser alterados a qualquer momento.' },
+                { t: '14. Foro', b: '14.1. Foro de Curitiba/PR.' },
+                { t: '15. Disposições Finais', b: '15.1. Este termo representa o acordo integral entre as partes.' },
+              ].map(function(s, i) {
+                return (
+                  <div key={i} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, color: '#C9A961', fontWeight: 800, marginBottom: 4, letterSpacing: 0.3 }}>{s.t}</div>
+                    <div style={{ whiteSpace: 'pre-line', color: 'rgba(255,255,255,0.8)' }}>{s.b}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 18, padding: 14, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.4)', borderRadius: 10, textAlign: 'center' }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>✅</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', letterSpacing: 2, textTransform: 'uppercase' }}>Você já assinou</div>
             </div>
           </div>
         </div>
