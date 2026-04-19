@@ -91,9 +91,23 @@ button:active:not(:disabled) {
   50% { text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 60px rgba(255,215,0,0.4); }
 }
 
-@keyframes obligationPulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(201,169,97,0.55), 0 0 16px rgba(201,169,97,0.25); }
-  50% { box-shadow: 0 0 14px rgba(201,169,97,0.9), 0 0 28px rgba(201,169,97,0.55), 0 0 40px rgba(201,169,97,0.25); }
+@keyframes chaseBorderRotate { to { transform: rotate(360deg); } }
+
+.obligation-day-glow { position: relative; }
+.obligation-day-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from 0deg, transparent 0 72%, rgba(255,215,0,0.2) 78%, #FFD700 87%, #FFF4B8 92%, #FFD700 95%, transparent 99% 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: chaseBorderRotate 2.6s linear infinite;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(255,215,0,0.7));
 }
 
 @keyframes materialHeartbeat {
