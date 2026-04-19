@@ -123,6 +123,8 @@ export default function AdminDashboard() {
   const [rankingMonth, setRankingMonth] = useState(new Date().getMonth() + 1);
   const [rankingYear, setRankingYear] = useState(new Date().getFullYear());
   const [rankingLimit, setRankingLimit] = useState(10);
+  const [top10Month, setTop10Month] = useState(new Date().getMonth() + 1);
+  const [top10Year, setTop10Year] = useState(new Date().getFullYear());
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -965,22 +967,61 @@ export default function AdminDashboard() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 16 }}>
-              <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Top 10 afiliados</div>
-                {top10.map(function(a, i) {
-                  var perf = getPerformance(a);
-                  return (<div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < 9 ? '1px solid #F0F0F0' : 'none' }}>
-                    <div style={{ width: 24, fontSize: 12, fontWeight: 600 }}>{i + 1}</div>
-                    <div style={{ width: 32, height: 32, borderRadius: 16, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>{a.avatar_initials}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}{a.is_sponsored && <span style={{ fontSize: 10, flexShrink: 0 }}>⭐</span>}</div>
-                      <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code} · {a.total_sales} vendas</div>
+              {(function() {
+                var mStart = new Date(top10Year, top10Month - 1, 1).getTime();
+                var mEnd = new Date(top10Year, top10Month, 1).getTime();
+                var countByAf = {};
+                (allSales || []).forEach(function(s) {
+                  if (!s.affiliate_id || !s.created_at) return;
+                  var t = new Date(s.created_at).getTime();
+                  if (t >= mStart && t < mEnd) {
+                    countByAf[s.affiliate_id] = (countByAf[s.affiliate_id] || 0) + 1;
+                  }
+                });
+                var pool = applyTypeFilter(affiliates).filter(function(a) { return !a.is_admin && !a.blocked; });
+                var topMonth = pool
+                  .map(function(a) {
+                    var c = countByAf[a.id] || 0;
+                    var commission = Number(a.commission_value) || 25;
+                    return { af: a, count: c, earned: c * commission };
+                  })
+                  .sort(function(a, b) { return b.count - a.count; })
+                  .slice(0, 10);
+                var currentYr = new Date().getFullYear();
+                var yearOpts = [currentYr - 1, currentYr, currentYr + 1];
+                return (
+                  <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>Top 10 afiliados</div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <select value={top10Month} onChange={function(e) { setTop10Month(Number(e.target.value)); }} style={{ padding: '4px 8px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: '#fff' }}>
+                          {[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m) { return <option key={m} value={m}>{monthNames[m-1]}</option>; })}
+                        </select>
+                        <select value={top10Year} onChange={function(e) { setTop10Year(Number(e.target.value)); }} style={{ padding: '4px 8px', border: '1px solid #E5E5E5', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: '#fff' }}>
+                          {yearOpts.map(function(y) { return <option key={y} value={y}>{y}</option>; })}
+                        </select>
+                      </div>
                     </div>
-                    <div style={{ padding: '2px 8px', background: perf.bg, color: perf.color, borderRadius: 4, fontSize: 10, fontWeight: 600 }}>{perf.label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>{formatMoney(a.total_earned)}</div>
-                  </div>);
-                })}
-              </div>
+                    {topMonth.filter(function(r) { return r.count > 0; }).length === 0 && (
+                      <div style={{ padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhuma venda neste mês</div>
+                    )}
+                    {topMonth.filter(function(r) { return r.count > 0; }).map(function(r, i, arr) {
+                      var a = r.af;
+                      return (<div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < arr.length - 1 ? '1px solid #F0F0F0' : 'none' }}>
+                        <div style={{ width: 24, fontSize: 12, fontWeight: 600 }}>{i + 1}</div>
+                        <div style={{ width: 32, height: 32, borderRadius: 16, background: a.avatar_url ? 'transparent' : '#F3F4F6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#666' }}>
+                          {a.avatar_url ? <img src={storageProxyUrl(a.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : a.avatar_initials}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.name}</span>{newAffiliateIds.has(a.id) && <NewBadge />}{a.is_sponsored && <span style={{ fontSize: 10, flexShrink: 0 }}>⭐</span>}</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>{a.coupon_code} · {r.count} vendas</div>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>{formatMoney(r.earned)}</div>
+                      </div>);
+                    })}
+                  </div>
+                );
+              })()}
 
               <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 8, padding: 20 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Pagamentos pendentes</div>
