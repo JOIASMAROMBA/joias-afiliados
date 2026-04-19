@@ -855,14 +855,14 @@ export default function PainelPage() {
                 else { bg = 'rgba(255,255,255,0.04)'; border = '1px solid rgba(201,169,97,0.1)'; opacity = 0.55; }
 
                 return (
-                  <div key={i} className={d.isObligatory && !d.posted && !d.missed ? 'obligation-day-glow' : ''} style={{ background: bg, border: border, borderRadius: 10, padding: '8px 4px', textAlign: 'center', opacity: opacity, position: 'relative', minHeight: 70 }}>
+                  <div key={i} style={{ background: bg, border: border, borderRadius: 10, padding: '8px 4px', textAlign: 'center', opacity: opacity, position: 'relative', minHeight: 70 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: d.isToday ? '#C9A961' : 'rgba(201,169,97,0.6)', marginBottom: 2 }}>{weekdayShort[d.date.getDay()]}</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: d.posted ? '#000' : d.missed ? '#ff4444' : d.isToday ? '#C9A961' : '#fff' }}>{d.date.getDate()}</div>
                     {label === 'obrigatory' && (
-                      <div style={{ marginTop: 2, lineHeight: 1.1 }}>
-                        <div style={{ fontSize: 9, color: '#C9A961', fontWeight: 900, letterSpacing: 0.5 }}>DIA</div>
-                        <div style={{ fontSize: 9, color: '#C9A961', fontWeight: 900, letterSpacing: 0.5 }}>POST</div>
-                      </div>
+                      <>
+                        <div style={{ fontSize: 7, color: '#C9A961', fontWeight: 800, marginTop: 1 }}>DIA DE</div>
+                        <div style={{ fontSize: 7, color: '#C9A961', fontWeight: 800, marginTop: 1 }}>POSTAR</div>
+                      </>
                     )}
                     {label && label !== 'obrigatory' && (<div style={{ fontSize: 14, color: labelColor, fontWeight: 900, marginTop: 2 }}>{label}</div>)}
                     {d.posted && !d.missed && (<div style={{ fontSize: 7, color: '#000', fontWeight: 800, marginTop: 1 }}>POSTADO</div>)}
