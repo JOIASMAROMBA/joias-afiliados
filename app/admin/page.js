@@ -115,6 +115,7 @@ export default function AdminDashboard() {
   const [newFolderType, setNewFolderType] = useState('photo');
   const [newFolderUrgent, setNewFolderUrgent] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const [adminFilesOpen, setAdminFilesOpen] = useState(false);
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -1414,18 +1415,28 @@ export default function AdminDashboard() {
                     <div style={{ fontSize: 11, color: '#888' }}>Foto (JPG/PNG/GIF/WebP) ou Video (MP4/WebM/MOV) — max 50 MB cada</div>
                   </label>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                  {materialFiles.length === 0 && (<div style={{ gridColumn: '1 / -1', padding: 40, textAlign: 'center', color: '#888' }}>Nenhum arquivo ainda</div>)}
-                  {materialFiles.map(function(file) {
-                    return (
-                      <div key={file.id} style={{ position: 'relative', aspectRatio: '1 / 1', background: '#F3F4F6', borderRadius: 10, overflow: 'hidden', border: '1px solid #E5E5E5' }}>
-                        {file.file_type === 'video' ? (<video src={file.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />) : (<img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />)}
-                        <button onClick={function() { deleteMaterialFile(file.id); }} style={{ position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: 14, cursor: 'pointer' }}>✕</button>
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'rgba(0,0,0,0.75)', fontSize: 10, color: '#fff', fontWeight: 600 }}>{file.file_type === 'video' ? '▶ VIDEO' : '📷 FOTO'}</div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <button onClick={function() { setAdminFilesOpen(!adminFilesOpen); }} style={{ width: '100%', padding: '12px 14px', marginTop: 12, background: adminFilesOpen ? '#1A1A1A' : '#F3F4F6', color: adminFilesOpen ? '#FFD700' : '#1A1A1A', border: '1px solid ' + (adminFilesOpen ? '#1A1A1A' : '#E5E5E5'), borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, letterSpacing: 0.5 }}>
+                  <span style={{ fontSize: 20 }}>{adminFilesOpen ? '📂' : '📁'}</span>
+                  <span style={{ flex: 1, textAlign: 'left', textTransform: 'uppercase' }}>Arquivos já adicionados</span>
+                  <span style={{ padding: '2px 8px', background: adminFilesOpen ? '#FFD700' : '#1A1A1A', color: adminFilesOpen ? '#1A1A1A' : '#FFD700', borderRadius: 10, fontSize: 11, fontWeight: 800 }}>{materialFiles.length}</span>
+                  <span style={{ fontSize: 14 }}>{adminFilesOpen ? '▲' : '▼'}</span>
+                </button>
+                {adminFilesOpen && (
+                  <div style={{ marginTop: 10, padding: 12, background: '#FAFAFA', border: '1px solid #E5E5E5', borderRadius: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                      {materialFiles.length === 0 && (<div style={{ gridColumn: '1 / -1', padding: 30, textAlign: 'center', color: '#888', fontSize: 13 }}>Nenhum arquivo ainda</div>)}
+                      {materialFiles.map(function(file) {
+                        return (
+                          <div key={file.id} style={{ position: 'relative', aspectRatio: '1 / 1', background: '#FFF', borderRadius: 10, overflow: 'hidden', border: '1px solid #E5E5E5' }}>
+                            {file.file_type === 'video' ? (<video src={file.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />) : (<img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />)}
+                            <button onClick={function() { deleteMaterialFile(file.id); }} title="Apagar" style={{ position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: '50%', background: 'rgba(220,38,38,0.95)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>✕</button>
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'rgba(0,0,0,0.75)', fontSize: 10, color: '#fff', fontWeight: 600 }}>{file.file_type === 'video' ? '▶ VIDEO' : '📷 FOTO'}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
