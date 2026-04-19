@@ -2836,9 +2836,17 @@ export default function AdminDashboard() {
 
 function MonthlyTowersChart({ monthlySales, monthlyTops, monthNames, formatMoney, selectedAffiliate }) {
   var currentMonth = new Date().getMonth() + 1;
-  var maxRevenue = Math.max.apply(null, (monthlySales || []).map(function(m) { return Number(m.revenue); }).concat([100]));
-  var levelStep = maxRevenue > 10000 ? 5000 : maxRevenue > 5000 ? 2500 : maxRevenue > 1000 ? 1000 : maxRevenue > 500 ? 500 : 250;
-  var topLevel = Math.ceil(maxRevenue / levelStep) * levelStep;
+  // Quando filtra por um afiliado, usa quantidade de vendas no eixo Y (vendas manuais tem revenue=0)
+  var useCount = Boolean(selectedAffiliate);
+  var values = (monthlySales || []).map(function(m) { return Number(useCount ? m.sales_count : m.revenue) || 0; });
+  var maxVal = Math.max.apply(null, values.concat([useCount ? 5 : 100]));
+  var levelStep;
+  if (useCount) {
+    levelStep = maxVal > 200 ? 50 : maxVal > 100 ? 25 : maxVal > 40 ? 10 : maxVal > 20 ? 5 : maxVal > 8 ? 2 : 1;
+  } else {
+    levelStep = maxVal > 10000 ? 5000 : maxVal > 5000 ? 2500 : maxVal > 1000 ? 1000 : maxVal > 500 ? 500 : 250;
+  }
+  var topLevel = Math.ceil(maxVal / levelStep) * levelStep;
   if (topLevel === 0) topLevel = levelStep;
   var levels = [];
   for (var i = 0; i <= 4; i++) { levels.push(Math.round((topLevel / 4) * i)); }
@@ -2848,7 +2856,7 @@ function MonthlyTowersChart({ monthlySales, monthlyTops, monthNames, formatMoney
   return (
     <div style={{ display: 'flex', gap: 0, alignItems: 'stretch', height: 380, position: 'relative' }}>
       <div style={{ width: 70, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingTop: 60, paddingBottom: 50, fontSize: 10, color: '#888', textAlign: 'right', paddingRight: 10, flexShrink: 0 }}>
-        {levels.map(function(lv, i) { return (<div key={i} style={{ fontSize: 10, fontWeight: 600, color: '#666' }}>R$ {lv.toLocaleString('pt-BR')}</div>); })}
+        {levels.map(function(lv, i) { return (<div key={i} style={{ fontSize: 10, fontWeight: 600, color: '#666' }}>{useCount ? (lv + ' vendas') : ('R$ ' + lv.toLocaleString('pt-BR'))}</div>); })}
       </div>
       <div style={{ flex: 1, position: 'relative' }}>
         <div style={{ position: 'absolute', top: 60, bottom: 50, left: 0, right: 0, pointerEvents: 'none' }}>
@@ -2858,18 +2866,20 @@ function MonthlyTowersChart({ monthlySales, monthlyTops, monthNames, formatMoney
           {[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m) {
             var data = getMonthData(m);
             var top = getTopData(m);
-            var revenue = Number(data.revenue);
-            var heightPct = topLevel > 0 ? (revenue / topLevel) * 100 : 0;
+            var revenue = Number(data.revenue) || 0;
+            var count = Number(data.sales_count) || 0;
+            var barVal = useCount ? count : revenue;
+            var heightPct = topLevel > 0 ? (barVal / topLevel) * 100 : 0;
             var isCurrent = m === currentMonth;
             var isFuture = m > currentMonth;
             return (
               <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', minWidth: 0, position: 'relative' }}>
                 {top && !isFuture && !selectedAffiliate && (<div style={{ position: 'absolute', top: -55, left: 0, right: 0, textAlign: 'center' }}><div style={{ fontSize: 22 }}>🏆</div><div style={{ fontSize: 9, fontWeight: 700, color: '#FFD700', marginTop: 2 }}>{top.coupon_code}</div></div>)}
-                {revenue > 0 && (<div style={{ position: 'absolute', bottom: 'calc(' + Math.max(heightPct, 2) + '% + 52px)', fontSize: 10, fontWeight: 700, color: isCurrent ? '#B8860B' : '#666' }}>{data.sales_count}</div>)}
+                {count > 0 && (<div style={{ position: 'absolute', bottom: 'calc(' + Math.max(heightPct, 2) + '% + 52px)', fontSize: 10, fontWeight: 700, color: isCurrent ? '#B8860B' : '#666' }}>{count}</div>)}
                 <div style={{ width: '100%', maxWidth: 60, height: Math.max(heightPct, isFuture ? 0 : 2) + '%', minHeight: isFuture ? 0 : 2, background: isFuture ? 'transparent' : (isCurrent ? 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' : 'linear-gradient(180deg, #FFD700 0%, #B8860B 100%)'), borderRadius: '6px 6px 0 0' }}></div>
                 <div style={{ width: '100%', maxWidth: 60, height: 3, background: '#1A1A1A', borderRadius: 1 }}></div>
                 <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: isCurrent ? '#1A1A1A' : '#888' }}>{monthNames[m-1]}</div>
-                <div style={{ marginTop: 2, fontSize: 9, color: '#666' }}>{revenue > 0 ? formatMoney(revenue) : '–'}</div>
+                <div style={{ marginTop: 2, fontSize: 9, color: '#666' }}>{useCount ? (count > 0 ? (count + ' vendas') : '–') : (revenue > 0 ? formatMoney(revenue) : '–')}</div>
               </div>
             );
           })}
