@@ -116,6 +116,10 @@ export default function AdminDashboard() {
   const [newFolderUrgent, setNewFolderUrgent] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [adminFilesOpen, setAdminFilesOpen] = useState(false);
+  const [lastManualOrderNumber, setLastManualOrderNumber] = useState('');
+  useEffect(function() {
+    try { var v = localStorage.getItem('admin_last_order_number'); if (v) setLastManualOrderNumber(v); } catch (e) {}
+  }, []);
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -813,6 +817,36 @@ export default function AdminDashboard() {
               {activeTab === 'withdrawals' && 'Processar saques'}
             </div>
           </div>
+          {activeTab === 'overview' && (function() {
+            var lastManual = (allSales || []).find(function(s) {
+              var ext = String(s.external_order_id || '');
+              var buyer = String(s.buyer_name || '');
+              return ext.indexOf('manual-') === 0 || /inser[çc]ao manual/i.test(buyer);
+            });
+            var dt = lastManual && lastManual.created_at ? new Date(lastManual.created_at) : null;
+            var dtStr = dt ? dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
+            var cupom = lastManual && lastManual.affiliates && lastManual.affiliates.coupon_code ? lastManual.affiliates.coupon_code : null;
+            return (
+              <div style={{ background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 14, minWidth: 280, boxShadow: '0 6px 20px rgba(0,0,0,0.35)' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: 'rgba(255,215,0,0.7)', fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>Última inserção manual</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: '#FFD700', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{dtStr || '—'}</div>
+                  {cupom && (<div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', letterSpacing: 1, marginTop: 3 }}>{cupom}</div>)}
+                </div>
+                <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,215,0,0.15)' }} />
+                <div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Você parou aqui</div>
+                  <input
+                    type="text"
+                    value={lastManualOrderNumber}
+                    onChange={function(e) { var v = e.target.value.slice(0, 30); setLastManualOrderNumber(v); try { localStorage.setItem('admin_last_order_number', v); } catch (er) {} }}
+                    placeholder="Nº pedido"
+                    style={{ width: 120, padding: '6px 10px', background: '#000', border: '1px solid rgba(255,215,0,0.35)', borderRadius: 6, color: '#FFD700', fontSize: 13, fontWeight: 700, outline: 'none', fontFamily: 'monospace' }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
           {(activeTab === 'overview' || activeTab === 'sales') && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {dateRangeOptions.map(function(r) { return (<button key={r.v} onClick={function() { setDateRange(r.v); }} style={{ padding: '8px 14px', background: dateRange === r.v ? '#1A1A1A' : '#FFFFFF', color: dateRange === r.v ? '#FFFFFF' : '#666', border: '1px solid ' + (dateRange === r.v ? '#1A1A1A' : '#E5E5E5'), borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>{r.l}</button>); })}
