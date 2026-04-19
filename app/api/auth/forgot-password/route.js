@@ -30,7 +30,7 @@ export async function POST(request) {
 
     const { data: affiliate } = await supabaseAdmin
       .from('affiliates')
-      .select('id, name, email, coupon_code')
+      .select('id, name, email, coupon_code, gender')
       .ilike('coupon_code', coupon)
       .maybeSingle();
 
@@ -63,6 +63,7 @@ export async function POST(request) {
         name: affiliate.name,
         coupon: affiliate.coupon_code,
         provisionalPassword: provisional,
+        gender: affiliate.gender,
       });
       const sendResult = await sendEmail({ to: email, ...emailContent });
       if (!sendResult.ok) {

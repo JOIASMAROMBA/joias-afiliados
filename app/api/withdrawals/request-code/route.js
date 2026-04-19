@@ -93,6 +93,7 @@ export async function POST(request) {
       amount: amount,
       pixType: pixType,
       pixKey: pixKey,
+      gender: auth.affiliate.gender,
     });
     var sendRes = await sendEmail({ to: email, subject: msg.subject, html: msg.html });
     if (!sendRes.ok) {

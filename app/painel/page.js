@@ -57,8 +57,10 @@ export default function PainelPage() {
   const [pushStatus, setPushStatus] = useState('idle'); // idle | unsupported | denied | disabled | enabled | busy
   const [pushBannerDismissed, setPushBannerDismissed] = useState(false);
 
+  var isMale = affiliate && affiliate.gender === 'male';
+  var g = function(male, female) { return isMale ? male : female; };
   var phrases = [
-    '🔥 Bora pra cima! Você é brabo(a) e ninguém segura!',
+    isMale ? '🔥 Bora pra cima! Você é brabo e ninguém segura!' : '🔥 Bora pra cima! Você é braba e ninguém segura!',
     '💪 Cada venda é um passo mais perto do seu sonho',
     '🚀 Anuncie hoje e conquiste sua meta!',
     '⭐ Os campeões não esperam, eles vão atrás!',
@@ -733,7 +735,7 @@ export default function PainelPage() {
           {affiliate && affiliate.avatar_url ? (<img src={storageProxyUrl(affiliate.avatar_url)} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : (affiliate && affiliate.avatar_initials)}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>AFILIADO</div>
+          <div style={{ fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>{g('AFILIADO', 'AFILIADA')}</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>Ola, {affiliate && affiliate.name && affiliate.name.split(' ')[0]}!</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 2 }}>
             <div onClick={openEditProfile} style={{ fontSize: 10, color: 'rgba(201,169,97,0.7)', cursor: 'pointer', textDecoration: 'underline' }}>Editar perfil</div>
@@ -938,23 +940,17 @@ export default function PainelPage() {
             <div style={{ fontSize: 13, color: 'rgba(201,169,97,0.6)' }}>Cada venda te impulsiona mais alto!</div>
           </div>
 
-          <div style={{ position: 'relative', background: 'linear-gradient(135deg, rgba(15,15,15,0.7), rgba(26,19,6,0.7))', border: '1px solid rgba(201,169,97,0.35)', borderRadius: 14, padding: 14, marginBottom: 20, overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: ((30 - cycle.daysRemaining) / 30 * 100) + '%', background: 'linear-gradient(90deg, rgba(201,169,97,0.08), rgba(201,169,97,0.22))', pointerEvents: 'none', transition: 'width 0.6s ease' }} />
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'rgba(201,169,97,0.65)', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1 }}>Ciclo Atual</div>
-                <div style={{ fontSize: 12, color: '#C9A961', fontWeight: 700, marginTop: 4 }}>Ciclo #{cycle.cycleNumber}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: 30, fontWeight: 900, color: '#C9A961', lineHeight: 1, letterSpacing: -1, textShadow: '0 0 16px rgba(201,169,97,0.35)' }}>{cycle.daysRemaining}</span>
-                  <span style={{ fontSize: 12, color: 'rgba(201,169,97,0.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{cycle.daysRemaining === 1 ? 'dia' : 'dias'}</span>
-                </div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>restantes</div>
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <div style={{ position: 'relative', width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="46" height="46" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
+                <circle cx="23" cy="23" r="20" fill="none" stroke="rgba(239,68,68,0.18)" strokeWidth="2.5" />
+                <circle cx="23" cy="23" r="20" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={2 * Math.PI * 20 * (1 - cycle.daysRemaining / 30)} style={{ transition: 'stroke-dashoffset 0.8s ease', filter: 'drop-shadow(0 0 4px rgba(239,68,68,0.55))' }} />
+              </svg>
+              <span style={{ fontSize: 16, fontWeight: 900, color: '#EF4444', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{cycle.daysRemaining}</span>
             </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>{cycle.daysRemaining === 1 ? 'dia restante' : 'dias restantes'}</div>
           </div>
-          <div style={{ textAlign: 'center', fontSize: 10, color: 'rgba(201,169,97,0.45)', marginTop: -12, marginBottom: 18, lineHeight: 1.4, letterSpacing: 0.3 }}>O ciclo se reinicia a cada 30 dias a partir da sua data de cadastro.</div>
+          <div style={{ textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 18, lineHeight: 1.4 }}>O ciclo se reinicia a cada 30 dias a partir da sua data de cadastro.</div>
 
           {rewards.length === 0 && (
             <div style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px dashed rgba(201,169,97,0.3)', borderRadius: 16, padding: 40, textAlign: 'center' }}>
@@ -1545,7 +1541,7 @@ export default function PainelPage() {
                 <div style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'rgba(255,255,255,0.9)' }}>{n.message}</div>
                 {isWarning && (
                   <div style={{ marginTop: 14, padding: 10, background: 'rgba(220,38,38,0.18)', border: '1px solid rgba(220,38,38,0.5)', borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#FCA5A5', textAlign: 'center' }}>
-                    ⛔ Ao receber outra notificação você será <strong>banida permanentemente</strong> da plataforma.
+                    ⛔ Ao receber outra notificação você será <strong>{g('banido', 'banida')} permanentemente</strong> da plataforma.
                   </div>
                 )}
                 <button onClick={function() { dismissNotification(n.id); }} style={{ width: '100%', marginTop: 16, padding: 13, background: isWarning ? '#DC2626' : isPraise ? '#10B981' : '#3B82F6', border: 'none', borderRadius: 10, color: '#FFF', fontWeight: 800, fontSize: 14, letterSpacing: 0.5, cursor: 'pointer' }}>

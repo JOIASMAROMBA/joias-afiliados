@@ -18,7 +18,7 @@ export default function Home() {
     <div style={{
       minHeight: '100vh',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0f0520 0%, #1a0a2e 40%, #0d0a1a 100%)',
+      background: '#000',
     }}>
       <div style={{ fontSize: 78, animation: 'diamondSpin 2.2s linear infinite', display: 'inline-block', lineHeight: 1 }}>💎</div>
     </div>

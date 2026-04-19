@@ -11,7 +11,7 @@ export default function CadastroPage() {
   const [couponChecking, setCouponChecking] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [form, setForm] = useState({ name: '', age: '', city: '', email: '', whatsapp: '', platforms: [], instagram: '', facebook: '', tiktok: '', outro: '', coupon: '', password: '', passwordConfirm: '', agreedCommission: false, agreedConduct: false });
+  const [form, setForm] = useState({ name: '', age: '', gender: '', city: '', email: '', whatsapp: '', platforms: [], instagram: '', facebook: '', tiktok: '', outro: '', coupon: '', password: '', passwordConfirm: '', agreedCommission: false, agreedConduct: false });
   const [showTerms, setShowTerms] = useState(false);
   const [showConduct, setShowConduct] = useState(false);
 
@@ -53,6 +53,7 @@ export default function CadastroPage() {
   const validateStep1 = () => {
     if (!form.name.trim()) return 'Preencha seu nome.';
     if (!form.age.trim()) return 'Preencha sua idade.';
+    if (!form.gender || (form.gender !== 'male' && form.gender !== 'female')) return 'Selecione o sexo.';
     if (!form.city.trim()) return 'Preencha sua cidade.';
     if (!form.email.trim()) return 'Preencha seu e-mail.';
     if (!form.email.includes('@')) return 'E-mail invalido.';
@@ -92,12 +93,12 @@ export default function CadastroPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), whatsapp: form.whatsapp.replace(/\D/g, ''), coupon: form.coupon.trim(), password: form.password, age: form.age, city: form.city, platforms: form.platforms, social, accepted_conduct: form.agreedConduct }),
+        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim(), whatsapp: form.whatsapp.replace(/\D/g, ''), coupon: form.coupon.trim(), password: form.password, age: form.age, gender: form.gender, city: form.city, platforms: form.platforms, social, accepted_conduct: form.agreedConduct }),
       });
       let data;
       try { data = await res.json(); } catch { data = {}; }
       if (!res.ok || !data.ok) {
-        const map = { coupon_taken: 'Esse cupom ja foi usado.', email_taken: 'Esse e-mail ja esta cadastrado.', invalid_name: 'Nome invalido.', invalid_email: 'E-mail invalido.', invalid_coupon: 'Cupom invalido.', invalid_password: 'Senha deve ter 6 digitos.', invalid_whatsapp: 'WhatsApp invalido.', rate_limited: 'Muitas tentativas. Aguarde.' };
+        const map = { coupon_taken: 'Esse cupom ja foi usado.', email_taken: 'Esse e-mail ja esta cadastrado.', invalid_name: 'Nome invalido.', invalid_email: 'E-mail invalido.', invalid_coupon: 'Cupom invalido.', invalid_password: 'Senha deve ter 6 digitos.', invalid_whatsapp: 'WhatsApp invalido.', invalid_gender: 'Selecione o sexo.', rate_limited: 'Muitas tentativas. Aguarde.' };
         var msg = map[data.error];
         if (!msg) {
           msg = 'Erro: ' + (data.error || 'desconhecido');
@@ -264,6 +265,18 @@ export default function CadastroPage() {
               <div>
                 <label style={labelStyle}>Cidade</label>
                 <input type="text" className="premium" value={form.city} onChange={(e) => handleChange('city', e.target.value)} placeholder="Sua cidade" style={inputStyle(false)} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Sexo</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[{ id: 'female', label: '♀ Feminino' }, { id: 'male', label: '♂ Masculino' }].map((g) => {
+                  const selected = form.gender === g.id;
+                  return (
+                    <button key={g.id} type="button" onClick={() => handleChange('gender', g.id)} style={{ padding: 12, borderRadius: 10, border: selected ? '2px solid #C9A961' : '1px solid rgba(201,169,97,0.2)', background: selected ? 'rgba(201,169,97,0.15)' : 'rgba(255,255,255,0.03)', color: selected ? '#C9A961' : 'rgba(201,169,97,0.5)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{g.label}</button>
+                  );
+                })}
               </div>
             </div>
 

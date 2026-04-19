@@ -163,6 +163,7 @@ export async function POST(request) {
           pixType: pixType,
           pixKey: pixKey,
           ip: ip,
+          gender: auth.affiliate.gender,
         });
         await sendEmail({ to: email, subject: msg.subject, html: msg.html });
       } catch {}

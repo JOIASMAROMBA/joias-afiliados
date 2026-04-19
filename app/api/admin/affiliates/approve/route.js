@@ -21,7 +21,7 @@ export async function POST(request) {
 
   var { data: target, error: fetchErr } = await supabaseAdmin
     .from('affiliates')
-    .select('id, name, email, coupon_code, approval_status')
+    .select('id, name, email, coupon_code, approval_status, gender')
     .eq('id', affiliateId)
     .maybeSingle();
   if (fetchErr) return NextResponse.json({ error: 'db_error', detail: fetchErr.message }, { status: 500 });
@@ -38,7 +38,7 @@ export async function POST(request) {
   if (emailEnabled && target.email) {
     try {
       var msg = action === 'approve'
-        ? buildApprovalEmail({ name: target.name, coupon: target.coupon_code })
+        ? buildApprovalEmail({ name: target.name, coupon: target.coupon_code, gender: target.gender })
         : buildRejectionEmail({ name: target.name, reason: reason });
       var sendRes = await sendEmail({ to: target.email, subject: msg.subject, html: msg.html });
       emailSent = !!(sendRes && sendRes.ok);

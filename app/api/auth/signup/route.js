@@ -28,6 +28,8 @@ export async function POST(request) {
     const password = String(body?.password || '').trim();
     const age = String(body?.age || '').trim().slice(0, 10);
     const city = String(body?.city || '').trim().slice(0, 120);
+    const genderRaw = String(body?.gender || '').trim().toLowerCase();
+    const gender = genderRaw === 'male' || genderRaw === 'female' ? genderRaw : null;
     const whatsappRaw = String(body?.whatsapp || '').trim().slice(0, 30);
     const whatsappDigits = whatsappRaw.replace(/\D/g, '');
     const platforms = Array.isArray(body?.platforms) ? body.platforms.slice(0, 10).map(x => String(x).slice(0, 40)) : [];
@@ -38,6 +40,7 @@ export async function POST(request) {
     if (!/^[A-Z0-9]{3,40}$/.test(coupon)) return NextResponse.json({ error: 'invalid_coupon' }, { status: 400 });
     if (!/^\d{6,10}$/.test(password)) return NextResponse.json({ error: 'invalid_password' }, { status: 400 });
     if (whatsappDigits.length < 10 || whatsappDigits.length > 13) return NextResponse.json({ error: 'invalid_whatsapp' }, { status: 400 });
+    if (!gender) return NextResponse.json({ error: 'invalid_gender' }, { status: 400 });
 
     const { data: existingCoupon } = await supabaseAdmin
       .from('affiliates').select('id').ilike('coupon_code', coupon).maybeSingle();
@@ -73,6 +76,7 @@ export async function POST(request) {
       whatsapp: whatsappDigits,
       phone: whatsappDigits,
       age: age || null,
+      gender: gender,
       city: city || null,
       instagram: safeSocial.instagram || null,
       facebook: safeSocial.facebook || null,
