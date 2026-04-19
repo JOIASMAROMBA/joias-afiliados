@@ -207,7 +207,12 @@ export default function PainelPage() {
     } catch(e) {}
     try { var obData = await supabase.from('posting_obligations').select('*').eq('affiliate_id', affiliateId).eq('active', true); setObligations(obData.data || []); } catch(e) {}
     try { var wd = await supabase.from('withdrawals').select('*').eq('affiliate_id', affiliateId).order('created_at', { ascending: false }); setMyWithdrawals(wd.data || []); } catch(e) {}
-    try { var rw = await supabase.from('rewards').select('*').eq('active', true).order('target_value', { ascending: true }); setRewards(rw.data || []); } catch(e) {}
+    try {
+      var myAud = check.data.is_sponsored ? 'sponsored' : 'affiliate';
+      var rw = await supabase.from('rewards').select('*').eq('active', true).order('target_value', { ascending: true });
+      var filtered = (rw.data || []).filter(function(r) { var aud = r.audience || 'both'; return aud === myAud || aud === 'both'; });
+      setRewards(filtered);
+    } catch(e) {}
     try {
       var fxRes = await supabase.from('monthly_fixed_payments').select('*').eq('affiliate_id', affiliateId).eq('active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
       setFixedMonthly(fxRes.data || null);

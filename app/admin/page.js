@@ -132,6 +132,7 @@ export default function AdminDashboard() {
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null);
   const [rewards, setRewards] = useState([]);
   const [showRewardModal, setShowRewardModal] = useState(false);
+  const [rewardAudience, setRewardAudience] = useState('affiliate');
   const [editingReward, setEditingReward] = useState(null);
   const [rewardForm, setRewardForm] = useState({ target_type: 'sales', target_value: '', reward_title: '', reward_description: '', reward_emoji: '🎁', reward_value_money: '' });
   const [obligationsAffiliateId, setObligationsAffiliateId] = useState(null);
@@ -378,6 +379,7 @@ export default function AdminDashboard() {
       active: true,
     };
     if (editingReward) payload.id = editingReward.id;
+    else payload.audience = rewardAudience;
     await fetch('/api/admin/rewards/save', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1367,14 +1369,23 @@ export default function AdminDashboard() {
             })()}
 
             {rewardsView === 'list' && (<>
+            <div style={{ display: 'flex', gap: 4, background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 10, padding: 4, marginBottom: 16 }}>
+              {[{ id: 'affiliate', label: '🤝 Afiliados' }, { id: 'sponsored', label: '⭐ Patrocinados' }].map(function(aud) {
+                var active = rewardAudience === aud.id;
+                return (<button key={aud.id} onClick={function() { setRewardAudience(aud.id); }} style={{ flex: 1, padding: '10px 12px', background: active ? '#1A1A1A' : 'transparent', border: 'none', borderRadius: 7, color: active ? '#FFD700' : '#555', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{aud.label}</button>);
+              })}
+            </div>
             <div style={{ background: 'linear-gradient(135deg, #1A1A1A 0%, #333 100%)', border: '1px solid #FFD700', borderRadius: 12, padding: 24, marginBottom: 20, color: '#FFD700' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                <div><div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>🎁 Gerenciar Recompensas</div><div style={{ fontSize: 13, opacity: 0.8 }}>Crie metas e prêmios</div></div>
+                <div><div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>🎁 Recompensas para {rewardAudience === 'sponsored' ? 'Patrocinados' : 'Afiliados'}</div><div style={{ fontSize: 13, opacity: 0.8 }}>Metas e prêmios que apenas {rewardAudience === 'sponsored' ? 'patrocinados' : 'afiliados'} verão no painel</div></div>
                 <button onClick={function() { openRewardModal(null); }} style={{ padding: '12px 24px', background: '#FFD700', border: 'none', borderRadius: 8, color: '#1A1A1A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>+ Nova Recompensa</button>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-              {rewards.map(function(r) {
+              {rewards.filter(function(r) {
+                var aud = r.audience || 'both';
+                return aud === rewardAudience || aud === 'both';
+              }).map(function(r) {
                 return (<div key={r.id} style={{ background: '#FFFFFF', border: '1px solid #E5E5E5', borderRadius: 12, padding: 20, opacity: r.active ? 1 : 0.5 }}>
                   <div style={{ fontSize: 48, marginBottom: 12, textAlign: 'center' }}>{r.reward_emoji}</div>
                   <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, textAlign: 'center' }}>{r.reward_title}</div>
@@ -1391,9 +1402,10 @@ export default function AdminDashboard() {
                   </div>
                 </div>);
               })}
-              {rewards.length === 0 && (<div style={{ gridColumn: '1 / -1', background: '#FFFFFF', border: '2px dashed #E5E5E5', borderRadius: 12, padding: 60, textAlign: 'center', color: '#888' }}>
+              {rewards.filter(function(r) { var aud = r.audience || 'both'; return aud === rewardAudience || aud === 'both'; }).length === 0 && (<div style={{ gridColumn: '1 / -1', background: '#FFFFFF', border: '2px dashed #E5E5E5', borderRadius: 12, padding: 60, textAlign: 'center', color: '#888' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🎁</div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>Nenhuma recompensa</div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>Nenhuma recompensa para {rewardAudience === 'sponsored' ? 'Patrocinados' : 'Afiliados'}</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>Clique em "+ Nova Recompensa" para criar</div>
               </div>)}
             </div>
             </>)}

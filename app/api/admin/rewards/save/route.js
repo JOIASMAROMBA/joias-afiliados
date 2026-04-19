@@ -4,7 +4,8 @@ import { requireAdmin } from '../../../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-const ALLOWED = ['target_type', 'target_value', 'reward_title', 'reward_description', 'reward_emoji', 'reward_value_money', 'active', 'order_position'];
+const ALLOWED = ['target_type', 'target_value', 'reward_title', 'reward_description', 'reward_emoji', 'reward_value_money', 'active', 'order_position', 'audience'];
+const VALID_AUDIENCE = ['affiliate', 'sponsored', 'both'];
 
 export async function POST(request) {
   try {
@@ -22,6 +23,9 @@ export async function POST(request) {
 
     if (!payload.target_type || !payload.target_value || !payload.reward_title) {
       return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
+    }
+    if (payload.audience !== undefined && !VALID_AUDIENCE.includes(payload.audience)) {
+      return NextResponse.json({ error: 'invalid_audience' }, { status: 400 });
     }
 
     let result;
