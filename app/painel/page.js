@@ -839,7 +839,7 @@ export default function PainelPage() {
             <button onClick={function() { setShowReleaseDatesModal(true); }} style={{ marginTop: 10, width: '100%', padding: '9px 12px', background: 'transparent', border: '1px solid rgba(201,169,97,0.5)', borderRadius: 10, color: '#C9A961', fontSize: 11, fontWeight: 800, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>📅 Datas de Liberação</button>
           </div>
 
-          <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.2)', borderRadius: 16, padding: 18, marginBottom: 16, animation: obligations && obligations.length > 0 ? 'obligationCardGlow 2.4s ease-in-out infinite' : 'none' }}>
+          <div className="full-width" style={{ background: 'rgba(15,15,15,0.6)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(201,169,97,0.2)', borderRadius: 16, padding: 18, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#C9A961' }}>📸 Sua Semana de Postagens</div>
             </div>
@@ -855,7 +855,7 @@ export default function PainelPage() {
                 else { bg = 'rgba(255,255,255,0.04)'; border = '1px solid rgba(201,169,97,0.1)'; opacity = 0.55; }
 
                 return (
-                  <div key={i} style={{ background: bg, border: border, borderRadius: 10, padding: '8px 4px', textAlign: 'center', opacity: opacity, animation: d.isObligatory && d.isFuture ? 'obligationPulse 2s ease-in-out infinite' : 'none', position: 'relative', minHeight: 70 }}>
+                  <div key={i} style={{ background: bg, border: border, borderRadius: 10, padding: '8px 4px', textAlign: 'center', opacity: opacity, animation: d.isObligatory && !d.posted && !d.missed ? 'obligationPulse 2s ease-in-out infinite' : 'none', position: 'relative', minHeight: 70 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: d.isToday ? '#C9A961' : 'rgba(201,169,97,0.6)', marginBottom: 2 }}>{weekdayShort[d.date.getDay()]}</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: d.posted ? '#000' : d.missed ? '#ff4444' : d.isToday ? '#C9A961' : '#fff' }}>{d.date.getDate()}</div>
                     {label && (<div style={{ fontSize: 14, color: labelColor, fontWeight: 900, marginTop: 2 }}>{label}</div>)}
