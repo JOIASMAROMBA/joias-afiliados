@@ -468,6 +468,23 @@ export default function AdminDashboard() {
     await loadMaterialFolders();
   }
 
+  async function cleanupOrphans() {
+    if (!selectedMatFolder) return;
+    if (!confirm('Varrer esta pasta e remover arquivos cuja foto/video ja nao existe no storage?')) return;
+    try {
+      const res = await fetch('/api/admin/materials/file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cleanup_orphans', folder_id: selectedMatFolder.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) { alert('Erro: ' + (data.error || 'falhou')); return; }
+      alert((data.removed || 0) + ' arquivo(s) orfao(s) removidos');
+      await loadMaterialFiles(selectedMatFolder.id);
+      await loadMaterialFolders();
+    } catch (e) { alert('Erro: ' + e.message); }
+  }
+
   // ==== Aplicar filtro de tipo (all/affiliate/sponsored) nos afiliados ====
   function applyTypeFilter(list) {
     if (typeFilter === 'all') return list;
@@ -1394,6 +1411,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: 13, color: '#666' }}>{selectedMatFolder ? 'Pasta: ' + selectedMatFolder.name : 'Organize fotos e videos para as afiliadas baixarem'}</div>
               </div>
               {!selectedMatFolder && (<button onClick={function() { setShowNewFolderModal(true); }} style={{ padding: '10px 18px', background: '#1A1A1A', border: 'none', borderRadius: 8, color: '#FFD700', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ Nova Pasta</button>)}
+              {selectedMatFolder && (<button onClick={cleanupOrphans} title="Remove arquivos cuja foto/video ja nao existe no storage" style={{ padding: '10px 14px', background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: 8, color: '#92400E', fontSize: 12, fontWeight: 800, cursor: 'pointer', letterSpacing: 0.3 }}>🧹 Limpar órfãos</button>)}
               {selectedMatFolder && (<button onClick={function() { setSelectedMatFolder(null); setMaterialFiles([]); }} style={{ padding: '10px 18px', background: '#F3F4F6', border: '1px solid #E5E5E5', borderRadius: 8, color: '#666', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>← Voltar</button>)}
             </div>
 

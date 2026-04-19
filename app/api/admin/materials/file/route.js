@@ -18,7 +18,7 @@ export async function POST(request) {
       const id = String(body?.id || '').trim();
       if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
 
-      // Busca o URL do arquivo via REST direto (bypassa bug do client)
+      // Busca URL do arquivo pra limpar storage (via REST, bypassa bug do client)
       let fileUrl = null;
       try {
         const getResp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id) + '&select=url', {
@@ -29,7 +29,6 @@ export async function POST(request) {
         if (Array.isArray(getJson) && getJson[0] && getJson[0].url) fileUrl = getJson[0].url;
       } catch (e) {}
 
-      // Remove do storage
       if (fileUrl) {
         try {
           const u = new URL(fileUrl);
@@ -38,26 +37,45 @@ export async function POST(request) {
         } catch {}
       }
 
-      // DELETE via REST direto (bypassa bug do client)
-      const delResp = await fetch(SUPA_URL + '/rest/v1/material_files?id=eq.' + encodeURIComponent(id), {
-        method: 'DELETE',
-        headers: {
-          apikey: SUPA_KEY,
-          Authorization: 'Bearer ' + SUPA_KEY,
-          Prefer: 'return=representation',
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!delResp.ok) {
-        const txt = await delResp.text().catch(function() { return ''; });
-        return NextResponse.json({ error: 'delete_failed', status: delResp.status, detail: txt.slice(0, 300) }, { status: 500 });
+      // DELETE via RPC (security definer, ignora RLS e bug do PostgREST)
+      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc('admin_delete_material_file', { p_id: id });
+      if (rpcErr) {
+        return NextResponse.json({ error: 'delete_failed', detail: rpcErr.message }, { status: 500 });
+      }
+      const deleted = Number(rpcData) || 0;
+      if (deleted === 0) {
+        return NextResponse.json({ error: 'not_found', detail: 'Linha nao encontrada no DB' }, { status: 404 });
       }
 
-      const delJson = await delResp.json().catch(function() { return []; });
-      const deleted = Array.isArray(delJson) ? delJson.length : 0;
+      return NextResponse.json({ ok: true, deleted });
+    }
 
-      return NextResponse.json({ ok: true, deleted: deleted });
+    if (action === 'cleanup_orphans') {
+      const folderId = String(body?.folder_id || '').trim();
+      if (!folderId) return NextResponse.json({ error: 'missing_folder_id' }, { status: 400 });
+
+      // Lista todos os arquivos desta pasta (sem filtro, depois filtra em JS — bug do .eq)
+      const getResp = await fetch(SUPA_URL + '/rest/v1/material_files?select=id,url,folder_id', {
+        headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY },
+        cache: 'no-store',
+      });
+      const rows = await getResp.json().catch(function() { return []; });
+      const inFolder = Array.isArray(rows) ? rows.filter(function(r) { return r && r.folder_id === folderId; }) : [];
+
+      let removed = 0;
+      for (const r of inFolder) {
+        // Checa se o storage file ainda existe
+        let exists = false;
+        try {
+          const head = await fetch(r.url, { method: 'HEAD', cache: 'no-store' });
+          exists = head.ok;
+        } catch {}
+        if (!exists) {
+          const { data: rpcData } = await supabaseAdmin.rpc('admin_delete_material_file', { p_id: r.id });
+          if (Number(rpcData) > 0) removed++;
+        }
+      }
+      return NextResponse.json({ ok: true, removed });
     }
 
     return NextResponse.json({ error: 'invalid_action' }, { status: 400 });
