@@ -79,7 +79,7 @@ async function tryAuthModes(path) {
 }
 
 async function fetchPaidOrdersSince(sinceIso) {
-  const path = `/pedido/search/?data_inicio=${sinceIso}&limit=50&order_by=-data_pedido`;
+  const path = `/pedido/search/?data_inicio=${sinceIso}&limit=50&order_by=-id`;
   const result = await tryAuthModes(path);
   if (!result.ok) {
     throw new Error(`All auth modes failed: ${JSON.stringify(result.attempts)}`);
