@@ -109,18 +109,59 @@ function isPaidStatus(order) {
   return ['pago', 'paid', 'aprovado', 'approved', 'faturado', 'concluido'].some(x => str.includes(x));
 }
 
+function isReversedStatus(order) {
+  const s = order?.situacao ?? order?.status;
+  if (!s) return false;
+  if (typeof s === 'object') {
+    if (s.cancelado === true) return true;
+    const codigo = String(s.codigo || s.nome || '').toLowerCase();
+    return ['cancelado', 'devolvido', 'disputa', 'estornado', 'reembolsado', 'pgto_devolvido', 'pagamento_devolvido', 'chargeback'].some(x => codigo.includes(x));
+  }
+  const str = String(s).toLowerCase();
+  return ['cancelado', 'devolvido', 'disputa', 'estornado', 'reembolsado', 'chargeback'].some(x => str.includes(x));
+}
+
+function statusLabel(order) {
+  const s = order?.situacao ?? order?.status;
+  if (!s) return 'unknown';
+  if (typeof s === 'object') return String(s.codigo || s.nome || 'unknown');
+  return String(s);
+}
+
 async function processOrder(order) {
   const externalId = String(order?.numero || order?.codigo || order?.id || '');
   if (!externalId) return { skipped: 'no id' };
+
+  if (isReversedStatus(order)) {
+    const { data: sale } = await supabase
+      .from('sales')
+      .select('id, created_at, reversed_at, commission_earned, affiliate_id')
+      .eq('external_order_id', externalId)
+      .maybeSingle();
+    if (!sale) return { skipped: 'reversal: no sale to reverse', externalId };
+    if (sale.reversed_at) return { skipped: 'reversal: already reversed', externalId };
+    const ageMs = Date.now() - new Date(sale.created_at).getTime();
+    const HOLD_MS = 8 * 24 * 60 * 60 * 1000;
+    if (ageMs > HOLD_MS) return { skipped: 'reversal: past 8-day hold', externalId };
+    const { error } = await supabase
+      .from('sales')
+      .update({ reversed_at: new Date().toISOString(), reversed_reason: statusLabel(order) })
+      .eq('id', sale.id);
+    if (error) return { error: error.message, externalId };
+    return { reversed: true, externalId, affiliate_id: sale.affiliate_id, commission: sale.commission_earned, reason: statusLabel(order) };
+  }
 
   if (!isPaidStatus(order)) return { skipped: 'status not paid', externalId };
 
   const { data: existing } = await supabase
     .from('sales')
-    .select('id')
+    .select('id, reversed_at')
     .eq('external_order_id', externalId)
     .maybeSingle();
-  if (existing) return { skipped: 'duplicate', externalId };
+  if (existing) {
+    if (existing.reversed_at) return { skipped: 'duplicate (previously reversed)', externalId };
+    return { skipped: 'duplicate', externalId };
+  }
 
   const coupon = extractCouponCode(order);
   if (!coupon) return { skipped: 'no coupon', externalId };
@@ -195,6 +236,7 @@ export async function GET(request) {
     }
 
     const inserted = results.filter(r => r.inserted).length;
+    const reversed = results.filter(r => r.reversed).length;
     const skipped = results.filter(r => r.skipped).length;
     const errored = results.filter(r => r.error).length;
 
@@ -206,6 +248,7 @@ export async function GET(request) {
       offset_used: offset,
       fetched: orders.length,
       inserted,
+      reversed,
       skipped,
       errored,
       results,

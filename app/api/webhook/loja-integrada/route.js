@@ -49,8 +49,35 @@ function extractProductName(order) {
 }
 
 function isPaidStatus(order) {
-  const status = String(order?.situacao || order?.status || '').toLowerCase();
-  return ['pago', 'paid', 'aprovado', 'approved', 'faturado', 'concluido', 'concluído'].some(s => status.includes(s));
+  const s = order?.situacao ?? order?.status;
+  if (!s) return false;
+  if (typeof s === 'object') {
+    if (s.cancelado === true) return false;
+    if (s.aprovado === true) return true;
+    const codigo = String(s.codigo || s.nome || '').toLowerCase();
+    return ['pedido_pago', 'pago', 'paid', 'aprovado', 'approved', 'pedido_separacao', 'pedido_enviado', 'pedido_concluido', 'faturado', 'concluido'].some(x => codigo.includes(x));
+  }
+  const str = String(s).toLowerCase();
+  return ['pago', 'paid', 'aprovado', 'approved', 'faturado', 'concluido'].some(x => str.includes(x));
+}
+
+function isReversedStatus(order) {
+  const s = order?.situacao ?? order?.status;
+  if (!s) return false;
+  if (typeof s === 'object') {
+    if (s.cancelado === true) return true;
+    const codigo = String(s.codigo || s.nome || '').toLowerCase();
+    return ['cancelado', 'devolvido', 'disputa', 'estornado', 'reembolsado', 'pgto_devolvido', 'pagamento_devolvido', 'chargeback'].some(x => codigo.includes(x));
+  }
+  const str = String(s).toLowerCase();
+  return ['cancelado', 'devolvido', 'disputa', 'estornado', 'reembolsado', 'chargeback'].some(x => str.includes(x));
+}
+
+function statusLabel(order) {
+  const s = order?.situacao ?? order?.status;
+  if (!s) return 'unknown';
+  if (typeof s === 'object') return String(s.codigo || s.nome || 'unknown');
+  return String(s);
 }
 
 function safeEqual(a, b) {
@@ -74,6 +101,28 @@ export async function POST(request) {
     const payload = await request.json();
     const order = payload?.pedido || payload?.order || payload;
 
+    const externalId = String(order?.numero || order?.codigo || order?.id || '');
+
+    if (isReversedStatus(order)) {
+      if (!externalId) return NextResponse.json({ ok: true, skipped: 'reversal: no id' });
+      const { data: sale } = await supabase
+        .from('sales')
+        .select('id, created_at, reversed_at, commission_earned, affiliate_id')
+        .eq('external_order_id', externalId)
+        .maybeSingle();
+      if (!sale) return NextResponse.json({ ok: true, skipped: 'reversal: no sale to reverse', externalId });
+      if (sale.reversed_at) return NextResponse.json({ ok: true, skipped: 'reversal: already reversed', externalId });
+      const ageMs = Date.now() - new Date(sale.created_at).getTime();
+      const HOLD_MS = 8 * 24 * 60 * 60 * 1000;
+      if (ageMs > HOLD_MS) return NextResponse.json({ ok: true, skipped: 'reversal: past 8-day hold', externalId });
+      const { error } = await supabase
+        .from('sales')
+        .update({ reversed_at: new Date().toISOString(), reversed_reason: statusLabel(order) })
+        .eq('id', sale.id);
+      if (error) return NextResponse.json({ error: 'reversal update failed', details: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, reversed: true, externalId, affiliate_id: sale.affiliate_id, commission: sale.commission_earned, reason: statusLabel(order) });
+    }
+
     if (!isPaidStatus(order)) {
       return NextResponse.json({ ok: true, skipped: 'status not paid' });
     }
@@ -93,14 +142,14 @@ export async function POST(request) {
       return NextResponse.json({ ok: true, skipped: 'affiliate not found', coupon });
     }
 
-    const externalId = String(order?.numero || order?.codigo || order?.id || '');
     if (externalId) {
       const { data: existing } = await supabase
         .from('sales')
-        .select('id')
+        .select('id, reversed_at')
         .eq('external_order_id', externalId)
         .maybeSingle();
       if (existing) {
+        if (existing.reversed_at) return NextResponse.json({ ok: true, skipped: 'duplicate (previously reversed)', externalId });
         return NextResponse.json({ ok: true, skipped: 'duplicate order', externalId });
       }
     }
