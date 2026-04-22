@@ -79,7 +79,7 @@ async function tryAuthModes(path) {
 }
 
 async function fetchPaidOrdersSince(sinceIso) {
-  const path = `/pedido/search/?data_inicio=${sinceIso}&limit=50`;
+  const path = `/pedido/search/?data_inicio=${sinceIso}&limit=100&order_by=-data_pedido`;
   const result = await tryAuthModes(path);
   if (!result.ok) {
     throw new Error(`All auth modes failed: ${JSON.stringify(result.attempts)}`);
@@ -165,7 +165,10 @@ export async function GET(request) {
     const url = new URL(request.url);
     const envSecret = (process.env.WEBHOOK_SECRET || '').trim();
     const secret = (url.searchParams.get('secret') || '').trim();
-    if (!envSecret || !safeEqual(secret, envSecret)) {
+    const userAgent = request.headers.get('user-agent') || '';
+    const isVercelCron = userAgent.toLowerCase().includes('vercel-cron');
+    const authorized = isVercelCron || (envSecret && safeEqual(secret, envSecret));
+    if (!authorized) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
