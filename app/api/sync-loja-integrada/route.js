@@ -79,7 +79,7 @@ async function tryAuthModes(path) {
 }
 
 async function fetchPaidOrdersSince(sinceIso) {
-  const path = `/pedido/search/?situacao=pago&data_inicio=${sinceIso}&limit=50`;
+  const path = `/pedido/search/?data_inicio=${sinceIso}&limit=50`;
   const result = await tryAuthModes(path);
   if (!result.ok) {
     throw new Error(`All auth modes failed: ${JSON.stringify(result.attempts)}`);
@@ -88,9 +88,24 @@ async function fetchPaidOrdersSince(sinceIso) {
   return { orders: data?.objects || data?.results || data?.pedidos || [], mode: result.mode };
 }
 
+function isPaidStatus(order) {
+  const s = order?.situacao ?? order?.status;
+  if (!s) return false;
+  if (typeof s === 'object') {
+    if (s.cancelado === true) return false;
+    if (s.aprovado === true) return true;
+    const codigo = String(s.codigo || s.nome || '').toLowerCase();
+    return ['pedido_pago', 'pago', 'paid', 'aprovado', 'approved', 'pedido_separacao', 'pedido_enviado', 'pedido_concluido', 'faturado', 'concluido'].some(x => codigo.includes(x));
+  }
+  const str = String(s).toLowerCase();
+  return ['pago', 'paid', 'aprovado', 'approved', 'faturado', 'concluido'].some(x => str.includes(x));
+}
+
 async function processOrder(order) {
   const externalId = String(order?.numero || order?.codigo || order?.id || '');
   if (!externalId) return { skipped: 'no id' };
+
+  if (!isPaidStatus(order)) return { skipped: 'status not paid', externalId };
 
   const { data: existing } = await supabase
     .from('sales')
