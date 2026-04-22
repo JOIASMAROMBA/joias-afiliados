@@ -23,14 +23,42 @@ function buildAuthHeaders(mode = 'full') {
 }
 
 function extractCouponCode(order) {
-  if (order?.cupom) return String(order.cupom).trim().toUpperCase();
-  if (order?.cupom_desconto) return String(order.cupom_desconto).trim().toUpperCase();
-  if (Array.isArray(order?.descontos)) {
-    const cupom = order.descontos.find(d => d?.tipo === 'cupom' || d?.codigo);
-    if (cupom?.codigo) return String(cupom.codigo).trim().toUpperCase();
+  const candidates = [order?.cupom, order?.cupom_desconto, order?.codigo_cupom];
+  for (const c of candidates) {
+    if (!c) continue;
+    if (typeof c === 'object') {
+      const code = String(c.codigo || c.code || '').trim().toUpperCase();
+      if (code) return code;
+    } else if (typeof c === 'string') {
+      if (c.startsWith('/')) continue;
+      const code = c.trim().toUpperCase();
+      if (code) return code;
+    }
   }
-  if (order?.codigo_cupom) return String(order.codigo_cupom).trim().toUpperCase();
+  if (Array.isArray(order?.descontos)) {
+    const d = order.descontos.find(x => x?.codigo || x?.tipo === 'cupom');
+    if (d?.codigo) return String(d.codigo).trim().toUpperCase();
+  }
+  if (Array.isArray(order?.cupons) && order.cupons.length > 0) {
+    const c = order.cupons[0];
+    if (typeof c === 'object' && c?.codigo) return String(c.codigo).trim().toUpperCase();
+    if (typeof c === 'string' && !c.startsWith('/')) return c.trim().toUpperCase();
+  }
   return null;
+}
+
+async function fetchOrderDetail(id) {
+  const chaveApi = (process.env.LOJA_INTEGRADA_API_KEY || '').trim();
+  const chaveAplicacao = (process.env.LOJA_INTEGRADA_APP_KEY || chaveApi).trim();
+  const queryAuth = `chave_api=${encodeURIComponent(chaveApi)}&chave_aplicacao=${encodeURIComponent(chaveAplicacao)}`;
+  const url = `${LI_BASE}/pedido/${encodeURIComponent(id)}/?${queryAuth}`;
+  try {
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
 }
 
 function extractBuyerCity(order) {
@@ -163,7 +191,8 @@ async function processOrder(order) {
     return { skipped: 'duplicate', externalId };
   }
 
-  const coupon = extractCouponCode(order);
+  const detail = (await fetchOrderDetail(externalId)) || order;
+  const coupon = extractCouponCode(detail) || extractCouponCode(order);
   if (!coupon) return { skipped: 'no coupon', externalId };
 
   const { data: affiliate } = await supabase
@@ -177,10 +206,10 @@ async function processOrder(order) {
 
   const { error: insertError } = await supabase.from('sales').insert({
     affiliate_id: affiliate.id,
-    product_name: extractProductName(order),
-    product_value: Number(order?.valor_total || order?.total || 0),
-    buyer_name: extractBuyerName(order),
-    buyer_city: extractBuyerCity(order),
+    product_name: extractProductName(detail),
+    product_value: Number(detail?.valor_total || detail?.total || 0),
+    buyer_name: extractBuyerName(detail),
+    buyer_city: extractBuyerCity(detail),
     commission_earned: commission,
     external_order_id: externalId,
   });
