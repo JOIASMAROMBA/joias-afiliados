@@ -79,13 +79,21 @@ async function tryAuthModes(path) {
 }
 
 async function fetchPaidOrdersSince(sinceIso) {
-  const path = `/pedido/search/?data_inicio=${sinceIso}&limit=50&order_by=-id`;
+  const head = await tryAuthModes(`/pedido/search/?data_inicio=${sinceIso}&limit=1`);
+  if (!head.ok) {
+    throw new Error(`All auth modes failed: ${JSON.stringify(head.attempts)}`);
+  }
+  const total = Number(head?.data?.meta?.total_count || 0);
+  const pageSize = 50;
+  const offset = Math.max(0, total - pageSize);
+  const path = `/pedido/search/?data_inicio=${sinceIso}&limit=${pageSize}&offset=${offset}`;
   const result = await tryAuthModes(path);
   if (!result.ok) {
     throw new Error(`All auth modes failed: ${JSON.stringify(result.attempts)}`);
   }
   const data = result.data;
-  return { orders: data?.objects || data?.results || data?.pedidos || [], mode: result.mode };
+  const raw = data?.objects || data?.results || data?.pedidos || [];
+  return { orders: raw.slice().reverse(), mode: result.mode, total, offset };
 }
 
 function isPaidStatus(order) {
@@ -180,7 +188,7 @@ export async function GET(request) {
     const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
     const sinceIso = since.toISOString().split('T')[0];
 
-    const { orders, mode: authMode } = await fetchPaidOrdersSince(sinceIso);
+    const { orders, mode: authMode, total, offset } = await fetchPaidOrdersSince(sinceIso);
     const results = [];
     for (const order of orders) {
       results.push(await processOrder(order));
@@ -194,6 +202,8 @@ export async function GET(request) {
       ok: true,
       authMode,
       since: sinceIso,
+      total_orders_in_store: total,
+      offset_used: offset,
       fetched: orders.length,
       inserted,
       skipped,
