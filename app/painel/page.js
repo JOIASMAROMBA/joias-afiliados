@@ -199,7 +199,7 @@ export default function PainelPage() {
     setAffiliate(check.data);
     if (check.data.email) setWithdrawEmail(check.data.email);
     try { var balData = await supabase.from('affiliate_balance').select('*').eq('id', affiliateId).single(); if (balData.data) setBalance(balData.data); } catch(e) {}
-    try { var salesData = await supabase.from('sales').select('*').eq('affiliate_id', affiliateId).order('created_at', { ascending: false }).limit(500); setAllSales(salesData.data || []); } catch(e) {}
+    try { var salesData = await supabase.from('sales').select('*').eq('affiliate_id', affiliateId).is('reversed_at', null).order('created_at', { ascending: false }).limit(500); setAllSales(salesData.data || []); } catch(e) {}
     try {
       var weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0,0,0,0);
       var postsData = await supabase.from('posts').select('*').eq('affiliate_id', affiliateId).gte('created_at', weekStart.toISOString()).order('created_at', { ascending: false });
