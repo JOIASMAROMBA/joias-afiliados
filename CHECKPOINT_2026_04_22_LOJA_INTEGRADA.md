@@ -84,6 +84,8 @@ Status que mantêm o crédito (não mexem): `pedido_enviado`, `pedido_separacao`
 
 Arquivo: [supabase_sales_reversal.sql](supabase_sales_reversal.sql) — **rodado no Supabase em 2026-04-22** com sucesso ("Success. No rows returned").
 
+> ⚠️ **Pegadinha (corrigida em 2026-05-18):** a primeira versão da view nesta migration esqueceu de manter a regra `source = 'fixed_payment'` que existia em [supabase_fixed_monthly.sql](supabase_fixed_monthly.sql). Resultado: pagamentos de fixo mensal pra afiliadas patrocinadas estavam caindo no `blocked_balance` em vez do `available_balance`. Corrigido rodando [supabase_fix_view_fixed_and_reversal.sql](supabase_fix_view_fixed_and_reversal.sql) — agora a view combina as duas regras (vendas reversadas excluídas + fixed_payment direto pro disponível). O arquivo original `supabase_sales_reversal.sql` também foi atualizado para ter a view correta, evitando o bug em re-execuções.
+
 Alterações:
 ```sql
 -- Colunas novas em sales

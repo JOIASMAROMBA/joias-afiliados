@@ -1,18 +1,9 @@
--- Reversao automatica de vendas: quando pedido muda para CANCELADO / PGTO DEVOLVIDO / PGTO EM DISPUTA
--- dentro da janela de 8 dias apos a venda, marca reversed_at e a comissao sai do saldo da afiliada.
--- Rodar no SQL Editor do Supabase uma vez.
+-- CORRECAO da view affiliate_balance: combina as duas regras que existiam separadas
+-- 1) Vendas com source = 'fixed_payment' (fixo mensal) vao direto pro saldo disponivel (sem hold de 8 dias)
+-- 2) Vendas com reversed_at preenchido (canceladas/devolvidas em <=8 dias) saem do saldo
+--
+-- Rodar UMA VEZ no SQL Editor do Supabase. Substitui a view criada por supabase_sales_reversal.sql.
 
--- 1) Colunas de auditoria em sales
-alter table public.sales
-  add column if not exists reversed_at timestamp with time zone,
-  add column if not exists reversed_reason text;
-
-create index if not exists idx_sales_external_order_id on public.sales (external_order_id);
-create index if not exists idx_sales_reversed_at on public.sales (reversed_at);
-
--- 2) Atualiza view affiliate_balance:
---    - exclui vendas reversadas (reversed_at preenchido) dos dois pots
---    - mantem regra de source = 'fixed_payment' indo direto pro disponivel (sem hold de 8 dias)
 create or replace view public.affiliate_balance as
 with
   released_sales as (
